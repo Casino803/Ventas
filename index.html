@@ -227,13 +227,24 @@
     <script type="module">
         // Importa las funciones necesarias de Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, where, deleteDoc, getDocs, updateDoc, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, where, deleteDoc, getDocs, updateDoc, limit, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Variables globales para la configuración de Firebase
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Reemplaza los valores a continuación con la configuración de tu proyecto de Firebase.
+        // La obtienes en la Consola de Firebase > Configuración del Proyecto > General.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDaeiHDKjK_DkdYNF9FvL8aMGINPGvU9uc",
+            authDomain: "ventas-casino.firebaseapp.com",
+            projectId: "ventas-casino",
+            storageBucket: "ventas-casino.firebasestorage.app",
+            messagingSenderId: "683247450522",
+            appId: "1:683247450522:web:87a57e190d2c252d0a6223",
+            measurementId: "G-XYG0ZNEQ61"
+        };
+        
+        // Obtenemos el ID del proyecto de la configuración para usarlo en las rutas de Firestore
+        const appId = firebaseConfig.projectId;
+        const initialAuthToken = null; // No necesario con la configuración manual.
 
         let db, auth, userId;
         let currentView = 'login';
@@ -465,8 +476,10 @@
             }
 
             try {
+                // Usamos getDoc para obtener un solo documento
                 const docRef = doc(db, `artifacts/${appId}/users/${userId}/cashiers`, openCashierDocId);
-                const docData = (await getDocs(docRef)).data();
+                const docSnapshot = await getDoc(docRef);
+                const docData = docSnapshot.data();
                 
                 const totalSales = parseFloat(dailySalesEl.textContent.substring(1));
                 const totalExpenses = parseFloat(dailyExpensesEl.textContent.substring(1));
@@ -869,11 +882,7 @@
                     userId = user.uid;
                 } else {
                     try {
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        await signInAnonymously(auth);
                     } catch (error) {
                         console.error("Error de autenticación:", error);
                         loginMessage.textContent = 'Error de autenticación. Por favor, recarga la página.';
