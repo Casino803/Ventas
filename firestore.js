@@ -309,7 +309,7 @@ export const listenForOrders = () => {
 };
 
 // --- Funciones para la vista de Productos ---
-export const listenForProducts = () => {
+export const renderProducts = () => {
     productsMessage.textContent = 'Cargando productos...';
     productsMessage.classList.remove('hidden');
     const path = `artifacts/${appId}/users/${userId}/products`;
