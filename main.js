@@ -110,7 +110,7 @@ export const showView = (viewName) => {
     if (viewName === 'pos') {
         checkCashierStatus();
     } else if (viewName === 'products') {
-        renderProducts(); // Llamar a la función `renderProducts` para cargar los productos
+        listenForProducts();
     } else if (viewName === 'expenses') {
         listenForExpenses();
     } else if (viewName === 'stats') {
