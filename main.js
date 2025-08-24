@@ -4,7 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { handleRegistration, handleLogin, handleLogout, onAuthChange } from "./auth.js";
-import { checkCashierStatus, openCashier, closeCashier, confirmCloseCashier, renderMenu, renderCart, placeOrder, listenForOrders, renderProducts, saveProduct, listenForProducts, deleteItem, listenForExpenses, addExpense, loadStats } from "./firestore.js";
+import { checkCashierStatus, openCashier, closeCashier, confirmCloseCashier, renderMenu, renderCart, placeOrder, listenForOrders, listenForProducts, saveProduct, deleteItem, listenForExpenses, addExpense, loadStats } from "./firestore.js";
 
 // Tu configuración de Firebase
 const firebaseConfig = {
