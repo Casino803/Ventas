@@ -309,7 +309,7 @@ export const listenForOrders = () => {
 };
 
 // --- Funciones para la vista de Productos ---
-export const renderProducts = () => {
+export const listenForProducts = () => {
     productsMessage.textContent = 'Cargando productos...';
     productsMessage.classList.remove('hidden');
     const path = `artifacts/${appId}/users/${userId}/products`;
@@ -548,5 +548,5 @@ export const loadStats = async () => {
         console.error("Error al cargar las estadísticas: ", e);
         statsMessage.textContent = 'Error al cargar las estadísticas.';
         statsMessage.classList.remove('hidden');
-    }
+    });
 };
