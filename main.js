@@ -3,7 +3,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { handleLogin, handleLogout, onAuthChange } from "./auth.js";
+import { handleRegistration, handleLogin, handleLogout, onAuthChange } from "./auth.js";
 import { checkCashierStatus, openCashier, closeCashier, confirmCloseCashier, renderMenu, renderCart, placeOrder, listenForOrders, renderProducts, saveProduct, listenForProducts, deleteItem, listenForExpenses, addExpense, loadStats } from "./firestore.js";
 
 // Tu configuración de Firebase
@@ -110,7 +110,7 @@ export const showView = (viewName) => {
     if (viewName === 'pos') {
         checkCashierStatus();
     } else if (viewName === 'products') {
-        listenForProducts();
+        renderProducts(); // Llamar a la función `renderProducts` para cargar los productos
     } else if (viewName === 'expenses') {
         listenForExpenses();
     } else if (viewName === 'stats') {
