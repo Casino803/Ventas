@@ -548,5 +548,5 @@ export const loadStats = async () => {
         console.error("Error al cargar las estadísticas: ", e);
         statsMessage.textContent = 'Error al cargar las estadísticas.';
         statsMessage.classList.remove('hidden');
-    });
+    };
 };
