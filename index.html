@@ -447,7 +447,6 @@
             modal.classList.add('hidden');
         });
         
-        // Se corrigió la lógica de navegación para asegurar que se activen los eventos.
         function setupNavigation() {
             menuButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -497,6 +496,7 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
+                // Mueve la inicialización de los oyentes aquí, una vez que el userId está disponible
                 setupRealtimeListeners();
             } else {
                 try {
