@@ -57,6 +57,10 @@
                     <button data-page="customers-page" class="menu-btn bg-blue-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
                         <i class="fas fa-users mr-2"></i> Clientes
                     </button>
+                     <!-- Nuevo botón para la página de Configuración -->
+                    <button data-page="config-page" class="menu-btn bg-blue-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-cog mr-2"></i> Configuración
+                    </button>
                 </div>
             </div>
             
@@ -283,6 +287,46 @@
                 </div>
             </div>
 
+            <!-- Nueva Página de Configuración -->
+            <div id="config-page" class="page-content">
+                <button data-page="home-menu" class="back-to-menu-btn mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
+                    <i class="fas fa-arrow-left"></i> Volver al Menú
+                </button>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Configuración de Usuarios y Roles</h2>
+
+                <!-- Gestión de Usuarios -->
+                <div class="bg-gray-50 p-4 rounded-xl shadow-inner mb-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Gestión de Usuarios</h3>
+                    <form id="add-user-form" class="flex space-x-2 mb-4">
+                        <input type="text" id="username-input" placeholder="Nombre de usuario" required class="flex-grow px-4 py-2 border rounded-lg">
+                        <select id="user-role-select" class="w-1/3 px-4 py-2 border rounded-lg">
+                            <option value="">Seleccionar Rol</option>
+                            <!-- Los roles se cargarán dinámicamente -->
+                        </select>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-user-plus"></i> Añadir
+                        </button>
+                    </form>
+                    <div id="users-list-container" class="space-y-2">
+                        <!-- La lista de usuarios se cargará aquí -->
+                    </div>
+                </div>
+
+                <!-- Gestión de Roles -->
+                <div class="bg-gray-50 p-4 rounded-xl shadow-inner">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Gestión de Roles</h3>
+                    <form id="add-role-form" class="flex space-x-2 mb-4">
+                        <input type="text" id="role-name-input" placeholder="Nombre del rol" required class="flex-grow px-4 py-2 border rounded-lg">
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-plus"></i> Añadir Rol
+                        </button>
+                    </form>
+                    <div id="roles-list-container" class="space-y-2">
+                        <!-- La lista de roles se cargará aquí -->
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- Diálogo modal para mensajes -->
@@ -407,6 +451,15 @@
         const expenseCategorySelect = document.getElementById('expense-category-select');
         const cashHistoryContainer = document.getElementById('cash-history-container');
         
+        // Referencias de la nueva página de configuración
+        const addUserForm = document.getElementById('add-user-form');
+        const usernameInput = document.getElementById('username-input');
+        const userRoleSelect = document.getElementById('user-role-select');
+        const usersListContainer = document.getElementById('users-list-container');
+        const addRoleForm = document.getElementById('add-role-form');
+        const roleNameInput = document.getElementById('role-name-input');
+        const rolesListContainer = document.getElementById('roles-list-container');
+        
         // Referencias del modal de pago múltiple
         const splitPaymentModal = document.getElementById('split-payment-modal');
         const paymentTotalDisplay = document.getElementById('payment-total-display');
@@ -431,6 +484,8 @@
         let dailySalesTotal = 0;
         let dailyExpensesTotal = 0;
         let allCustomers = [];
+        let allUsers = [];
+        let allRoles = [];
         
         const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
         let userPaymentMethods = [];
@@ -447,6 +502,7 @@
             modal.classList.add('hidden');
         });
         
+        // Se corrigió la lógica de navegación para asegurar que se activen los eventos.
         function setupNavigation() {
             menuButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -496,7 +552,6 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
-                // Mueve la inicialización de los oyentes aquí, una vez que el userId está disponible
                 setupRealtimeListeners();
             } else {
                 try {
@@ -586,6 +641,20 @@
                 allCustomers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderCustomersList(allCustomers);
                 renderCustomerSelect(allCustomers);
+            });
+
+            // NUEVOS LISTENERS para la página de Configuración
+            const usersConfigCollection = collection(db, `artifacts/${appId}/users/${userId}/users_config`);
+            onSnapshot(usersConfigCollection, (snapshot) => {
+                allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderUsersList(allUsers);
+            });
+
+            const rolesCollection = collection(db, `artifacts/${appId}/users/${userId}/roles`);
+            onSnapshot(rolesCollection, (snapshot) => {
+                allRoles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderRolesList(allRoles);
+                renderUserRolesSelect(allRoles);
             });
         }
         
@@ -1542,6 +1611,113 @@
             printWindow.print();
         }
 
+        // Lógica de la página de Configuración (NUEVA)
+        addUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            const role = userRoleSelect.value;
+            if (!username || !role) {
+                showModal("El nombre de usuario y el rol son obligatorios.");
+                return;
+            }
+
+            try {
+                const usersConfigCollection = collection(db, `artifacts/${appId}/users/${userId}/users_config`);
+                await addDoc(usersConfigCollection, { username, role });
+                addUserForm.reset();
+                showModal(`Usuario '${username}' con rol '${role}' añadido con éxito.`);
+            } catch (error) {
+                console.error("Error al añadir usuario:", error);
+                showModal("Error al añadir usuario. Intenta de nuevo.");
+            }
+        });
+
+        addRoleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const roleName = roleNameInput.value.trim();
+            if (!roleName) {
+                showModal("El nombre del rol no puede estar vacío.");
+                return;
+            }
+
+            try {
+                const rolesCollection = collection(db, `artifacts/${appId}/users/${userId}/roles`);
+                await addDoc(rolesCollection, { name: roleName });
+                addRoleForm.reset();
+                showModal(`Rol '${roleName}' añadido con éxito.`);
+            } catch (error) {
+                console.error("Error al añadir rol:", error);
+                showModal("Error al añadir rol. Intenta de nuevo.");
+            }
+        });
+        
+        function renderUsersList(users) {
+            usersListContainer.innerHTML = '';
+            users.forEach(user => {
+                const item = document.createElement('div');
+                item.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+                item.innerHTML = `
+                    <span>${user.username} - <span class="font-semibold">${user.role}</span></span>
+                    <button data-id="${user.id}" class="delete-user-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                        <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>
+                `;
+                usersListContainer.appendChild(item);
+                
+                item.querySelector('.delete-user-btn').addEventListener('click', async () => {
+                    if (confirm(`¿Estás seguro de que quieres eliminar al usuario '${user.username}'?`)) {
+                        try {
+                            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/users_config/${user.id}`);
+                            await deleteDoc(userDocRef);
+                            showModal("Usuario eliminado.");
+                        } catch (error) {
+                            console.error("Error al eliminar usuario:", error);
+                            showModal("Error al eliminar usuario. Intenta de nuevo.");
+                        }
+                    }
+                });
+            });
+        }
+        
+        function renderRolesList(roles) {
+            rolesListContainer.innerHTML = '';
+            roles.forEach(role => {
+                const item = document.createElement('div');
+                item.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+                item.innerHTML = `
+                    <span class="font-semibold">${role.name}</span>
+                    <button data-id="${role.id}" class="delete-role-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                        <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>
+                `;
+                rolesListContainer.appendChild(item);
+                
+                item.querySelector('.delete-role-btn').addEventListener('click', async () => {
+                    if (confirm(`¿Estás seguro de que quieres eliminar el rol '${role.name}'?`)) {
+                        try {
+                            const roleDocRef = doc(db, `artifacts/${appId}/users/${userId}/roles/${role.id}`);
+                            await deleteDoc(roleDocRef);
+                            showModal("Rol eliminado.");
+                        } catch (error) {
+                            console.error("Error al eliminar rol:", error);
+                            showModal("Error al eliminar rol. Intenta de nuevo.");
+                        }
+                    }
+                });
+            });
+        }
+        
+        function renderUserRolesSelect(roles) {
+            userRoleSelect.innerHTML = '<option value="">Seleccionar Rol</option>';
+            roles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role.name;
+                option.textContent = role.name;
+                userRoleSelect.appendChild(option);
+            });
+        }
+
+        // Asegúrate de que esta llamada está al final del script para que se ejecute una vez que se cargue la página
         document.addEventListener('DOMContentLoaded', setupNavigation);
     </script>
 </body>
