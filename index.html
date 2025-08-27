@@ -1041,9 +1041,14 @@
                 cartContainer.appendChild(itemDiv);
                 
                 itemDiv.querySelector('button').addEventListener('click', (e) => {
-                    const idToRemove = e.target.dataset.id;
-                    removeProductFromCart(idToRemove);
-                });
+    // Busca el elemento más cercano que sea un botón y tenga el atributo 'data-id'.
+    // Esto asegura que siempre obtendremos el ID correcto, incluso si el clic es en el ícono.
+    const button = e.target.closest('button[data-id]');
+    if (button) {
+        const idToRemove = button.dataset.id;
+        removeProductFromCart(idToRemove);
+    }
+});
             });
             cartTotalSpan.textContent = `$${total.toFixed(2)}`;
         }
