@@ -33,7 +33,7 @@ to { opacity: 1; transform: translateY(0); }
 
 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
 
-<div id="home-menu" class="page-content active text-center hidden">
+<div id="home-menu" class="page-content active text-center">
 <h2 class="text-2xl font-bold text-gray-800 mb-6">Menú Principal</h2>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 <button data-page="pos-page" class="menu-btn bg-blue-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
@@ -51,13 +51,13 @@ to { opacity: 1; transform: translateY(0); }
 <button data-page="customers-page" class="menu-btn bg-blue-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
 <i class="fas fa-users mr-2"></i> Clientes
 </button>
-<button id="logout-btn" class="menu-btn bg-red-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-red-700 transition-colors">
-<i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
+<button data-page="auth-modal" class="menu-btn bg-gray-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-gray-700 transition-colors">
+<i class="fas fa-user-circle mr-2"></i> Iniciar Sesión
 </button>
 </div>
 </div>
 
-<div id="customers-page" class="page-content hidden">
+<div id="customers-page" class="page-content">
 <button data-page="home-menu" class="back-to-menu-btn mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
 <i class="fas fa-arrow-left"></i> Volver al Menú
 </button>
@@ -72,7 +72,7 @@ to { opacity: 1; transform: translateY(0); }
 </div>
 </div>
 
-<div id="pos-page" class="page-content hidden">
+<div id="pos-page" class="page-content">
 <button data-page="home-menu" class="back-to-menu-btn mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
 <i class="fas fa-arrow-left"></i> Volver al Menú
 </button>
@@ -113,7 +113,7 @@ class="w-full mt-4 px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-l
 </div>
 </div>
 
-<div id="products-page" class="page-content hidden">
+<div id="products-page" class="page-content">
 <button data-page="home-menu" class="back-to-menu-btn mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
 <i class="fas fa-arrow-left"></i> Volver al Menú
 </button>
@@ -141,7 +141,7 @@ class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-m
 </div>
 </div>
 
-<div id="history-page" class="page-content hidden">
+<div id="history-page" class="page-content">
 <button data-page="home-menu" class="back-to-menu-btn mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
 <i class="fas fa-arrow-left"></i> Volver al Menú
 </button>
@@ -203,7 +203,7 @@ class="flex-grow px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-lg 
 </div>
 </div>
 
-<div id="cash-page" class="page-content hidden">
+<div id="cash-page" class="page-content">
 <button data-page="home-menu" class="back-to-menu-btn mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
 <i class="fas fa-arrow-left"></i> Volver al Menú
 </button>
@@ -313,7 +313,7 @@ Confirmar Pago
 </div>
 </div>
 
-<div id="auth-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center active">
+<div id="auth-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
   <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
     <h3 class="text-xl font-semibold mb-4 text-center">Iniciar Sesión / Registrarse</h3>
     <form id="auth-form" class="space-y-4">
@@ -336,7 +336,7 @@ Confirmar Pago
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // CONFIGURACIÓN DE FIREBASE
@@ -351,7 +351,7 @@ measurementId: "G-XYG0ZNEQ61"
 };
 
 const appId = firebaseConfig.appId;
-const initialAuthToken = null;
+const initialAuthToken = null; // No es necesario para GitHub Pages
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
@@ -387,7 +387,6 @@ const clearFiltersBtn = document.getElementById('clear-filters-btn');
 const customerSelect = document.getElementById('customer-select');
 const addCustomerForm = document.getElementById('add-customer-form');
 const customersListContainer = document.getElementById('customers-list-container');
-const logoutBtn = document.getElementById('logout-btn');
 
 // Referencias de la página de caja
 const cashStatusText = document.getElementById('cash-status-text');
@@ -451,11 +450,16 @@ modalCloseBtn.addEventListener('click', () => {
 modal.classList.add('hidden');
 });
 
+// Se corrigió la lógica de navegación para asegurar que se activen los eventos.
 function setupNavigation() {
 menuButtons.forEach(btn => {
 btn.addEventListener('click', () => {
 const targetPageId = btn.dataset.page;
+if (targetPageId === 'auth-modal') {
+authModal.classList.remove('hidden');
+} else {
 showPage(targetPageId);
+}
 });
 });
 
@@ -477,6 +481,8 @@ function showHomeMenu() {
 pages.forEach(page => page.classList.remove('active'));
 homeMenu.classList.add('active');
 }
+
+showHomeMenu();
 }
 
 posSearchInput.addEventListener('input', (e) => {
@@ -494,22 +500,21 @@ renderProductCard(product);
 });
 }
 
+// Manejo de autenticación para el entorno.
 onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        userId = user.uid;
-        setupRealtimeListeners();
-        // Oculta el modal de autenticación y muestra el menú principal
-        authModal.classList.remove('active');
-        authModal.classList.add('hidden');
-        homeMenu.classList.remove('hidden');
-        showHomeMenu();
-    } else {
-        // Muestra el modal de autenticación y oculta todo lo demás
-        authModal.classList.add('active');
-        authModal.classList.remove('hidden');
-        pages.forEach(page => page.classList.remove('active'));
-        homeMenu.classList.add('hidden');
-    }
+if (user) {
+userId = user.uid;
+setupRealtimeListeners();
+authModal.classList.add('hidden');
+} else {
+try {
+// Intenta iniciar sesión anónimamente si no hay un token personalizado.
+await signInAnonymously(auth);
+} catch (error) {
+console.error("Error al firmar anónimamente:", error);
+showModal("Error al iniciar sesión. Por favor, recarga la página.");
+}
+}
 });
 
 function setupRealtimeListeners() {
@@ -1556,6 +1561,7 @@ loginBtn.addEventListener('click', async (e) => {
     try {
         await signInWithEmailAndPassword(auth, email, password);
         showModal("Inicio de sesión exitoso.");
+        authModal.classList.add('hidden');
     } catch (error) {
         console.error("Error al iniciar sesión:", error);
         showModal("Error al iniciar sesión. Verifica tus credenciales.");
@@ -1576,19 +1582,6 @@ registerBtn.addEventListener('click', async (e) => {
         } else {
             showModal("Error al registrarse. Intenta de nuevo.");
         }
-    }
-});
-
-logoutBtn.addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-        showModal("Sesión cerrada correctamente.");
-        // Opcional: limpiar datos locales si es necesario
-        cart = [];
-        renderCart();
-    } catch (error) {
-        console.error("Error al cerrar sesión:", error);
-        showModal("Hubo un error al cerrar la sesión.");
     }
 });
 
