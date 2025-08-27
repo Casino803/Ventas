@@ -125,6 +125,7 @@ function setupNavigation() {
         homeMenu.classList.add('active');
     }
 
+    // Al iniciar la aplicación, solo mostramos el menú principal.
     showHomeMenu();
 }
 
@@ -332,14 +333,14 @@ function renderManageProduct(product) {
     `;
     manageProductsContainer.appendChild(itemDiv);
 
-    itemDiv.querySelector('.edit-product-btn').addEventListener('click', () => {
+    item.querySelector('.edit-product-btn').addEventListener('click', () => {
         document.getElementById('product-id').value = product.id;
         document.getElementById('product-name-input').value = product.name;
         document.getElementById('product-price-input').value = product.price;
         document.getElementById('product-stock-input').value = product.stock;
     });
 
-    itemDiv.querySelector('.delete-product-btn').addEventListener('click', async () => {
+    item.querySelector('.delete-product-btn').addEventListener('click', async () => {
         if(confirm('¿Estás seguro de que quieres eliminar este producto?')) {
             try {
                 const productRef = doc(db, `artifacts/${appId}/users/${userId}/products/${product.id}`);
