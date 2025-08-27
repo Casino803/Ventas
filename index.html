@@ -345,7 +345,7 @@
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIGURACIÓN DE FIREBASE: Reemplazada con tus valores
+        // CONFIGURACIÓN DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyDaeiHDKjK_DkdYNF9FvL8aMGINPGvU9uc",
             authDomain: "ventas-casino.firebaseapp.com",
@@ -356,9 +356,8 @@
             measurementId: "G-XYG0ZNEQ61"
         };
         
-        // No es necesario el token personalizado para GitHub Pages, lo establecemos como nulo.
         const appId = firebaseConfig.appId;
-        const initialAuthToken = null;
+        const initialAuthToken = null; // No es necesario para GitHub Pages
         
         // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
@@ -501,13 +500,8 @@
                 setupRealtimeListeners();
             } else {
                 try {
-                    // Intenta iniciar sesión con el token personalizado si está disponible
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        // De lo contrario, utiliza la autenticación anónima
-                        await signInAnonymously(auth);
-                    }
+                    // Intenta iniciar sesión anónimamente si no hay un token personalizado.
+                    await signInAnonymously(auth);
                 } catch (error) {
                     console.error("Error al firmar anónimamente:", error);
                     showModal("Error al iniciar sesión. Por favor, recarga la página.");
