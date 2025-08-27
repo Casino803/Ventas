@@ -313,7 +313,7 @@
             </div>
         </div>
 
-        <div id="auth-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+        <div id="auth-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center active">
             <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
                 <h3 class="text-xl font-semibold mb-4 text-center">Iniciar Sesión / Registrarse</h3>
                 <form id="auth-form" class="space-y-4">
@@ -457,6 +457,20 @@
             modal.classList.add('hidden');
         });
 
+        // Hacemos que la función showPage sea global para que pueda ser llamada desde cualquier lugar
+        function showPage(pageId) {
+            pages.forEach(page => {
+                page.classList.remove('active');
+            });
+            homeMenu.classList.remove('active');
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        function showHomeMenu() {
+            pages.forEach(page => page.classList.remove('active'));
+            homeMenu.classList.add('active');
+        }
+
         function setupNavigation() {
             menuButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -470,19 +484,6 @@
                     showHomeMenu();
                 });
             });
-
-            function showPage(pageId) {
-                pages.forEach(page => {
-                    page.classList.remove('active');
-                });
-                homeMenu.classList.remove('active');
-                document.getElementById(pageId).classList.add('active');
-            }
-
-            function showHomeMenu() {
-                pages.forEach(page => page.classList.remove('active'));
-                homeMenu.classList.add('active');
-            }
         }
 
         posSearchInput.addEventListener('input', (e) => {
@@ -1132,8 +1133,8 @@
                     addPaymentForm.reset();
                     paymentModal.classList.add('hidden');
                 } catch (error) {
-                    console.error("Error al añadir la forma de pago:", error);
-                    showModal("Error al añadir la forma de pago.");
+                console.error("Error al añadir la forma de pago:", error);
+                showModal("Error al añadir la forma de pago.");
                 }
             } else {
                 showModal("Esa forma de pago ya existe o no es válida.");
