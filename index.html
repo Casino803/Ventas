@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Punto de Venta</title>
+    <title>Punto de Venta</title>
     <!-- Incluimos Tailwind CSS para un diseño moderno y responsive -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #e5e7eb;
         }
+        /* Oculta la barra de desplazamiento pero la mantiene funcional */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -18,210 +19,294 @@
             -ms-overflow-style: none; /* Internet Explorer 10+ */
             scrollbar-width: none; /* Firefox */
         }
-        .view-section {
-            display: none;
-        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center">
 
-    <!-- Sección de Login/Registro (mostrada por defecto) -->
-    <div id="authView" class="view-section flex flex-col items-center justify-center w-full min-h-screen p-4">
-        <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
-            <h1 id="authTitle" class="text-3xl font-bold text-gray-800 mb-6">Iniciar Sesión</h1>
-            <input type="email" id="emailInput" placeholder="Correo Electrónico" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <input type="password" id="passwordInput" placeholder="Contraseña" class="w-full p-3 rounded-xl border border-gray-300 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button id="authBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition duration-300">Iniciar Sesión</button>
-            <p id="authMessage" class="text-red-500 mt-4 text-sm hidden"></p>
-            <button id="toggleAuthBtn" class="mt-4 text-sm text-blue-500 hover:underline">¿No tienes una cuenta? Regístrate</button>
-        </div>
-    </div>
+    <main class="w-full max-w-7xl mx-auto p-4 md:p-8">
+        <h1 class="text-4xl font-extrabold text-center text-gray-900 mb-8">Punto de Venta</h1>
+        
+        <!-- Identificador de usuario -->
+        <p class="text-sm text-center text-gray-500 mb-6">
+            ID de usuario: <span id="userId" class="font-mono bg-gray-200 px-2 py-1 rounded-md text-xs">Cargando...</span>
+        </p>
 
-    <!-- Sección Principal de la App (oculta por defecto) -->
-    <div id="mainAppView" class="view-section hidden w-full min-h-screen flex flex-col md:flex-row">
-
-        <!-- Menú de Navegación -->
-        <nav class="bg-white shadow-lg md:w-64 p-4 md:p-6 flex flex-row md:flex-col justify-around md:justify-start items-center md:items-stretch fixed bottom-0 md:top-0 md:left-0 w-full z-20">
-            <h2 class="hidden md:block text-2xl font-bold text-gray-800 mb-6">Menú</h2>
-            <button id="posNavBtn" class="nav-btn bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-xl flex items-center justify-center md:justify-start mb-2 w-full transition duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                <span class="hidden md:inline">Caja</span>
-            </button>
-            <button id="productsNavBtn" class="nav-btn bg-white text-gray-800 font-bold py-2 px-4 rounded-xl flex items-center justify-center md:justify-start mb-2 w-full transition duration-300 hover:bg-gray-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a2 2 0 012 2v2m0 0h5a2 2 0 012 2v6m-4-2v4m-5-4v4m-7-6v6a2 2 0 002 2h4a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2zM3 3h4l-1 5H3V3z" /></svg>
-                <span class="hidden md:inline">Productos</span>
-            </button>
-            <button id="expensesNavBtn" class="nav-btn bg-white text-gray-800 font-bold py-2 px-4 rounded-xl flex items-center justify-center md:justify-start mb-2 w-full transition duration-300 hover:bg-gray-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9v2m0 0v2m0-2h-2m2 0h2m0 0a2 2 0 11-4 0 2 2 0 014 0zM19 21h-2a2 2 0 00-2 2v-4h-2a2 2 0 00-2 2v4a2 2 0 002 2h2v-4h2a2 2 0 002 2v4a2 2 0 002 2h2a2 2 0 002-2v-4a2 2 0 00-2-2h-2zm-6-2h-2v4h2v-4zM7 7a2 2 0 00-2 2v2m0 0v2m0-2h-2m2 0h2" /></svg>
-                <span class="hidden md:inline">Gastos</span>
-            </button>
-            <button id="statsNavBtn" class="nav-btn bg-white text-gray-800 font-bold py-2 px-4 rounded-xl flex items-center justify-center md:justify-start mb-2 w-full transition duration-300 hover:bg-gray-100">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v.01M16 12v.01M16 16v.01M12 8v.01M12 12v.01M12 16v.01M8 8v.01M8 12v.01M8 16v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span class="hidden md:inline">Estadísticas</span>
-            </button>
-            <button id="logoutBtn" class="nav-btn bg-red-500 text-white font-bold py-2 px-4 rounded-xl flex items-center justify-center md:justify-start mb-2 w-full transition duration-300 hover:bg-red-600 md:mt-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-10a2 2 0 012-2h6a2 2 0 012 2v1" /></svg>
-                <span class="hidden md:inline">Salir</span>
-            </button>
-        </nav>
-
-        <!-- Contenedor de Vistas -->
-        <div id="content" class="flex-1 p-4 md:p-8 md:ml-64 pb-20 md:pb-4">
-            <!-- Vista de Caja (Punto de Venta) -->
-            <div id="posView" class="view-section">
-                <h1 class="text-4xl font-extrabold text-center text-gray-900 mb-8">Punto de Venta</h1>
-                <!-- Mensaje de estado de caja -->
-                <div id="cashierStatus" class="bg-gray-200 rounded-xl p-4 text-center text-gray-700 font-bold mb-6 hidden">
-                    <p id="statusMessage">Cargando estado de la caja...</p>
+        <div id="appContainer" class="flex flex-col md:flex-row gap-8">
+            <!-- Sección de Menú -->
+            <div class="md:w-3/5 bg-white rounded-2xl shadow-xl p-6 no-scrollbar overflow-y-auto" style="max-height: 80vh;">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 sticky top-0 bg-white z-10 py-2">Menú</h2>
+                <div id="menuContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Los productos del menú se insertarán aquí -->
                 </div>
+            </div>
 
-                <!-- Interfaz para abrir caja -->
-                <div id="openCashierSection" class="bg-white rounded-2xl shadow-xl p-6 mb-8 hidden">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Abrir Caja</h2>
-                    <input type="number" id="openingAmountInput" placeholder="Monto Inicial en Caja" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="openCashierBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition duration-300">Abrir Caja</button>
+            <!-- Sección del Carrito -->
+            <div class="md:w-2/5 bg-white rounded-2xl shadow-xl p-6 flex flex-col" style="max-height: 80vh;">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Carrito</h2>
+                <div id="cartItems" class="flex-1 overflow-y-auto no-scrollbar">
+                    <!-- Los items del carrito se insertarán aquí -->
                 </div>
                 
-                <!-- Interfaz principal de ventas (visible solo si la caja está abierta) -->
-                <div id="salesSection" class="hidden">
-                    <div class="flex flex-col md:flex-row gap-8">
-                        <!-- Sección de Menú -->
-                        <div class="md:w-3/5 bg-white rounded-2xl shadow-xl p-6 no-scrollbar overflow-y-auto" style="max-height: 80vh;">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4 sticky top-0 bg-white z-10 py-2">Menú</h2>
-                            <div id="menuContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <!-- Los productos del menú se insertarán aquí -->
-                            </div>
-                        </div>
-                        <!-- Sección del Carrito -->
-                        <div class="md:w-2/5 bg-white rounded-2xl shadow-xl p-6 flex flex-col" style="max-height: 80vh;">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-4">Carrito</h2>
-                            <div id="cartItems" class="flex-1 overflow-y-auto no-scrollbar">
-                                <!-- Los items del carrito se insertarán aquí -->
-                            </div>
-                            <div class="mt-4 pt-4 border-t border-gray-200">
-                                <div class="flex justify-between items-center mb-4">
-                                    <span class="text-lg font-semibold text-gray-700">Total:</span>
-                                    <span id="totalPrice" class="text-2xl font-bold text-blue-600">$0.00</span>
-                                </div>
-                                <button id="checkoutBtn" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition duration-300 ease-in-out shadow-lg transform hover:scale-105">
-                                    Realizar Pedido
-                                </button>
-                                <button id="closeCashierBtn" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition duration-300 ease-in-out shadow-lg transform hover:scale-105 mt-2">
-                                    Cerrar Caja
-                                </button>
-                            </div>
-                        </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-lg font-semibold text-gray-700">Total:</span>
+                        <span id="totalPrice" class="text-2xl font-bold text-blue-600">$0.00</span>
                     </div>
+                    <button id="checkoutBtn" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition duration-300 ease-in-out shadow-lg transform hover:scale-105">
+                        Realizar Pedido
+                    </button>
                 </div>
-
-                <!-- Sección de Pedidos Recientes (visible solo si la caja está abierta) -->
-                <div id="recentOrdersSection" class="w-full mx-auto mt-8 bg-white rounded-2xl shadow-xl p-6 hidden">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Pedidos Recientes</h2>
-                    <div id="recentOrders" class="no-scrollbar overflow-y-auto" style="max-height: 30vh;">
-                        <!-- Los pedidos recientes se mostrarán aquí -->
-                    </div>
-                    <p id="ordersMessage" class="text-center text-sm text-gray-500 mt-4 hidden">Cargando pedidos...</p>
-                </div>
-            </div>
-
-            <!-- Vista de Productos -->
-            <div id="productsView" class="view-section">
-                <h1 class="text-4xl font-extrabold text-center text-gray-900 mb-8">Gestión de Productos</h1>
-                <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Añadir/Editar Producto</h2>
-                    <input type="hidden" id="productIdInput">
-                    <input type="text" id="productNameInput" placeholder="Nombre del Producto" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <input type="number" id="productPriceInput" placeholder="Precio" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <input type="text" id="productImageInput" placeholder="URL de la Imagen (opcional)" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="saveProductBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition duration-300">Guardar Producto</button>
-                </div>
-                <div class="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Lista de Productos</h2>
-                    <div id="productsList" class="no-scrollbar overflow-y-auto" style="max-height: 40vh;">
-                        <!-- Los productos se listarán aquí -->
-                    </div>
-                    <p id="productsMessage" class="text-center text-sm text-gray-500 mt-4 hidden">Cargando productos...</p>
-                </div>
-            </div>
-
-            <!-- Vista de Gastos -->
-            <div id="expensesView" class="view-section">
-                <h1 class="text-4xl font-extrabold text-center text-gray-900 mb-8">Gestión de Gastos</h1>
-                <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Añadir Gasto</h2>
-                    <input type="text" id="expenseDescriptionInput" placeholder="Descripción del Gasto" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <input type="number" id="expenseAmountInput" placeholder="Monto" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="addExpenseBtn" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition duration-300">Añadir Gasto</button>
-                </div>
-                <div class="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de Gastos</h2>
-                    <div id="expensesList" class="no-scrollbar overflow-y-auto" style="max-height: 40vh;">
-                        <!-- Los gastos se listarán aquí -->
-                    </div>
-                    <p id="expensesMessage" class="text-center text-sm text-gray-500 mt-4 hidden">Cargando gastos...</p>
-                </div>
-            </div>
-            
-            <!-- Vista de Estadísticas -->
-            <div id="statsView" class="view-section">
-                <h1 class="text-4xl font-extrabold text-center text-gray-900 mb-8">Estadísticas</h1>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="bg-blue-500 text-white rounded-2xl shadow-xl p-6 text-center">
-                        <p class="text-sm">Total de Ventas</p>
-                        <p id="totalSales" class="text-4xl font-extrabold mt-2">$0.00</p>
-                    </div>
-                    <div class="bg-red-500 text-white rounded-2xl shadow-xl p-6 text-center">
-                        <p class="text-sm">Total de Gastos</p>
-                        <p id="totalExpenses" class="text-4xl font-extrabold mt-2">$0.00</p>
-                    </div>
-                    <div class="bg-green-500 text-white rounded-2xl shadow-xl p-6 text-center">
-                        <p class="text-sm">Beneficio Neto</p>
-                        <p id="netProfit" class="text-4xl font-extrabold mt-2">$0.00</p>
-                    </div>
-                </div>
-                <div class="bg-white rounded-2xl shadow-xl p-6 mt-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Historial de Cajas</h2>
-                    <div id="cashierHistory" class="no-scrollbar overflow-y-auto">
-                        <!-- El historial de cajas cerradas se mostrará aquí -->
-                    </div>
-                </div>
-                <p id="statsMessage" class="text-center text-sm text-gray-500 mt-4 hidden">Cargando estadísticas...</p>
             </div>
         </div>
 
-        <!-- Modales (Ventanas emergentes) -->
+        <!-- Sección de Pedidos Recientes -->
+        <div class="w-full max-w-7xl mx-auto mt-8 bg-white rounded-2xl shadow-xl p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Pedidos Recientes</h2>
+            <div id="recentOrders" class="no-scrollbar overflow-y-auto" style="max-height: 30vh;">
+                <!-- Los pedidos recientes se mostrarán aquí -->
+            </div>
+            <p id="ordersMessage" class="text-center text-sm text-gray-500 mt-4 hidden">Cargando pedidos...</p>
+        </div>
+
+        <!-- Modal de Confirmación -->
         <div id="confirmationModal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50">
             <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md text-center transform scale-95 transition-transform">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">¡Acción Exitosa!</h2>
-                <p id="modalMessage" class="text-gray-600 mb-4">El pedido ha sido guardado con éxito.</p>
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">¡Pedido Realizado!</h2>
+                <p class="text-gray-600 mb-4">El pedido ha sido guardado con éxito.</p>
                 <button id="closeModalBtn" class="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700">Cerrar</button>
             </div>
         </div>
-        <div id="deleteModal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md text-center">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">¿Estás seguro?</h2>
-                <p class="text-gray-600 mb-4">Esta acción no se puede deshacer.</p>
-                <div class="flex justify-center space-x-4">
-                    <button id="confirmDeleteBtn" class="bg-red-600 text-white px-6 py-2 rounded-xl hover:bg-red-700">Eliminar</button>
-                    <button id="cancelDeleteBtn" class="bg-gray-300 text-gray-800 px-6 py-2 rounded-xl hover:bg-gray-400">Cancelar</button>
-                </div>
-            </div>
-        </div>
 
-        <!-- Modal de Cierre de Caja -->
-        <div id="closeCashierModal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Cerrar Caja</h2>
-                <p class="text-gray-600 mb-2">Ventas del día: <span id="dailySales" class="font-bold"></span></p>
-                <p class="text-gray-600 mb-4">Gastos del día: <span id="dailyExpenses" class="font-bold"></span></p>
-                <input type="number" id="closingAmountInput" placeholder="Monto Final en Caja" class="w-full p-3 rounded-xl border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <div class="flex justify-end space-x-2">
-                    <button id="cancelCloseBtn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-400">Cancelar</button>
-                    <button id="confirmCloseBtn" class="bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700">Confirmar Cierre</button>
-                </div>
-            </div>
-        </div>
     </main>
-    <script type="module" src="./main.js"></script>
+
+    <!-- Scripts de Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variables globales proporcionadas por el entorno de Canvas
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db, auth, userId;
+        let cart = []; // El carrito de compras
+        
+        // Elementos de la UI
+        const menuContainer = document.getElementById('menuContainer');
+        const cartItemsContainer = document.getElementById('cartItems');
+        const totalPriceEl = document.getElementById('totalPrice');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        const recentOrdersContainer = document.getElementById('recentOrders');
+        const ordersMessage = document.getElementById('ordersMessage');
+        const userIdSpan = document.getElementById('userId');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+
+        // Productos de ejemplo para el menú
+        // Puedes cambiar esto por tus propios productos, precios e imágenes.
+        const menuItems = [
+            { id: 1, name: 'Hamburguesa Clásica', price: 9.99, image: 'https://placehold.co/400x300/a3e635/000000?text=Hamburguesa' },
+            { id: 2, name: 'Pizza de Pepperoni', price: 12.50, image: 'https://placehold.co/400x300/eab308/000000?text=Pizza' },
+            { id: 3, name: 'Tacos de Pastor', price: 8.75, image: 'https://placehold.co/400x300/f87171/000000?text=Tacos' },
+            { id: 4, name: 'Ensalada César', price: 7.25, image: 'https://placehold.co/400x300/818cf8/000000?text=Ensalada' },
+            { id: 5, name: 'Refresco', price: 2.00, image: 'https://placehold.co/400x300/6b7280/ffffff?text=Refresco' },
+            { id: 6, name: 'Papas Fritas', price: 3.50, image: 'https://placehold.co/400x300/94a3b8/000000?text=Papas' }
+        ];
+
+        // --- Funciones de la UI ---
+
+        // Función para renderizar el menú
+        const renderMenu = () => {
+            menuItems.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.classList.add('bg-gray-50', 'rounded-xl', 'shadow-md', 'overflow-hidden', 'cursor-pointer', 'transition-transform', 'duration-200', 'hover:scale-105', 'transform');
+                itemEl.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-32 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg text-gray-800">${item.name}</h3>
+                        <p class="text-sm text-gray-600 mt-1">$${item.price.toFixed(2)}</p>
+                    </div>
+                `;
+                itemEl.addEventListener('click', () => addItemToCart(item));
+                menuContainer.appendChild(itemEl);
+            });
+        };
+
+        // Función para añadir un producto al carrito
+        const addItemToCart = (item) => {
+            const existingItem = cart.find(cartItem => cartItem.id === item.id);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({ ...item, quantity: 1 });
+            }
+            renderCart();
+        };
+
+        // Función para renderizar el carrito
+        const renderCart = () => {
+            cartItemsContainer.innerHTML = '';
+            let total = 0;
+            cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                
+                const itemEl = document.createElement('div');
+                itemEl.classList.add('flex', 'justify-between', 'items-center', 'bg-gray-50', 'rounded-xl', 'p-3', 'mb-2');
+                itemEl.innerHTML = `
+                    <div class="flex-1">
+                        <h4 class="text-sm font-medium text-gray-800">${item.name}</h4>
+                        <p class="text-xs text-gray-500">$${item.price.toFixed(2)} x ${item.quantity}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button class="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs" data-id="${item.id}" data-action="decrease">-</button>
+                        <span class="text-sm font-semibold">${item.quantity}</span>
+                        <button class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs" data-id="${item.id}" data-action="increase">+</button>
+                    </div>
+                `;
+                cartItemsContainer.appendChild(itemEl);
+            });
+            totalPriceEl.textContent = `$${total.toFixed(2)}`;
+            
+            // Event Listeners para los botones de cantidad
+            cartItemsContainer.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    const action = e.target.dataset.action;
+                    const item = cart.find(cartItem => cartItem.id === id);
+                    
+                    if (item) {
+                        if (action === 'increase') {
+                            item.quantity++;
+                        } else if (action === 'decrease' && item.quantity > 1) {
+                            item.quantity--;
+                        } else if (action === 'decrease' && item.quantity === 1) {
+                            cart = cart.filter(cartItem => cartItem.id !== id);
+                        }
+                        renderCart();
+                    }
+                });
+            });
+        };
+
+        // Función para mostrar el modal
+        const showModal = (modalEl) => {
+            modalEl.classList.remove('hidden');
+            setTimeout(() => modalEl.classList.add('opacity-100'), 10);
+        };
+
+        // Función para ocultar el modal
+        const hideModal = (modalEl) => {
+            modalEl.classList.add('hidden');
+        };
+
+        // --- Lógica de la base de datos (Firebase) ---
+
+        // Función para realizar el pedido y guardarlo en Firebase
+        const placeOrder = async () => {
+            if (cart.length === 0) {
+                alert("El carrito está vacío.");
+                return;
+            }
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            try {
+                const path = `artifacts/${appId}/users/${userId}/orders`;
+                await addDoc(collection(db, path), {
+                    items: cart,
+                    total: total,
+                    timestamp: serverTimestamp()
+                });
+                
+                // Limpiar el carrito después de guardar el pedido
+                cart = [];
+                renderCart();
+                
+                // Mostrar el modal de confirmación
+                showModal(confirmationModal);
+                
+            } catch (e) {
+                console.error("Error al guardar el pedido: ", e);
+                alert("Hubo un error al procesar el pedido.");
+            }
+        };
+
+        // Función para escuchar los pedidos recientes
+        const listenForOrders = () => {
+            const path = `artifacts/${appId}/users/${userId}/orders`;
+            const ordersCollection = collection(db, path);
+            const q = query(ordersCollection, orderBy('timestamp', 'desc'), limit(5)); // Muestra los 5 pedidos más recientes
+
+            onSnapshot(q, (snapshot) => {
+                ordersMessage.classList.add('hidden');
+                recentOrdersContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    ordersMessage.textContent = 'Aún no hay pedidos.';
+                    ordersMessage.classList.remove('hidden');
+                } else {
+                    snapshot.forEach(doc => {
+                        const orderData = doc.data();
+                        const orderEl = document.createElement('div');
+                        orderEl.classList.add('bg-gray-50', 'rounded-xl', 'p-4', 'mb-2', 'shadow-sm');
+                        const itemsList = orderData.items.map(item => `${item.quantity}x ${item.name}`).join(', ');
+                        orderEl.innerHTML = `
+                            <p class="text-sm text-gray-800">Pedido ID: <span class="font-mono text-xs">${doc.id.substring(0, 8)}...</span></p>
+                            <p class="text-sm text-gray-600 mt-1">Artículos: ${itemsList}</p>
+                            <p class="text-sm font-bold text-gray-800 mt-2">Total: $${orderData.total.toFixed(2)}</p>
+                        `;
+                        recentOrdersContainer.appendChild(orderEl);
+                    });
+                }
+            }, (error) => {
+                console.error("Error al escuchar los pedidos: ", error);
+                ordersMessage.textContent = 'Error al cargar los pedidos.';
+                ordersMessage.classList.remove('hidden');
+            });
+        };
+
+        // --- Inicialización de la aplicación ---
+
+        const initApp = () => {
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            // Maneja el estado de autenticación
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userIdSpan.textContent = userId;
+                    listenForOrders(); // Empieza a escuchar los pedidos
+                } else {
+                    // Si no hay un usuario, usa el token personalizado o inicia sesión anónimamente
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Error de autenticación:", error);
+                        alert('Error de autenticación. Por favor, recarga la página.');
+                    }
+                }
+            });
+
+            // Renderiza el menú al iniciar la app
+            renderMenu();
+
+            // Asigna los manejadores de eventos
+            checkoutBtn.addEventListener('click', placeOrder);
+            closeModalBtn.addEventListener('click', () => hideModal(confirmationModal));
+        };
+
+        // Llama a la función de inicialización cuando la ventana se carga
+        window.onload = initApp;
+    </script>
 </body>
 </html>
+
+
