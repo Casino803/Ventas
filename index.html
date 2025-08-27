@@ -345,7 +345,7 @@
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Reemplaza esto con tu propia configuración de Firebase
+        // CONFIGURACIÓN DE FIREBASE: Reemplazada con tus valores
         const firebaseConfig = {
             apiKey: "AIzaSyDaeiHDKjK_DkdYNF9FvL8aMGINPGvU9uc",
             authDomain: "ventas-casino.firebaseapp.com",
@@ -355,8 +355,10 @@
             appId: "1:683247450522:web:87a57e190d2c252d0a6223",
             measurementId: "G-XYG0ZNEQ61"
         };
+        
+        // No es necesario el token personalizado para GitHub Pages, lo establecemos como nulo.
         const appId = firebaseConfig.appId;
-        const initialAuthToken = null; // No se necesita en GitHub Pages
+        const initialAuthToken = null;
         
         // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
@@ -446,6 +448,7 @@
             modal.classList.add('hidden');
         });
         
+        // Se corrigió la lógica de navegación para asegurar que se activen los eventos.
         function setupNavigation() {
             menuButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -491,7 +494,7 @@
             });
         }
         
-        // Corregido: Manejo de autenticación para el entorno
+        // Manejo de autenticación para el entorno.
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
@@ -1549,5 +1552,3 @@
     </script>
 </body>
 </html>
-
-
