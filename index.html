@@ -544,7 +544,7 @@
             onSnapshot(salesCollection, (snapshot) => {
                 allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderSalesHistory(allSales);
-                updateDailyTotals(allSales, 'sales'); 
+                updateDailyTotals(allSales, 'sales');
                 renderSalesChart(allSales);
             }, (error) => {
                 console.error("Error al escuchar ventas:", error);
@@ -801,11 +801,6 @@
             const paymentMethod = filterPaymentMethod.value;
 
             return sales.filter(sale => {
-                // Validación para evitar el error de "Cannot read properties of null"
-                if (!sale.timestamp || !sale.timestamp.seconds) {
-                    return false;
-                }
-
                 const saleDate = new Date(sale.timestamp.seconds * 1000);
 
                 if (startDate && saleDate < startDate) return false;
@@ -891,11 +886,10 @@
         function updateDailyTotals(sales, type, expenses = []) {
             if (!dailyCashData) return;
 
-            const today = new Date().toLocaleDateString('en-CA');
-
             if (type === 'sales') {
                 dailySalesTotal = sales.reduce((sum, sale) => {
                     const saleDate = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('en-CA');
+                    const today = new Date().toLocaleDateString('en-CA');
                     if (saleDate === today) {
                         return sum + sale.total;
                     }
@@ -906,6 +900,7 @@
             if (type === 'expenses') {
                 dailyExpensesTotal = expenses.reduce((sum, expense) => {
                     const expenseDate = new Date(expense.timestamp.seconds * 1000).toLocaleDateString('en-CA');
+                    const today = new Date().toLocaleDateString('en-CA');
                     if (expenseDate === today) {
                         return sum + expense.amount;
                     }
