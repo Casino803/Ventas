@@ -544,7 +544,7 @@
             onSnapshot(salesCollection, (snapshot) => {
                 allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderSalesHistory(allSales);
-                updateDailyTotals(allSales, 'sales'); // Línea corregida
+                updateDailyTotals(allSales, 'sales'); 
                 renderSalesChart(allSales);
             }, (error) => {
                 console.error("Error al escuchar ventas:", error);
@@ -795,18 +795,18 @@
         }
 
         function applyFilters(sales) {
-    const startDate = filterStartDate.value ? new Date(filterStartDate.value) : null;
-    const endDate = filterEndDate.value ? new Date(filterEndDate.value) : null;
-    const productName = filterProduct.value.toLowerCase();
-    const paymentMethod = filterPaymentMethod.value;
+            const startDate = filterStartDate.value ? new Date(filterStartDate.value) : null;
+            const endDate = filterEndDate.value ? new Date(filterEndDate.value) : null;
+            const productName = filterProduct.value.toLowerCase();
+            const paymentMethod = filterPaymentMethod.value;
 
-    return sales.filter(sale => {
-        // Corrección: Añade una validación para evitar el error si timestamp es nulo.
-        if (!sale.timestamp || !sale.timestamp.seconds) {
-            return false;
-        }
+            return sales.filter(sale => {
+                // Validación para evitar el error de "Cannot read properties of null"
+                if (!sale.timestamp || !sale.timestamp.seconds) {
+                    return false;
+                }
 
-        const saleDate = new Date(sale.timestamp.seconds * 1000);
+                const saleDate = new Date(sale.timestamp.seconds * 1000);
 
                 if (startDate && saleDate < startDate) return false;
                 if (endDate && saleDate > endDate) return false;
