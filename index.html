@@ -887,15 +887,18 @@
             if (!dailyCashData) return;
 
             if (type === 'sales') {
-                dailySalesTotal = sales.reduce((sum, sale) => {
-                    const saleDate = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('en-CA');
-                    const today = new Date().toLocaleDateString('en-CA');
-                    if (saleDate === today) {
-                        return sum + sale.total;
-                    }
-                    return sum;
-                }, 0);
+    dailySalesTotal = sales.reduce((sum, sale) => {
+        // Verifica que la marca de tiempo exista antes de usarla
+        if (sale.timestamp && sale.timestamp.seconds) {
+            const saleDate = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('en-CA');
+            const today = new Date().toLocaleDateString('en-CA');
+            if (saleDate === today) {
+                return sum + sale.total;
             }
+        }
+        return sum;
+    }, 0);
+}
 
             if (type === 'expenses') {
                 dailyExpensesTotal = expenses.reduce((sum, expense) => {
