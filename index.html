@@ -544,7 +544,7 @@
             onSnapshot(salesCollection, (snapshot) => {
                 allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderSalesHistory(allSales);
-                updateDailyTotals(allSales, 'sales');
+                updateDailyTotals(allSales, 'sales'); // Línea corregida
                 renderSalesChart(allSales);
             }, (error) => {
                 console.error("Error al escuchar ventas:", error);
@@ -886,10 +886,11 @@
         function updateDailyTotals(sales, type, expenses = []) {
             if (!dailyCashData) return;
 
+            const today = new Date().toLocaleDateString('en-CA');
+
             if (type === 'sales') {
                 dailySalesTotal = sales.reduce((sum, sale) => {
                     const saleDate = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('en-CA');
-                    const today = new Date().toLocaleDateString('en-CA');
                     if (saleDate === today) {
                         return sum + sale.total;
                     }
@@ -900,7 +901,6 @@
             if (type === 'expenses') {
                 dailyExpensesTotal = expenses.reduce((sum, expense) => {
                     const expenseDate = new Date(expense.timestamp.seconds * 1000).toLocaleDateString('en-CA');
-                    const today = new Date().toLocaleDateString('en-CA');
                     if (expenseDate === today) {
                         return sum + expense.amount;
                     }
