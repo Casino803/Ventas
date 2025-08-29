@@ -795,13 +795,18 @@
         }
 
         function applyFilters(sales) {
-            const startDate = filterStartDate.value ? new Date(filterStartDate.value) : null;
-            const endDate = filterEndDate.value ? new Date(filterEndDate.value) : null;
-            const productName = filterProduct.value.toLowerCase();
-            const paymentMethod = filterPaymentMethod.value;
+    const startDate = filterStartDate.value ? new Date(filterStartDate.value) : null;
+    const endDate = filterEndDate.value ? new Date(filterEndDate.value) : null;
+    const productName = filterProduct.value.toLowerCase();
+    const paymentMethod = filterPaymentMethod.value;
 
-            return sales.filter(sale => {
-                const saleDate = new Date(sale.timestamp.seconds * 1000);
+    return sales.filter(sale => {
+        // Corrección: Añade una validación para evitar el error si timestamp es nulo.
+        if (!sale.timestamp || !sale.timestamp.seconds) {
+            return false;
+        }
+
+        const saleDate = new Date(sale.timestamp.seconds * 1000);
 
                 if (startDate && saleDate < startDate) return false;
                 if (endDate && saleDate > endDate) return false;
