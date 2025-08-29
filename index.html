@@ -441,6 +441,11 @@
         const SHARED_CUSTOMERS_COLLECTION = 'customers';
         const SHARED_PAYMENT_METHODS_COLLECTION = 'paymentMethods';
         const SHARED_EXPENSE_CATEGORIES_COLLECTION = 'expenseCategories';
+        // NUEVAS COLECCIONES COMPARTIDAS
+        const SHARED_EXPENSES_COLLECTION = 'expenses';
+        const SHARED_CASH_COLLECTION = 'cajas';
+        const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
+
 
         const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
         let userPaymentMethods = [];
@@ -569,8 +574,8 @@
             });
 
 
-            // Colecciones privadas por usuario
-            const expensesCollection = collection(db, `artifacts/${appId}/users/${userId}/expenses`);
+            // Colecciones ahora compartidas
+            const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
             onSnapshot(expensesCollection, (snapshot) => {
                 const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderDailyExpenses(expenses);
@@ -581,7 +586,7 @@
             });
 
             const today = new Date().toLocaleDateString('en-CA');
-            const cashDocRef = doc(db, `artifacts/${appId}/users/${userId}/cajas`, today);
+            const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
             onSnapshot(cashDocRef, (doc) => {
                 if (doc.exists()) {
                     dailyCashData = doc.data();
@@ -594,7 +599,7 @@
                 console.error("Error al escuchar la caja diaria:", error);
             });
 
-            const cashHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/cajas_historico`);
+            const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
             onSnapshot(cashHistoryCollection, (snapshot) => {
                 const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderCashHistory(history);
@@ -893,7 +898,14 @@
             }
 
             if (type === 'expenses') {
-                dailyExpensesTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+                dailyExpensesTotal = expenses.reduce((sum, expense) => {
+                    const expenseDate = new Date(expense.timestamp.seconds * 1000).toLocaleDateString('en-CA');
+                    const today = new Date().toLocaleDateString('en-CA');
+                    if (expenseDate === today) {
+                        return sum + expense.amount;
+                    }
+                    return sum;
+                }, 0);
             }
 
             const currentCash = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
@@ -928,7 +940,7 @@
             }
 
             const today = new Date().toLocaleDateString('en-CA');
-            const cashDocRef = doc(db, `artifacts/${appId}/users/${userId}/cajas`, today);
+            const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
 
             try {
                 await setDoc(cashDocRef, {
@@ -958,7 +970,7 @@
             }
 
             try {
-                const expensesCollection = collection(db, `artifacts/${appId}/users/${userId}/expenses`);
+                const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
                 await addDoc(expensesCollection, {
                     description: description,
                     amount: amount,
@@ -978,10 +990,10 @@
                 showModal("La caja no está abierta o ya ha sido cerrada.");
                 return;
             }
-
+            
             const totalFinal = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
             const today = new Date().toLocaleDateString('en-CA');
-            const cashDocRef = doc(db, `artifacts/${appId}/users/${userId}/cajas`, today);
+            const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
 
             try {
                 await setDoc(cashDocRef, {
@@ -991,7 +1003,7 @@
                     gastosTotales: dailyExpensesTotal
                 }, { merge: true });
 
-                const cashHistoryCollection = collection(db, `artifacts/${appId}/users/${userId}/cajas_historico`);
+                const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
                 await addDoc(cashHistoryCollection, {
                     abertura: dailyCashData.abertura,
                     cierre: totalFinal,
