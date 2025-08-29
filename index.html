@@ -335,7 +335,7 @@ class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // CONFIGURACIÓN DE FIREBASE
 const firebaseConfig = {
@@ -542,7 +542,7 @@ const salesCollection = collection(db, SHARED_SALES_COLLECTION);
 onSnapshot(salesCollection, (snapshot) => {
 allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderSalesHistory(allSales);
-updateDailyTotals(allSales, 'sales');
+updateDailyTotals();
 renderSalesChart(allSales);
 }, (error) => {
 console.error("Error al escuchar ventas:", error);
@@ -577,7 +577,7 @@ const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
 onSnapshot(expensesCollection, (snapshot) => {
 const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderDailyExpenses(expenses);
-updateDailyTotals([], 'expenses', expenses);
+updateDailyTotals();
 }, (error) => {
 console.error("Error al escuchar gastos:", error);
 showModal("Error al cargar los gastos.");
@@ -887,38 +887,38 @@ cashHistoryContainer.appendChild(monthDiv);
 });
 }
 
-function updateDailyTotals(sales, type, expenses = []) {
-if (!dailyCashData) return;
+async function updateDailyTotals() {
+  if (!dailyCashData) {
+    currentCashDisplay.textContent = `$0.00`;
+    return;
+  }
 
-if (type === 'sales') {
-dailySalesTotal = sales.reduce((sum, sale) => {
-// Corrección: Verifica que el timestamp exista antes de intentar leer 'seconds'.
-if (sale.timestamp && sale.timestamp.seconds) {
-const saleDate = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('en-CA');
-const today = new Date().toLocaleDateString('en-CA');
-if (saleDate === today) {
-return sum + sale.total;
-}
-}
-return sum;
-}, 0);
-}
+  const today = new Date().toLocaleDateString('en-CA');
 
-if (type === 'expenses') {
-dailyExpensesTotal = expenses.reduce((sum, expense) => {
-if (expense.timestamp && expense.timestamp.seconds) {
-const expenseDate = new Date(expense.timestamp.seconds * 1000).toLocaleDateString('en-CA');
-const today = new Date().toLocaleDateString('en-CA');
-if (expenseDate === today) {
-return sum + expense.amount;
-}
-}
-return sum;
-}, 0);
-}
+  // Obtener ventas asociadas a la caja de hoy
+  const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
+  const salesSnapshot = await getDocs(salesQuery);
+  dailySalesTotal = salesSnapshot.docs.reduce((sum, doc) => {
+    const sale = doc.data();
+    if (sale.total && !isNaN(sale.total)) {
+      return sum + sale.total;
+    }
+    return sum;
+  }, 0);
 
-const currentCash = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
-currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
+  // Obtener gastos asociados a la caja de hoy
+  const expensesQuery = query(collection(db, SHARED_EXPENSES_COLLECTION), where("cashId", "==", today));
+  const expensesSnapshot = await getDocs(expensesQuery);
+  dailyExpensesTotal = expensesSnapshot.docs.reduce((sum, doc) => {
+    const expense = doc.data();
+    if (expense.amount && !isNaN(expense.amount)) {
+      return sum + expense.amount;
+    }
+    return sum;
+  }, 0);
+
+  const currentCash = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
+  currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
 }
 
 function renderCashStatus() {
@@ -977,14 +977,15 @@ if (isNaN(amount) || amount <= 0) {
 showModal("El monto debe ser un número positivo.");
 return;
 }
-
+const cashId = new Date().toLocaleDateString('en-CA');
 try {
 const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
 await addDoc(expensesCollection, {
 description: description,
 amount: amount,
 category: category,
-timestamp: serverTimestamp()
+timestamp: serverTimestamp(),
+cashId: cashId
 });
 expenseForm.reset();
 showModal("Gasto registrado con éxito.");
@@ -1266,7 +1267,7 @@ if (Math.abs(sum - total) > 0.01) {
 showModal("La suma de los pagos no coincide con el total.");
 return;
 }
-
+const cashId = new Date().toLocaleDateString('en-CA');
 try {
 const productUpdates = cart.map(item => {
 const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
@@ -1286,7 +1287,8 @@ total: total,
 payments: payments,
 customerId: customerId || null,
 customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-timestamp: serverTimestamp()
+timestamp: serverTimestamp(),
+cashId: cashId
 });
 
 showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
