@@ -1260,101 +1260,6 @@ function updateRemainingAmount() {
     }
 }
 
-if (processPaymentBtn) {
-    processPaymentBtn.addEventListener('click', async () => {
-        // Bloquear el proceso si ya se está ejecutando
-        if (isProcessingPayment) {
-            return;
-        }
-        isProcessingPayment = true;
-        
-        // Deshabilitar el botón para evitar clics duplicados
-        processPaymentBtn.disabled = true;
-
-        if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
-            console.error("Faltan elementos del DOM para procesar el pago.");
-            processPaymentBtn.disabled = false;
-            return;
-        }
-        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-        const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-        const paymentSelects = paymentInputsContainer.querySelectorAll('select');
-
-        let sum = 0;
-        const payments = [];
-
-        for (let i = 0; i < paymentInputs.length; i++) {
-            const amount = parseFloat(paymentInputs[i].value);
-            const method = paymentSelects[i].value;
-            if (isNaN(amount) || amount <= 0) {
-                showModal("Todos los montos deben ser números positivos.");
-                processPaymentBtn.disabled = false;
-                isProcessingPayment = false;
-                return;
-            }
-            sum += amount;
-            payments.push({ method: method, amount: amount });
-        }
-
-        if (Math.abs(sum - total) > 0.01) {
-            showModal("La suma de los pagos no coincide con el total.");
-            processPaymentBtn.disabled = false;
-            isProcessingPayment = false;
-            return;
-        }
-        const cashId = new Date().toLocaleDateString('en-CA');
-        try {
-            const productUpdates = cart.map(item => {
-                const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
-                return updateDoc(productDocRef, {
-                    stock: item.stock - item.quantity
-                });
-            });
-            await Promise.all(productUpdates);
-
-            const customerId = customerSelect.value;
-            const customerName = customerSelect.options[customerSelect.selectedIndex].text;
-
-            const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-            const newSaleRef = await addDoc(salesCollection, {
-                items: cart,
-                total: total,
-                payments: payments,
-                customerId: customerId || null,
-                customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                timestamp: serverTimestamp(),
-                cashId: cashId
-            });
-
-            showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-
-            // Pregunta al usuario si desea imprimir el ticket
-            if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-                printReceipt({
-                    id: newSaleRef.id,
-                    items: cart,
-                    total: total,
-                    payments: payments,
-                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                    timestamp: new Date()
-                });
-            }
-
-            cart = [];
-            renderCart();
-            if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-            if(customerSelect) customerSelect.value = "";
-
-        } catch (error) {
-            console.error("Error al finalizar la venta:", error);
-            showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
-        } finally {
-            // Habilitar el botón y reiniciar la bandera
-            isProcessingPayment = false;
-            processPaymentBtn.disabled = false;
-        }
-    });
-}
 
 if (importSalesBtn) {
     importSalesBtn.addEventListener('click', () => {
@@ -1907,16 +1812,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
         });
     }
-
+    
+    // Mover este bloque fuera de setupRealtimeListeners
     if (processPaymentBtn) {
         processPaymentBtn.addEventListener('click', async () => {
-            // Bloquear el proceso si ya se está ejecutando
             if (isProcessingPayment) {
                 return;
             }
             isProcessingPayment = true;
-            
-            // Deshabilitar el botón para evitar clics duplicados
             processPaymentBtn.disabled = true;
 
             if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
@@ -1977,7 +1880,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
 
-                // Pregunta al usuario si desea imprimir el ticket
                 if (confirm("¿Deseas imprimir el recibo de la venta?")) {
                     printReceipt({
                         id: newSaleRef.id,
@@ -1998,7 +1900,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Error al finalizar la venta:", error);
                 showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
             } finally {
-                // Habilitar el botón y reiniciar la bandera
                 isProcessingPayment = false;
                 processPaymentBtn.disabled = false;
             }
