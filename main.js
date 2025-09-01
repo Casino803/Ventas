@@ -1468,7 +1468,7 @@ async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
 function mapVentasToFirebase(headers, values) {
     const data = {};
     headers.forEach((header, index) => {
-        data[header] = values[index]);
+        data[header] = values[index];
     });
 
     // Se asume que 'IDITEM' y 'ITEM' están relacionados con el producto, pero el ID del producto no está en el CSV de VENTAS.
