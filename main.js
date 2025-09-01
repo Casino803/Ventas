@@ -29,6 +29,13 @@ const posSearchInput = document.getElementById('pos-search-input');
 const productsContainer = document.getElementById('products-container');
 const cartContainer = document.getElementById('cart-container');
 const cartTotalSpan = document.getElementById('cart-total');
+const cartSubtotalSpan = document.getElementById('cart-subtotal');
+const discountSurchargeDisplay = document.getElementById('discount-surcharge-display');
+const discountSurchargeAmountSpan = document.getElementById('discount-surcharge-amount');
+const discountSurchargeValueInput = document.getElementById('discount-surcharge-value');
+const discountSurchargeTypeSelect = document.getElementById('discount-surcharge-type');
+const applyDiscountSurchargeBtn = document.getElementById('apply-discount-surcharge-btn');
+const clearDiscountSurchargeBtn = document.getElementById('clear-discount-surcharge-btn');
 const checkoutBtn = document.getElementById('checkout-btn');
 const productForm = document.getElementById('product-form');
 const manageProductsContainer = document.getElementById('manage-products-container');
@@ -118,6 +125,10 @@ let dailySalesTotal = 0;
 let dailyExpensesTotal = 0;
 let allCustomers = [];
 let isProcessingPayment = false;
+let currentDiscountSurcharge = {
+    value: 0,
+    type: null // 'percentage_discount', 'fixed_discount', 'percentage_surcharge', 'fixed_surcharge'
+};
 
 // Ahora estas colecciones son globales
 const SHARED_PRODUCTS_COLLECTION = 'products';
@@ -1056,37 +1067,43 @@ if (closeCashBtn) {
     });
 }
 
-function addProductToCart(product) {
-    if (product.stock !== undefined && product.stock <= 0) {
-        showModal(`No hay stock disponible para ${product.name}.`);
-        return;
-    }
-    const existingItem = cart.find(item => item.id === product.id);
-    if (existingItem) {
-        if (product.stock !== undefined && existingItem.quantity >= product.stock) {
-            showModal(`El stock de ${product.name} es de ${product.stock} unidades.`);
-            return;
-        }
-        existingItem.quantity += 1;
-    } else {
-        cart.push({ ...product, quantity: 1, stock: product.stock });
-    }
-    renderCart();
-}
+function calculateTotal() {
+    let subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    let total = subtotal;
+    let adjustmentAmount = 0;
 
-function removeProductFromCart(productId) {
-    cart = cart.filter(item => item.id !== productId);
-    renderCart();
+    if (currentDiscountSurcharge.value > 0) {
+        if (currentDiscountSurcharge.type === 'percentage_discount') {
+            adjustmentAmount = subtotal * (currentDiscountSurcharge.value / 100);
+            total -= adjustmentAmount;
+        } else if (currentDiscountSurcharge.type === 'fixed_discount') {
+            adjustmentAmount = currentDiscountSurcharge.value;
+            total -= adjustmentAmount;
+        } else if (currentDiscountSurcharge.type === 'percentage_surcharge') {
+            adjustmentAmount = subtotal * (currentDiscountSurcharge.value / 100);
+            total += adjustmentAmount;
+        } else if (currentDiscountSurcharge.type === 'fixed_surcharge') {
+            adjustmentAmount = currentDiscountSurcharge.value;
+            total += adjustmentAmount;
+        }
+    }
+
+    return {
+        subtotal: subtotal,
+        total: total,
+        adjustmentAmount: adjustmentAmount
+    };
 }
 
 function renderCart() {
-    if (!cartContainer) return;
+    if (!cartContainer || !cartSubtotalSpan || !cartTotalSpan || !discountSurchargeDisplay) return;
+
     cartContainer.innerHTML = '';
-    let total = 0;
+    const { subtotal, total, adjustmentAmount } = calculateTotal();
+
     cart.forEach(item => {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-200 p-3 rounded-lg flex justify-between items-center";
-        total += item.price * item.quantity;
         itemDiv.innerHTML = `
         <div class="flex items-center space-x-2">
             <span class="font-semibold">${item.name}</span>
@@ -1109,7 +1126,42 @@ function renderCart() {
             }
         });
     });
-    if (cartTotalSpan) cartTotalSpan.textContent = `$${total.toFixed(2)}`;
+
+    cartSubtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
+    cartTotalSpan.textContent = `$${total.toFixed(2)}`;
+
+    // Mostrar el descuento/recargo aplicado
+    if (adjustmentAmount !== 0) {
+        let text = currentDiscountSurcharge.type.includes('discount') ? 'Descuento' : 'Recargo';
+        let sign = currentDiscountSurcharge.type.includes('discount') ? '-' : '+';
+        discountSurchargeAmountSpan.textContent = `${sign}$${adjustmentAmount.toFixed(2)}`;
+        discountSurchargeDisplay.classList.remove('hidden');
+    } else {
+        discountSurchargeDisplay.classList.add('hidden');
+    }
+}
+
+function addProductToCart(product) {
+    if (product.stock !== undefined && product.stock <= 0) {
+        showModal(`No hay stock disponible para ${product.name}.`);
+        return;
+    }
+    const existingItem = cart.find(item => item.id === product.id);
+    if (existingItem) {
+        if (product.stock !== undefined && existingItem.quantity >= product.stock) {
+            showModal(`El stock de ${product.name} es de ${product.stock} unidades.`);
+            return;
+        }
+        existingItem.quantity += 1;
+    } else {
+        cart.push({ ...product, quantity: 1, stock: product.stock });
+    }
+    renderCart();
+}
+
+function removeProductFromCart(productId) {
+    cart = cart.filter(item => item.id !== productId);
+    renderCart();
 }
 
 if (productForm) {
@@ -1160,7 +1212,7 @@ if (checkoutBtn) {
             return;
         }
 
-        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+        const { total } = calculateTotal();
         if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
         if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
@@ -1753,12 +1805,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (!cartTotalSpan || !paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal) {
+            if (!paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal) {
                 console.error("Faltan elementos del DOM para el checkout.");
                 return;
             }
+            
+            const { total } = calculateTotal();
 
-            const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
             paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
             paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
@@ -1769,6 +1822,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (applyDiscountSurchargeBtn) {
+        applyDiscountSurchargeBtn.addEventListener('click', () => {
+            const value = parseFloat(discountSurchargeValueInput?.value);
+            const type = discountSurchargeTypeSelect?.value;
+
+            if (isNaN(value) || value <= 0) {
+                showModal("El valor del descuento/recargo debe ser un número positivo.");
+                return;
+            }
+
+            currentDiscountSurcharge.value = value;
+            currentDiscountSurcharge.type = type;
+
+            renderCart();
+        });
+    }
+    
+    if (clearDiscountSurchargeBtn) {
+        clearDiscountSurchargeBtn.addEventListener('click', () => {
+            currentDiscountSurcharge.value = 0;
+            currentDiscountSurcharge.type = null;
+            discountSurchargeValueInput.value = '';
+            renderCart();
+        });
+    }
 
     if (addPaymentInputBtn) {
         addPaymentInputBtn.addEventListener('click', () => {
@@ -1791,13 +1869,14 @@ document.addEventListener('DOMContentLoaded', () => {
             isProcessingPayment = true;
             processPaymentBtn.disabled = true;
 
-            if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+            if (!paymentInputsContainer || !customerSelect || !splitPaymentModal) {
                 console.error("Faltan elementos del DOM para procesar el pago.");
                 processPaymentBtn.disabled = false;
                 isProcessingPayment = false;
                 return;
             }
-            const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+            
+            const { subtotal, total, adjustmentAmount } = calculateTotal();
             const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
             const paymentSelects = paymentInputsContainer.querySelectorAll('select');
 
@@ -1839,6 +1918,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const salesCollection = collection(db, SHARED_SALES_COLLECTION);
                 const newSaleRef = await addDoc(salesCollection, {
                     items: cart,
+                    subtotal: subtotal,
+                    adjustment: {
+                        amount: adjustmentAmount,
+                        type: currentDiscountSurcharge.type
+                    },
                     total: total,
                     payments: payments,
                     customerId: customerId || null,
@@ -1853,6 +1937,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     printReceipt({
                         id: newSaleRef.id,
                         items: cart,
+                        subtotal: subtotal,
+                        adjustment: {
+                            amount: adjustmentAmount,
+                            type: currentDiscountSurcharge.type
+                        },
                         total: total,
                         payments: payments,
                         customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
@@ -1861,6 +1950,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 cart = [];
+                currentDiscountSurcharge = { value: 0, type: null };
                 renderCart();
                 if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
                 if(customerSelect) customerSelect.value = "";
