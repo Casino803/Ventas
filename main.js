@@ -1358,18 +1358,35 @@ function updateRemainingAmount() {
 
 if (importSalesBtn) {
     importSalesBtn.addEventListener('click', () => {
-        if (importSalesInput) importSalesInput.click();
+        importSalesInput.click();
     });
 }
 
 if (importSalesInput) {
-    importSalesInput.addEventListener('change', (e) => {
+    importSalesInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const csvData = event.target.result;
-                await processImportedSales(csvData);
+
+                let results;
+                if (file.name.includes('VENTAS.csv')) {
+                    results = await importDataFromCsv(csvData, 'sales', mapVentasToFirebase);
+                } else if (file.name.includes('ARTICULOS.csv')) {
+                    results = await importDataFromCsv(csvData, 'products', mapArticulosToFirebase);
+                } else if (file.name.includes('CLIENTES.csv')) {
+                    results = await importDataFromCsv(csvData, 'customers', mapClientesToFirebase);
+                } else {
+                    showModal('Tipo de archivo no reconocido.');
+                    return;
+                }
+
+                let message = `Importación de ${file.name} completada. Se importaron ${results.importedCount} registros.`;
+                if (results.errors.length > 0) {
+                    message += ` Hubo ${results.errors.length} errores:\n${results.errors.join('\n')}`;
+                }
+                showModal(message);
             };
             reader.readAsText(file);
         }
@@ -1404,54 +1421,571 @@ function exportSalesToCsv(sales) {
     document.body.removeChild(link);
 }
 
-async function processImportedSales(csvData) {
-    const rows = csvData.split('\n').filter(row => row.trim() !== '');
+// Lógica de importación de CSV
+async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
+    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== ''); // Cambio para manejar saltos de línea
     if (rows.length < 2) {
-        showModal("El archivo CSV debe contener al menos una fila de datos después del encabezado.");
-        return;
+        showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
+        return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
     }
 
-    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+    const headers = rows[0].split(',').map(h => h.trim().replace(/\ufeff/g, ''));
+    const dataRows = rows.slice(1);
     let importedCount = 0;
-    const errors = [];
+    let errors = [];
 
-    const headers = rows[0].split(',').map(header => header.trim());
+    const csvRegex = /(?:(")([^"]*(?:"")?)*(")|([^,]*))(?:,|$)/g;
 
-    for (let i = 1; i < rows.length; i++) {
-        const row = rows[i].split(',').map(cell => cell.trim());
-        if (row.length !== 3) {
-            errors.push(`Fila ${i + 1}: Formato de fila incorrecto.`);
+    for (const row of dataRows) {
+        const values = [];
+        let match;
+        while ((match = csvRegex.exec(row)) !== null) {
+            let value = match[2] || match[4] || '';
+            value = value.replace(/""/g, '"').trim();
+            values.push(value);
+        }
+
+        if (values.length !== headers.length) {
+            errors.push(`Fila con formato incorrecto. Esperado ${headers.length} campos, encontrado ${values.length}: ${row}`);
             continue;
         }
 
-        const dateString = row[0];
-        const total = parseFloat(row[1]);
-        const paymentMethod = row[2];
-
-        if (isNaN(total) || total <= 0) {
-            errors.push(`Fila ${i + 1}: El total no es un número válido.`);
-            continue;
+        const item = mappingFunction(headers, values);
+        if (item) {
+            try {
+                await addDoc(collection(db, collectionName), item);
+                importedCount++;
+            } catch (error) {
+                errors.push(`Error al guardar en Firebase para la fila: ${row}. Error: ${error}`);
+            }
         }
+    }
 
+    return { importedCount, errors };
+}
+
+
+function mapVentasToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index]);
+    });
+
+    // Se asume que 'IDITEM' y 'ITEM' están relacionados con el producto, pero el ID del producto no está en el CSV de VENTAS.
+    // Para simplificar, se crea un array de items con la información disponible.
+    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")), quantity: parseInt(data.UNIDADES) }];
+    const payments = [{ method: data['FORMA DE PAGO'] || 'EFECTIVO', amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) }];
+
+    const dateParts = data['FECHA'].split('/');
+    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${data.HORA}`);
+
+    return {
+        items: items,
+        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        payments: payments,
+        timestamp: date,
+        customerId: null, // No se encuentra en el CSV de ventas
+        customerName: null,
+        cashId: data.ID_Caja_FK || null
+    };
+}
+
+function mapArticulosToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.NOMBRE,
+        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")),
+        stock: parseInt(data.CANTIDAD)
+    };
+}
+
+function mapClientesToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.CLIENTES
+    };
+}
+// Lógica de clientes
+if (addCustomerForm) {
+    addCustomerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('customer-name-input')?.value.trim();
+        if (!name) {
+            showModal("El nombre del cliente no puede estar vacío.");
+            return;
+        }
         try {
-            await addDoc(salesCollection, {
-                items: [],
-                total: total,
-                payments: [{ method: paymentMethod, amount: total }],
-                timestamp: new Date(dateString)
-            });
-            importedCount++;
+            const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
+            await addDoc(customersCollection, { name });
+            if(addCustomerForm) addCustomerForm.reset();
+            showModal(`Cliente '${name}' añadido con éxito.`);
+            
+            // Ocultar el formulario después de guardar
+            if (customerFormContainer) customerFormContainer.classList.add('hidden');
+            
         } catch (error) {
-            console.error(`Error al importar la fila ${i + 1}:`, error);
-            errors.push(`Fila ${i + 1}: Error al guardar en la base de datos.`);
+            console.error("Error al añadir cliente:", error);
+            showModal("Error al añadir cliente. Intenta de nuevo.");
+        }
+    });
+}
+
+function renderCustomersList(customers) {
+    if (!customersListContainer) return;
+    customersListContainer.innerHTML = '';
+    customers.forEach(customer => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+        <span>${customer.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        `;
+        customersListContainer.appendChild(itemDiv);
+
+        const editButton = itemDiv.querySelector('.edit-customer-btn');
+        if(editButton) {
+            editButton.addEventListener('click', () => {
+                const newName = prompt(`Editar nombre de cliente:`, customer.name);
+                if (newName && newName.trim()) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
+                }
+            });
+        }
+
+        const deleteButton = itemDiv.querySelector('.delete-customer-btn');
+        if(deleteButton) {
+            deleteButton.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    await deleteDoc(customerDocRef);
+                    showModal("Cliente eliminado.");
+                }
+            });
+        }
+    });
+}
+
+function renderCustomerSelect(customers) {
+    if (!customerSelect) return;
+    customerSelect.innerHTML = '<option value="">Seleccionar Cliente</option>';
+    customers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.id;
+        option.textContent = customer.name;
+        customerSelect.appendChild(option);
+    });
+}
+
+function renderSalesChart(sales) {
+    if (!salesChartCtx) return;
+    const salesByDay = sales.reduce((acc, sale) => {
+        if (sale.timestamp && sale.timestamp.seconds) {
+            const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
+            acc[date] = (acc[date] || 0) + sale.total;
+        }
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+    const salesData = sortedDates.map(date => salesByDay[date]);
+
+    if (salesChart) {
+        salesChart.destroy();
+    }
+
+    salesChart = new Chart(salesChartCtx, {
+        type: 'bar',
+        data: {
+            labels: sortedDates,
+            datasets: [{
+                label: 'Ventas Diarias',
+                data: salesData,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Ventas Totales ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Fecha'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTopProductsChart(sales) {
+    if (!topProductsChartCtx) return;
+
+    const productSales = sales.flatMap(sale => sale.items).reduce((acc, item) => {
+        acc[item.name] = (acc[item.name] || 0) + item.quantity;
+        return acc;
+    }, {});
+
+    const sortedProducts = Object.entries(productSales).sort(([, a], [, b]) => b - a).slice(0, 5);
+    const labels = sortedProducts.map(([name]) => name);
+    const data = sortedProducts.map(([, quantity]) => quantity);
+
+    if (topProductsChart) {
+        topProductsChart.destroy();
+    }
+
+    topProductsChart = new Chart(topProductsChartCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: data,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Producto'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderPaymentMethodsChart(sales) {
+    if (!paymentMethodsChartCtx) return;
+
+    const paymentTotals = sales.reduce((acc, sale) => {
+        sale.payments.forEach(payment => {
+            acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
+        });
+        return acc;
+    }, {});
+
+    const labels = Object.keys(paymentTotals);
+    const data = Object.values(paymentTotals);
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6b7280'];
+
+    if (paymentMethodsChart) {
+        paymentMethodsChart.destroy();
+    }
+
+    paymentMethodsChart = new Chart(paymentMethodsChartCtx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += `$${context.parsed.toFixed(2)}`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Impresión de recibos
+function printReceipt(sale) {
+    const paymentsHtml = sale.payments.map(p => `
+        <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
+    `).join('');
+
+    const content = `
+    <div id="print-area">
+        <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; }
+            .receipt-header { text-align: center; margin-bottom: 20px; }
+            .receipt-body { margin-bottom: 20px; }
+            .receipt-footer { text-align: center; border-top: 1px dashed black; padding-top: 10px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 5px 0; border-bottom: 1px solid #ccc; }
+            .total-row td { font-weight: bold; font-size: 1.2em; border-top: 2px solid black; }
+            .payment-row { margin-top: 10px; }
+            @media print {
+                body > *:not(#print-area) {
+                    display: none;
+                }
+                #print-area {
+                    display: block !important;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: white;
+                    z-index: 9999;
+                }
+            }
+        </style>
+        <div class="receipt-header">
+            <h2>Recibo de Venta</h2>
+            <p>Fecha: ${new Date().toLocaleString()}</p>
+            ${sale.customerName ? `<p>Cliente: ${sale.customerName}</p>` : ''}
+        </div>
+        <div class="receipt-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio Unit.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sale.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${item.price.toFixed(2)}</td>
+                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div style="text-align: right; margin-top: 20px;">
+                <p><strong>Total: $${sale.total.toFixed(2)}</strong></p>
+                ${paymentsHtml}
+            </div>
+        </div>
+        <div class="receipt-footer">
+            <p>¡Gracias por tu compra!</p>
+        </div>
+    </div>
+    `;
+
+    // 1. Crea un contenedor temporal
+    const printArea = document.createElement('div');
+    printArea.innerHTML = content;
+    document.body.appendChild(printArea);
+
+    // 2. Espera a que el DOM se actualice y luego imprime
+    setTimeout(() => {
+        window.print();
+        // 3. Elimina el contenedor temporal después de la impresión
+        document.body.removeChild(printArea);
+    }, 500);
+}
+
+// Lógica de autenticación
+if (loginBtn) {
+    loginBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            showModal("Inicio de sesión exitoso.");
+            if (authModal) authModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Error al iniciar sesión:", error);
+            showModal("Error al iniciar sesión. Verifica tus credenciales.");
+        }
+    });
+}
+
+if (registerBtn) {
+    registerBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            showModal("Registro exitoso. Ahora puedes iniciar sesión.");
+        } catch (error) {
+            console.error("Error al registrar:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                showModal("El correo electrónico ya está en uso.");
+            } else {
+                showModal("Error al registrarse. Intenta de nuevo.");
+            }
+        }
+    });
+}
+
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            showModal("Sesión cerrada correctamente.");
+            cart = [];
+            renderCart();
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            showModal("Hubo un error al cerrar la sesión.");
+        }
+    });
+}
+
+function toggleFilters() {
+    if (filtersContainer) {
+        filtersContainer.classList.toggle('hidden');
+    }
+}
+
+if (toggleFiltersBtn) {
+    toggleFiltersBtn.addEventListener('click', toggleFilters);
+}
+
+// Se hace global para poder llamarla desde el HTML con onclick
+window.toggleSection = function(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.toggle('hidden');
+        const icon = section.previousElementSibling?.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+    }
+}
+
+// Lógica de importación de CSV
+async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
+    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== ''); // Cambio para manejar saltos de línea
+    if (rows.length < 2) {
+        showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
+        return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
+    }
+
+    const headers = rows[0].split(',').map(h => h.trim().replace(/\ufeff/g, ''));
+    const dataRows = rows.slice(1);
+    let importedCount = 0;
+    let errors = [];
+
+    const csvRegex = /(?:^|,)(?:"([^"]*(?:"")?)*"|([^,]*))(?:,|$)/g;
+
+    for (const row of dataRows) {
+        const values = [];
+        let match;
+        while ((match = csvRegex.exec(row)) !== null) {
+            let value = match[2] || match[4] || '';
+            value = value.replace(/""/g, '"').trim();
+            values.push(value);
+        }
+
+        if (values.length !== headers.length) {
+            errors.push(`Fila con formato incorrecto. Esperado ${headers.length} campos, encontrado ${values.length}: ${row}`);
+            continue;
+        }
+
+        const item = mappingFunction(headers, values);
+        if (item) {
+            try {
+                await addDoc(collection(db, collectionName), item);
+                importedCount++;
+            } catch (error) {
+                errors.push(`Error al guardar en Firebase para la fila: ${row}. Error: ${error}`);
+            }
         }
     }
 
-    let message = `Importación completada. Se importaron ${importedCount} ventas.`;
-    if (errors.length > 0) {
-        message += ` Hubo ${errors.length} errores:\n${errors.join('\n')}`;
-    }
-    showModal(message);
+    return { importedCount, errors };
+}
+
+
+function mapVentasToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+
+    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")), quantity: parseInt(data.UNIDADES) }];
+    const payments = [{ method: data['FORMA DE PAGO'] || 'EFECTIVO', amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) }];
+
+    const dateParts = data['FECHA'].split('/');
+    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${data.HORA}`);
+
+    return {
+        items: items,
+        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        payments: payments,
+        timestamp: date,
+        customerId: null,
+        customerName: null,
+        cashId: data.ID_Caja_FK || null
+    };
+}
+
+function mapArticulosToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.NOMBRE,
+        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")),
+        stock: parseInt(data.CANTIDAD) || 0
+    };
+}
+
+function mapClientesToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.CLIENTES
+    };
 }
 
 // Lógica de clientes
@@ -1842,7 +2376,7 @@ window.toggleSection = function(sectionId) {
 
 // Lógica de importación de CSV
 async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
-    const rows = csvContent.split('\n').filter(row => row.trim() !== '');
+    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== '');
     if (rows.length < 2) {
         showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
         return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
@@ -1853,10 +2387,20 @@ async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
     let importedCount = 0;
     let errors = [];
 
+    // Regex mejorada para manejar comas dentro de comillas
+    const csvRegex = /(?:^|,)(?:"([^"]*(?:"")?)*"|([^,]*))(?:,|$)/g;
+
     for (const row of dataRows) {
-        const values = row.split(',').map(v => v.trim());
+        const values = [];
+        let match;
+        while ((match = csvRegex.exec(row)) !== null) {
+            let value = match[2] || match[4] || '';
+            value = value.replace(/""/g, '"').trim();
+            values.push(value);
+        }
+
         if (values.length !== headers.length) {
-            errors.push(`Fila con formato incorrecto: ${row}`);
+            errors.push(`Fila con formato incorrecto. Esperado ${headers.length} campos, encontrado ${values.length}: ${row}`);
             continue;
         }
 
@@ -1874,24 +2418,27 @@ async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
     return { importedCount, errors };
 }
 
+
 function mapVentasToFirebase(headers, values) {
     const data = {};
     headers.forEach((header, index) => {
         data[header] = values[index];
     });
 
-    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO), quantity: parseInt(data.UNIDADES) }];
-    const payments = [{ method: data['FORMA DE PAGO'], amount: parseFloat(data.TOTAL) }];
+    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")), quantity: parseInt(data.UNIDADES) }];
+    const payments = [{ method: data['FORMA DE PAGO'] || 'EFECTIVO', amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) }];
 
     const dateParts = data['FECHA'].split('/');
-    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${data.HORA}`);
 
     return {
         items: items,
-        total: parseFloat(data.TOTAL),
+        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
         payments: payments,
         timestamp: date,
-        // Asumiendo que el ID de la caja es el campo ID_Caja_FK
+        customerId: null,
+        customerName: null,
         cashId: data.ID_Caja_FK || null
     };
 }
@@ -1903,8 +2450,8 @@ function mapArticulosToFirebase(headers, values) {
     });
     return {
         name: data.NOMBRE,
-        price: parseFloat(data.PRECIO),
-        stock: parseInt(data.CANTIDAD)
+        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")),
+        stock: parseInt(data.CANTIDAD) || 0
     };
 }
 
@@ -1918,44 +2465,867 @@ function mapClientesToFirebase(headers, values) {
     };
 }
 
-if (importSalesBtn) {
-    importSalesBtn.addEventListener('click', () => {
-        importSalesInput.click();
-    });
-}
-
-if (importSalesInput) {
-    importSalesInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const csvData = event.target.result;
-
-                let results;
-                if (file.name.includes('VENTAS.csv')) {
-                    results = await importDataFromCsv(csvData, 'sales', mapVentasToFirebase);
-                } else if (file.name.includes('ARTICULOS.csv')) {
-                    results = await importDataFromCsv(csvData, 'products', mapArticulosToFirebase);
-                } else if (file.name.includes('CLIENTES.csv')) {
-                    results = await importDataFromCsv(csvData, 'customers', mapClientesToFirebase);
-                } else {
-                    showModal('Tipo de archivo no reconocido.');
-                    return;
-                }
-
-                let message = `Importación de ${file.name} completada. Se importaron ${results.importedCount} registros.`;
-                if (results.errors.length > 0) {
-                    message += ` Hubo ${results.errors.length} errores:\n${results.errors.join('\n')}`;
-                }
-                showModal(message);
-            };
-            reader.readAsText(file);
+// Lógica de clientes
+if (addCustomerForm) {
+    addCustomerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('customer-name-input')?.value.trim();
+        if (!name) {
+            showModal("El nombre del cliente no puede estar vacío.");
+            return;
+        }
+        try {
+            const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
+            await addDoc(customersCollection, { name });
+            if(addCustomerForm) addCustomerForm.reset();
+            showModal(`Cliente '${name}' añadido con éxito.`);
+            
+            // Ocultar el formulario después de guardar
+            if (customerFormContainer) customerFormContainer.classList.add('hidden');
+            
+        } catch (error) {
+            console.error("Error al añadir cliente:", error);
+            showModal("Error al añadir cliente. Intenta de nuevo.");
         }
     });
 }
 
-// Resto del código de la aplicación (sin cambios)...
+function renderCustomersList(customers) {
+    if (!customersListContainer) return;
+    customersListContainer.innerHTML = '';
+    customers.forEach(customer => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+        <span>${customer.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        `;
+        customersListContainer.appendChild(itemDiv);
+
+        const editButton = itemDiv.querySelector('.edit-customer-btn');
+        if(editButton) {
+            editButton.addEventListener('click', () => {
+                const newName = prompt(`Editar nombre de cliente:`, customer.name);
+                if (newName && newName.trim()) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
+                }
+            });
+        }
+
+        const deleteButton = itemDiv.querySelector('.delete-customer-btn');
+        if(deleteButton) {
+            deleteButton.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    await deleteDoc(customerDocRef);
+                    showModal("Cliente eliminado.");
+                }
+            });
+        }
+    });
+}
+
+function renderCustomerSelect(customers) {
+    if (!customerSelect) return;
+    customerSelect.innerHTML = '<option value="">Seleccionar Cliente</option>';
+    customers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.id;
+        option.textContent = customer.name;
+        customerSelect.appendChild(option);
+    });
+}
+
+function renderSalesChart(sales) {
+    if (!salesChartCtx) return;
+    const salesByDay = sales.reduce((acc, sale) => {
+        if (sale.timestamp && sale.timestamp.seconds) {
+            const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
+            acc[date] = (acc[date] || 0) + sale.total;
+        }
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+    const salesData = sortedDates.map(date => salesByDay[date]);
+
+    if (salesChart) {
+        salesChart.destroy();
+    }
+
+    salesChart = new Chart(salesChartCtx, {
+        type: 'bar',
+        data: {
+            labels: sortedDates,
+            datasets: [{
+                label: 'Ventas Diarias',
+                data: salesData,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Ventas Totales ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Fecha'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTopProductsChart(sales) {
+    if (!topProductsChartCtx) return;
+
+    const productSales = sales.flatMap(sale => sale.items).reduce((acc, item) => {
+        acc[item.name] = (acc[item.name] || 0) + item.quantity;
+        return acc;
+    }, {});
+
+    const sortedProducts = Object.entries(productSales).sort(([, a], [, b]) => b - a).slice(0, 5);
+    const labels = sortedProducts.map(([name]) => name);
+    const data = sortedProducts.map(([, quantity]) => quantity);
+
+    if (topProductsChart) {
+        topProductsChart.destroy();
+    }
+
+    topProductsChart = new Chart(topProductsChartCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: data,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Producto'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderPaymentMethodsChart(sales) {
+    if (!paymentMethodsChartCtx) return;
+
+    const paymentTotals = sales.reduce((acc, sale) => {
+        sale.payments.forEach(payment => {
+            acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
+        });
+        return acc;
+    }, {});
+
+    const labels = Object.keys(paymentTotals);
+    const data = Object.values(paymentTotals);
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6b7280'];
+
+    if (paymentMethodsChart) {
+        paymentMethodsChart.destroy();
+    }
+
+    paymentMethodsChart = new Chart(paymentMethodsChartCtx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += `$${context.parsed.toFixed(2)}`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Impresión de recibos
+function printReceipt(sale) {
+    const paymentsHtml = sale.payments.map(p => `
+        <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
+    `).join('');
+
+    const content = `
+    <div id="print-area">
+        <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; }
+            .receipt-header { text-align: center; margin-bottom: 20px; }
+            .receipt-body { margin-bottom: 20px; }
+            .receipt-footer { text-align: center; border-top: 1px dashed black; padding-top: 10px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 5px 0; border-bottom: 1px solid #ccc; }
+            .total-row td { font-weight: bold; font-size: 1.2em; border-top: 2px solid black; }
+            .payment-row { margin-top: 10px; }
+            @media print {
+                body > *:not(#print-area) {
+                    display: none;
+                }
+                #print-area {
+                    display: block !important;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: white;
+                    z-index: 9999;
+                }
+            }
+        </style>
+        <div class="receipt-header">
+            <h2>Recibo de Venta</h2>
+            <p>Fecha: ${new Date().toLocaleString()}</p>
+            ${sale.customerName ? `<p>Cliente: ${sale.customerName}</p>` : ''}
+        </div>
+        <div class="receipt-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio Unit.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sale.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${item.price.toFixed(2)}</td>
+                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div style="text-align: right; margin-top: 20px;">
+                <p><strong>Total: $${sale.total.toFixed(2)}</strong></p>
+                ${paymentsHtml}
+            </div>
+        </div>
+        <div class="receipt-footer">
+            <p>¡Gracias por tu compra!</p>
+        </div>
+    </div>
+    `;
+
+    // 1. Crea un contenedor temporal
+    const printArea = document.createElement('div');
+    printArea.innerHTML = content;
+    document.body.appendChild(printArea);
+
+    // 2. Espera a que el DOM se actualice y luego imprime
+    setTimeout(() => {
+        window.print();
+        // 3. Elimina el contenedor temporal después de la impresión
+        document.body.removeChild(printArea);
+    }, 500);
+}
+
+// Lógica de autenticación
+if (loginBtn) {
+    loginBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            showModal("Inicio de sesión exitoso.");
+            if (authModal) authModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Error al iniciar sesión:", error);
+            showModal("Error al iniciar sesión. Verifica tus credenciales.");
+        }
+    });
+}
+
+if (registerBtn) {
+    registerBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            showModal("Registro exitoso. Ahora puedes iniciar sesión.");
+        } catch (error) {
+            console.error("Error al registrar:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                showModal("El correo electrónico ya está en uso.");
+            } else {
+                showModal("Error al registrarse. Intenta de nuevo.");
+            }
+        }
+    });
+}
+
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            showModal("Sesión cerrada correctamente.");
+            cart = [];
+            renderCart();
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            showModal("Hubo un error al cerrar la sesión.");
+        }
+    });
+}
+
+function toggleFilters() {
+    if (filtersContainer) {
+        filtersContainer.classList.toggle('hidden');
+    }
+}
+
+if (toggleFiltersBtn) {
+    toggleFiltersBtn.addEventListener('click', toggleFilters);
+}
+
+// Se hace global para poder llamarla desde el HTML con onclick
+window.toggleSection = function(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.toggle('hidden');
+        const icon = section.previousElementSibling?.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+    }
+}
+
+// Lógica de importación de CSV
+async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
+    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== '');
+    if (rows.length < 2) {
+        showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
+        return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
+    }
+
+    const headers = rows[0].split(',').map(h => h.trim().replace(/\ufeff/g, ''));
+    const dataRows = rows.slice(1);
+    let importedCount = 0;
+    let errors = [];
+
+    const csvRegex = /(?:^|,)(?:"([^"]*(?:"")?)*"|([^,]*))(?:,|$)/g;
+
+    for (const row of dataRows) {
+        const values = [];
+        let match;
+        while ((match = csvRegex.exec(row)) !== null) {
+            let value = match[2] || match[4] || '';
+            value = value.replace(/""/g, '"').trim();
+            values.push(value);
+        }
+
+        if (values.length !== headers.length) {
+            errors.push(`Fila con formato incorrecto. Esperado ${headers.length} campos, encontrado ${values.length}: ${row}`);
+            continue;
+        }
+
+        const item = mappingFunction(headers, values);
+        if (item) {
+            try {
+                await addDoc(collection(db, collectionName), item);
+                importedCount++;
+            } catch (error) {
+                errors.push(`Error al guardar en Firebase para la fila: ${row}. Error: ${error}`);
+            }
+        }
+    }
+
+    return { importedCount, errors };
+}
+
+
+function mapVentasToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+
+    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")), quantity: parseInt(data.UNIDADES) }];
+    const payments = [{ method: data['FORMA DE PAGO'] || 'EFECTIVO', amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) }];
+
+    const dateParts = data['FECHA'].split('/');
+    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${data.HORA}`);
+
+    return {
+        items: items,
+        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        payments: payments,
+        timestamp: date,
+        customerId: null,
+        customerName: null,
+        cashId: data.ID_Caja_FK || null
+    };
+}
+
+function mapArticulosToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.NOMBRE,
+        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")),
+        stock: parseInt(data.CANTIDAD) || 0
+    };
+}
+
+function mapClientesToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.CLIENTES
+    };
+}
+
+// Lógica de clientes
+if (addCustomerForm) {
+    addCustomerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('customer-name-input')?.value.trim();
+        if (!name) {
+            showModal("El nombre del cliente no puede estar vacío.");
+            return;
+        }
+        try {
+            const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
+            await addDoc(customersCollection, { name });
+            if(addCustomerForm) addCustomerForm.reset();
+            showModal(`Cliente '${name}' añadido con éxito.`);
+            
+            // Ocultar el formulario después de guardar
+            if (customerFormContainer) customerFormContainer.classList.add('hidden');
+            
+        } catch (error) {
+            console.error("Error al añadir cliente:", error);
+            showModal("Error al añadir cliente. Intenta de nuevo.");
+        }
+    });
+}
+
+function renderCustomersList(customers) {
+    if (!customersListContainer) return;
+    customersListContainer.innerHTML = '';
+    customers.forEach(customer => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+        <span>${customer.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        `;
+        customersListContainer.appendChild(itemDiv);
+
+        const editButton = itemDiv.querySelector('.edit-customer-btn');
+        if(editButton) {
+            editButton.addEventListener('click', () => {
+                const newName = prompt(`Editar nombre de cliente:`, customer.name);
+                if (newName && newName.trim()) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
+                }
+            });
+        }
+
+        const deleteButton = itemDiv.querySelector('.delete-customer-btn');
+        if(deleteButton) {
+            deleteButton.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    await deleteDoc(customerDocRef);
+                    showModal("Cliente eliminado.");
+                }
+            });
+        }
+    });
+}
+
+function renderCustomerSelect(customers) {
+    if (!customerSelect) return;
+    customerSelect.innerHTML = '<option value="">Seleccionar Cliente</option>';
+    customers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.id;
+        option.textContent = customer.name;
+        customerSelect.appendChild(option);
+    });
+}
+
+function renderSalesChart(sales) {
+    if (!salesChartCtx) return;
+    const salesByDay = sales.reduce((acc, sale) => {
+        if (sale.timestamp && sale.timestamp.seconds) {
+            const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
+            acc[date] = (acc[date] || 0) + sale.total;
+        }
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+    const salesData = sortedDates.map(date => salesByDay[date]);
+
+    if (salesChart) {
+        salesChart.destroy();
+    }
+
+    salesChart = new Chart(salesChartCtx, {
+        type: 'bar',
+        data: {
+            labels: sortedDates,
+            datasets: [{
+                label: 'Ventas Diarias',
+                data: salesData,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Ventas Totales ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Fecha'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTopProductsChart(sales) {
+    if (!topProductsChartCtx) return;
+
+    const productSales = sales.flatMap(sale => sale.items).reduce((acc, item) => {
+        acc[item.name] = (acc[item.name] || 0) + item.quantity;
+        return acc;
+    }, {});
+
+    const sortedProducts = Object.entries(productSales).sort(([, a], [, b]) => b - a).slice(0, 5);
+    const labels = sortedProducts.map(([name]) => name);
+    const data = sortedProducts.map(([, quantity]) => quantity);
+
+    if (topProductsChart) {
+        topProductsChart.destroy();
+    }
+
+    topProductsChart = new Chart(topProductsChartCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: data,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Producto'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderPaymentMethodsChart(sales) {
+    if (!paymentMethodsChartCtx) return;
+
+    const paymentTotals = sales.reduce((acc, sale) => {
+        sale.payments.forEach(payment => {
+            acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
+        });
+        return acc;
+    }, {});
+
+    const labels = Object.keys(paymentTotals);
+    const data = Object.values(paymentTotals);
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6b7280'];
+
+    if (paymentMethodsChart) {
+        paymentMethodsChart.destroy();
+    }
+
+    paymentMethodsChart = new Chart(paymentMethodsChartCtx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += `$${context.parsed.toFixed(2)}`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Impresión de recibos
+function printReceipt(sale) {
+    const paymentsHtml = sale.payments.map(p => `
+        <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
+    `).join('');
+
+    const content = `
+    <div id="print-area">
+        <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; }
+            .receipt-header { text-align: center; margin-bottom: 20px; }
+            .receipt-body { margin-bottom: 20px; }
+            .receipt-footer { text-align: center; border-top: 1px dashed black; padding-top: 10px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 5px 0; border-bottom: 1px solid #ccc; }
+            .total-row td { font-weight: bold; font-size: 1.2em; border-top: 2px solid black; }
+            .payment-row { margin-top: 10px; }
+            @media print {
+                body > *:not(#print-area) {
+                    display: none;
+                }
+                #print-area {
+                    display: block !important;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: white;
+                    z-index: 9999;
+                }
+            }
+        </style>
+        <div class="receipt-header">
+            <h2>Recibo de Venta</h2>
+            <p>Fecha: ${new Date().toLocaleString()}</p>
+            ${sale.customerName ? `<p>Cliente: ${sale.customerName}</p>` : ''}
+        </div>
+        <div class="receipt-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio Unit.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sale.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${item.price.toFixed(2)}</td>
+                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div style="text-align: right; margin-top: 20px;">
+                <p><strong>Total: $${sale.total.toFixed(2)}</strong></p>
+                ${paymentsHtml}
+            </div>
+        </div>
+        <div class="receipt-footer">
+            <p>¡Gracias por tu compra!</p>
+        </div>
+    </div>
+    `;
+
+    // 1. Crea un contenedor temporal
+    const printArea = document.createElement('div');
+    printArea.innerHTML = content;
+    document.body.appendChild(printArea);
+
+    // 2. Espera a que el DOM se actualice y luego imprime
+    setTimeout(() => {
+        window.print();
+        // 3. Elimina el contenedor temporal después de la impresión
+        document.body.removeChild(printArea);
+    }, 500);
+}
+
+// Lógica de autenticación
+if (loginBtn) {
+    loginBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            showModal("Inicio de sesión exitoso.");
+            if (authModal) authModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Error al iniciar sesión:", error);
+            showModal("Error al iniciar sesión. Verifica tus credenciales.");
+        }
+    });
+}
+
+if (registerBtn) {
+    registerBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            showModal("Registro exitoso. Ahora puedes iniciar sesión.");
+        } catch (error) {
+            console.error("Error al registrar:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                showModal("El correo electrónico ya está en uso.");
+            } else {
+                showModal("Error al registrarse. Intenta de nuevo.");
+            }
+        }
+    });
+}
+
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            showModal("Sesión cerrada correctamente.");
+            cart = [];
+            renderCart();
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            showModal("Hubo un error al cerrar la sesión.");
+        }
+    });
+}
+
+function toggleFilters() {
+    if (filtersContainer) {
+        filtersContainer.classList.toggle('hidden');
+    }
+}
+
+if (toggleFiltersBtn) {
+    toggleFiltersBtn.addEventListener('click', toggleFilters);
+}
+
+// Se hace global para poder llamarla desde el HTML con onclick
+window.toggleSection = function(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.toggle('hidden');
+        const icon = section.previousElementSibling?.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+    }
+}
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
@@ -2119,111 +3489,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
         });
     }
-    
-    // Mover este bloque fuera de setupRealtimeListeners
-    if (processPaymentBtn) {
-        processPaymentBtn.addEventListener('click', async () => {
-            if (isProcessingPayment) {
-                return;
-            }
-            isProcessingPayment = true;
-            processPaymentBtn.disabled = true;
 
-            if (!paymentInputsContainer || !customerSelect || !splitPaymentModal) {
-                console.error("Faltan elementos del DOM para procesar el pago.");
-                processPaymentBtn.disabled = false;
-                isProcessingPayment = false;
-                return;
-            }
-            
-            const { subtotal, total, adjustmentAmount } = calculateTotal();
-            const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-            const paymentSelects = paymentInputsContainer.querySelectorAll('select');
-
-            let sum = 0;
-            const payments = [];
-
-            for (let i = 0; i < paymentInputs.length; i++) {
-                const amount = parseFloat(paymentInputs[i].value);
-                const method = paymentSelects[i].value;
-                if (isNaN(amount) || amount <= 0) {
-                    showModal("Todos los montos deben ser números positivos.");
-                    processPaymentBtn.disabled = false;
-                    isProcessingPayment = false;
-                    return;
-                }
-                sum += amount;
-                payments.push({ method: method, amount: amount });
-            }
-
-            if (Math.abs(sum - total) > 0.01) {
-                showModal("La suma de los pagos no coincide con el total.");
-                processPaymentBtn.disabled = false;
-                isProcessingPayment = false;
-                return;
-            }
-            const cashId = new Date().toLocaleDateString('en-CA');
-            try {
-                const productUpdates = cart.map(item => {
-                    const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
-                    return updateDoc(productDocRef, {
-                        stock: item.stock - item.quantity
-                    });
-                });
-                await Promise.all(productUpdates);
-
-                const customerId = customerSelect.value;
-                const customerName = customerSelect.options[customerSelect.selectedIndex].text;
-
-                const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                const newSaleRef = await addDoc(salesCollection, {
-                    items: cart,
-                    subtotal: subtotal,
-                    adjustment: {
-                        amount: adjustmentAmount,
-                        type: currentDiscountSurcharge.type
-                    },
-                    total: total,
-                    payments: payments,
-                    customerId: customerId || null,
-                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                    timestamp: serverTimestamp(),
-                    cashId: cashId
-                });
-
-                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-
-                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-                    printReceipt({
-                        id: newSaleRef.id,
-                        items: cart,
-                        subtotal: subtotal,
-                        adjustment: {
-                            amount: adjustmentAmount,
-                            type: currentDiscountSurcharge.type
-                        },
-                        total: total,
-                        payments: payments,
-                        customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                        timestamp: new Date()
-                    });
-                }
-
-                cart = [];
-                currentDiscountSurcharge = { value: 0, type: null };
-                renderCart();
-                if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-                if(customerSelect) customerSelect.value = "";
-
-            } catch (error) {
-                console.error("Error al finalizar la venta:", error);
-                showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
-            } finally {
-                isProcessingPayment = false;
-                processPaymentBtn.disabled = false;
-            }
+    function updateRemainingAmount() {
+        if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
+        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+        const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+        let sum = 0;
+        paymentInputs.forEach(input => {
+            sum += parseFloat(input.value) || 0;
         });
+        const remaining = total - sum;
+        paymentRemainingDisplay.textContent = `$${remaining.toFixed(2)}`;
+        paymentRemainingDisplay.style.color = remaining < 0 ? '#ef4444' : '#f59e0b';
+        if (remaining === 0) {
+            paymentRemainingDisplay.style.color = '#10b981';
+        }
     }
+
 
     if (importSalesBtn) {
         importSalesBtn.addEventListener('click', () => {
@@ -2268,124 +3550,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (applyFiltersBtn) {
-        applyFiltersBtn.addEventListener('click', () => {
-            renderSalesHistory(allSales);
+    function exportSalesToCsv(sales) {
+        const headers = ["ID", "Fecha", "Subtotal", "Ajuste", "Total", "Pagos", "Cliente", "Items"];
+        const rows = sales.map(sale => {
+            const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000).toLocaleString('es-ES') : '';
+            const subtotal = sale.subtotal ? sale.subtotal.toFixed(2) : '';
+            const adjustment = sale.adjustment ? `${sale.adjustment.amount.toFixed(2)} (${sale.adjustment.type})` : '';
+            const payments = JSON.stringify(sale.payments);
+            const items = JSON.stringify(sale.items);
+            const customer = sale.customerName || '';
+            return `"${sale.id}","${date}","${subtotal}","${adjustment}",${sale.total.toFixed(2)},"${payments}","${customer}","${items}"`;
         });
-    }
 
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', () => {
-            if (filterStartDate) filterStartDate.value = '';
-            if (filterEndDate) filterEndDate.value = '';
-            if (filterProduct) filterProduct.value = '';
-            if (filterPaymentMethod) filterPaymentMethod.value = '';
-            renderSalesHistory(allSales);
-        });
-    }
-
-    if (addPaymentMethodForm) {
-        addPaymentMethodForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newPaymentNameInput = document.getElementById('new-payment-method-name');
-            const newMethod = newPaymentNameInput?.value.trim();
-            if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
-                try {
-                    await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
-                    if(newPaymentNameInput) newPaymentNameInput.value = '';
-                    showModal("Forma de pago añadida con éxito.");
-                } catch (error) {
-                    console.error("Error al añadir forma de pago:", error);
-                    showModal("Error al añadir forma de pago.");
-                }
-            } else {
-                showModal("Esa forma de pago ya existe o no es válida.");
-            }
-        });
-    }
-
-    if (addExpenseCategoryForm) {
-        addExpenseCategoryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newExpenseNameInput = document.getElementById('new-expense-category-name');
-            const newCategory = newExpenseNameInput?.value.trim();
-            if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
-                try {
-                    await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
-                    if(newExpenseNameInput) newExpenseNameInput.value = '';
-                    showModal("Categoría de gasto añadida con éxito.");
-                } catch (error) {
-                    console.error("Error al añadir categoría de gasto:", error);
-                    showModal("Error al añadir categoría de gasto.");
-                }
-            } else {
-                showModal("Esa categoría de gasto ya existe o no es válida.");
-            }
-        });
-    }
-
-    const topSettingsButton = document.querySelector('button[data-page="settings-page"]');
-    if (topSettingsButton) {
-        topSettingsButton.addEventListener('click', () => {
-            showPage('settings-page');
-            document.querySelector('.tab-btn.active')?.classList.remove('active');
-        });
-    }
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                showModal("Sesión cerrada correctamente.");
-                cart = [];
-                renderCart();
-            } catch (error) {
-                console.error("Error al cerrar sesión:", error);
-                showModal("Hubo un error al cerrar la sesión.");
-            }
-        });
-    }
-    
-    // Toggle forms visibility
-    if (toggleProductFormBtn) {
-        toggleProductFormBtn.addEventListener('click', () => {
-            if (productFormContainer) {
-                productFormContainer.classList.toggle('hidden');
-                if (expenseFormContainer && !expenseFormContainer.classList.contains('hidden')) {
-                    expenseFormContainer.classList.add('hidden');
-                }
-                if (customerFormContainer && !customerFormContainer.classList.contains('hidden')) {
-                    customerFormContainer.classList.add('hidden');
-                }
-            }
-        });
-    }
-    
-    if (toggleExpenseFormBtn) {
-        toggleExpenseFormBtn.addEventListener('click', () => {
-            if (expenseFormContainer) {
-                expenseFormContainer.classList.toggle('hidden');
-                if (productFormContainer && !productFormContainer.classList.contains('hidden')) {
-                    productFormContainer.classList.add('hidden');
-                }
-                if (customerFormContainer && !customerFormContainer.classList.contains('hidden')) {
-                    customerFormContainer.classList.add('hidden');
-                }
-            }
-        });
-    }
-    
-    if (toggleCustomerFormBtn) {
-        toggleCustomerFormBtn.addEventListener('click', () => {
-            if (customerFormContainer) {
-                customerFormContainer.classList.toggle('hidden');
-                if (productFormContainer && !productFormContainer.classList.contains('hidden')) {
-                    productFormContainer.classList.add('hidden');
-                }
-                if (expenseFormContainer && !expenseFormContainer.classList.contains('hidden')) {
-                    expenseFormContainer.classList.add('hidden');
-                }
-            }
-        });
+        const csvContent = [headers.join(","), ...rows].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', 'ventas.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 });
