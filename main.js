@@ -141,31 +141,57 @@ modal.classList.add('hidden');
 
 // Hacemos que la función showPage sea global para que pueda ser llamada desde cualquier lugar
 function showPage(pageId) {
-pages.forEach(page => {
-page.classList.remove('active');
-});
-homeMenu.classList.remove('active');
-document.getElementById(pageId).classList.add('active');
+    pages.forEach(page => {
+        page.classList.remove('active');
+    });
+    const pageToShow = document.getElementById(pageId);
+    if (pageToShow) {
+        pageToShow.classList.add('active');
+    }
 }
 
 function showHomeMenu() {
-pages.forEach(page => page.classList.remove('active'));
-homeMenu.classList.add('active');
+    pages.forEach(page => page.classList.remove('active'));
+    document.getElementById('home-menu').classList.add('active');
 }
 
 function setupNavigation() {
-menuButtons.forEach(btn => {
-btn.addEventListener('click', () => {
-const targetPageId = btn.dataset.page;
-showPage(targetPageId);
-});
-});
+    menuButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetPageId = btn.dataset.page;
+            showPage(targetPageId);
+        });
+    });
 
-backToMenuBtns.forEach(btn => {
-btn.addEventListener('click', () => {
-showHomeMenu();
-});
-});
+    backToMenuBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            showHomeMenu();
+        });
+    });
+}
+
+function setupTabNavigation() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetPageId = btn.dataset.page;
+            // Desactivar la pestaña activa
+            document.querySelector('.tab-btn.active')?.classList.remove('active');
+            // Activar la pestaña clicada
+            btn.classList.add('active');
+            // Mostrar la página correspondiente
+            showPage(targetPageId);
+        });
+    });
+
+    // Restaurar el menú principal
+    backToMenuBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Eliminar la clase activa de las pestañas
+            document.querySelector('.tab-btn.active')?.classList.remove('active');
+            showHomeMenu();
+        });
+    });
 }
 
 posSearchInput.addEventListener('input', (e) => {
@@ -188,11 +214,9 @@ if (user) {
 userId = user.uid;
 setupRealtimeListeners();
 authModal.classList.add('hidden');
-homeMenu.classList.remove('hidden');
-showPage('home-menu');
+showPage('pos-page'); // Inicia en la página del POS
 } else {
 authModal.classList.remove('hidden');
-homeMenu.classList.add('hidden');
 pages.forEach(page => page.classList.remove('active'));
 }
 });
@@ -1443,4 +1467,17 @@ function toggleFilters() {
 
 toggleFiltersBtn.addEventListener('click', toggleFilters);
 
-document.addEventListener('DOMContentLoaded', setupNavigation);
+function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.toggle('hidden');
+        // Opcional: cambiar el icono de la flecha
+        const icon = section.previousElementSibling.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', setupTabNavigation);
