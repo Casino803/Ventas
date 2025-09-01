@@ -147,7 +147,11 @@ class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-m
 </button>
 <h2 class="text-xl font-semibold text-gray-700 mb-4">Historial de Ventas</h2>
 
-<div class="mb-6 p-4 rounded-lg bg-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+<button id="toggle-filters-btn" class="mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
+    <i class="fas fa-filter"></i> Mostrar/Ocultar Filtros
+</button>
+
+<div id="filters-container" class="mb-6 p-4 rounded-lg bg-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
 <div class="space-y-2">
 <label for="filter-start-date" class="block text-sm font-medium text-gray-700">Fecha de inicio</label>
 <input type="date" id="filter-start-date"
@@ -397,9 +401,9 @@ const filterProduct = document.getElementById('filter-product');
 const filterPaymentMethod = document.getElementById('filter-payment-method');
 const applyFiltersBtn = document.getElementById('apply-filters-btn');
 const clearFiltersBtn = document.getElementById('clear-filters-btn');
+const customersListContainer = document.getElementById('customers-list-container');
 const customerSelect = document.getElementById('customer-select');
 const addCustomerForm = document.getElementById('add-customer-form');
-const customersListContainer = document.getElementById('customers-list-container');
 const logoutBtn = document.getElementById('logout-btn');
 
 // Referencias de la página de caja
@@ -419,7 +423,6 @@ const statsTotalSales = document.getElementById('stats-total-sales');
 const statsSalesCount = document.getElementById('stats-sales-count');
 const statsTotalExpenses = document.getElementById('stats-total-expenses');
 
-
 // Referencias del modal de pago múltiple
 const splitPaymentModal = document.getElementById('split-payment-modal');
 const paymentTotalDisplay = document.getElementById('payment-total-display');
@@ -434,6 +437,8 @@ const importSalesBtn = document.getElementById('import-sales-btn');
 const importSalesInput = document.getElementById('import-sales-input');
 const exportSalesBtn = document.getElementById('export-sales-btn');
 const salesChartCtx = document.getElementById('salesChart').getContext('2d');
+const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+const filtersContainer = document.getElementById('filters-container');
 
 // Referencias del modal de autenticación
 const authModal = document.getElementById('auth-modal');
@@ -1660,6 +1665,12 @@ console.error("Error al cerrar sesión:", error);
 showModal("Hubo un error al cerrar la sesión.");
 }
 });
+
+function toggleFilters() {
+  filtersContainer.classList.toggle('hidden');
+}
+
+toggleFiltersBtn.addEventListener('click', toggleFilters);
 
 document.addEventListener('DOMContentLoaded', setupNavigation);
 </script>
