@@ -1220,9 +1220,15 @@ if (checkoutBtn) {
             return;
         }
 
+        if (!paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal) {
+            console.error("Faltan elementos del DOM para el checkout.");
+            return;
+        }
+        
         const { total } = calculateTotal();
-        if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
-        if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
+
+        paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
+        paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
         if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
         addPaymentInput(total);
@@ -1834,6 +1840,123 @@ window.toggleSection = function(sectionId) {
     }
 }
 
+// Lógica de importación de CSV
+async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
+    const rows = csvContent.split('\n').filter(row => row.trim() !== '');
+    if (rows.length < 2) {
+        showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
+        return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
+    }
+
+    const headers = rows[0].split(',').map(h => h.trim().replace(/\ufeff/g, ''));
+    const dataRows = rows.slice(1);
+    let importedCount = 0;
+    let errors = [];
+
+    for (const row of dataRows) {
+        const values = row.split(',').map(v => v.trim());
+        if (values.length !== headers.length) {
+            errors.push(`Fila con formato incorrecto: ${row}`);
+            continue;
+        }
+
+        const item = mappingFunction(headers, values);
+        if (item) {
+            try {
+                await addDoc(collection(db, collectionName), item);
+                importedCount++;
+            } catch (error) {
+                errors.push(`Error al guardar en Firebase para la fila: ${row}. Error: ${error}`);
+            }
+        }
+    }
+
+    return { importedCount, errors };
+}
+
+function mapVentasToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+
+    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO), quantity: parseInt(data.UNIDADES) }];
+    const payments = [{ method: data['FORMA DE PAGO'], amount: parseFloat(data.TOTAL) }];
+
+    const dateParts = data['FECHA'].split('/');
+    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+
+    return {
+        items: items,
+        total: parseFloat(data.TOTAL),
+        payments: payments,
+        timestamp: date,
+        // Asumiendo que el ID de la caja es el campo ID_Caja_FK
+        cashId: data.ID_Caja_FK || null
+    };
+}
+
+function mapArticulosToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.NOMBRE,
+        price: parseFloat(data.PRECIO),
+        stock: parseInt(data.CANTIDAD)
+    };
+}
+
+function mapClientesToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.CLIENTES
+    };
+}
+
+if (importSalesBtn) {
+    importSalesBtn.addEventListener('click', () => {
+        importSalesInput.click();
+    });
+}
+
+if (importSalesInput) {
+    importSalesInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const csvData = event.target.result;
+
+                let results;
+                if (file.name.includes('VENTAS.csv')) {
+                    results = await importDataFromCsv(csvData, 'sales', mapVentasToFirebase);
+                } else if (file.name.includes('ARTICULOS.csv')) {
+                    results = await importDataFromCsv(csvData, 'products', mapArticulosToFirebase);
+                } else if (file.name.includes('CLIENTES.csv')) {
+                    results = await importDataFromCsv(csvData, 'customers', mapClientesToFirebase);
+                } else {
+                    showModal('Tipo de archivo no reconocido.');
+                    return;
+                }
+
+                let message = `Importación de ${file.name} completada. Se importaron ${results.importedCount} registros.`;
+                if (results.errors.length > 0) {
+                    message += ` Hubo ${results.errors.length} errores:\n${results.errors.join('\n')}`;
+                }
+                showModal(message);
+            };
+            reader.readAsText(file);
+        }
+    });
+}
+
+// Resto del código de la aplicación (sin cambios)...
+
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -1951,7 +2074,7 @@ document.addEventListener('DOMContentLoaded', () => {
             paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
             paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
-            paymentInputsContainer.innerHTML = '';
+            if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
             addPaymentInput(total);
 
             splitPaymentModal.classList.remove('hidden');
@@ -2104,18 +2227,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (importSalesBtn) {
         importSalesBtn.addEventListener('click', () => {
-            if (importSalesInput) importSalesInput.click();
+            importSalesInput.click();
         });
     }
 
     if (importSalesInput) {
-        importSalesInput.addEventListener('change', (e) => {
+        importSalesInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const csvData = event.target.result;
-                    await processImportedSales(csvData);
+
+                    let results;
+                    if (file.name.includes('VENTAS.csv')) {
+                        results = await importDataFromCsv(csvData, 'sales', mapVentasToFirebase);
+                    } else if (file.name.includes('ARTICULOS.csv')) {
+                        results = await importDataFromCsv(csvData, 'products', mapArticulosToFirebase);
+                    } else if (file.name.includes('CLIENTES.csv')) {
+                        results = await importDataFromCsv(csvData, 'customers', mapClientesToFirebase);
+                    } else {
+                        showModal('Tipo de archivo no reconocido.');
+                        return;
+                    }
+
+                    let message = `Importación de ${file.name} completada. Se importaron ${results.importedCount} registros.`;
+                    if (results.errors.length > 0) {
+                        message += ` Hubo ${results.errors.length} errores:\n${results.errors.join('\n')}`;
+                    }
+                    showModal(message);
                 };
                 reader.readAsText(file);
             }
