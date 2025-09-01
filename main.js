@@ -50,6 +50,12 @@ const customersListContainer = document.getElementById('customers-list-container
 const customerSelect = document.getElementById('customer-select');
 const addCustomerForm = document.getElementById('add-customer-form');
 const logoutBtn = document.getElementById('logout-btn');
+const toggleProductFormBtn = document.getElementById('toggle-product-form-btn');
+const productFormContainer = document.getElementById('product-form-container');
+const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
+const expenseFormContainer = document.getElementById('expense-form-container');
+const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
+const customerFormContainer = document.getElementById('customer-form-container');
 
 // Referencias de la página de caja
 const cashStatusText = document.getElementById('cash-status-text');
@@ -67,6 +73,8 @@ const cashStatsSection = document.getElementById('cash-stats');
 const statsTotalSales = document.getElementById('stats-total-sales');
 const statsSalesCount = document.getElementById('stats-sales-count');
 const statsTotalExpenses = document.getElementById('stats-total-expenses');
+const statsCashSales = document.getElementById('stats-cash-sales');
+const statsOtherSales = document.getElementById('stats-other-sales');
 
 // Referencias del modal de pago múltiple
 const splitPaymentModal = document.getElementById('split-payment-modal');
@@ -101,14 +109,6 @@ const addExpenseCategoryForm = document.getElementById('add-expense-category-for
 const newExpenseCategoryName = document.getElementById('new-expense-category-name');
 const expenseCategoriesList = document.getElementById('expense-categories-list');
 const tabButtons = document.querySelectorAll('.tab-btn');
-
-// Referencias para los nuevos botones y contenedores de formularios (¡Ahora globales!)
-const toggleProductFormBtn = document.getElementById('toggle-product-form-btn');
-const productFormContainer = document.getElementById('product-form-container');
-const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
-const expenseFormContainer = document.getElementById('expense-form-container');
-const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
-const customerFormContainer = document.getElementById('customer-form-container');
 
 
 let salesChart;
@@ -827,10 +827,23 @@ async function updateDailyTotals() {
     const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
     const salesSnapshot = await getDocs(salesQuery);
     let salesCount = 0;
+    let cashSalesTotal = 0;
+    let otherPaymentsTotal = 0;
+
     dailySalesTotal = salesSnapshot.docs.reduce((sum, doc) => {
         const sale = doc.data();
         if (sale.total && !isNaN(sale.total)) {
             salesCount++;
+            // Clasificar y sumar por forma de pago
+            if (sale.payments) {
+                sale.payments.forEach(payment => {
+                    if (payment.method === "Efectivo") {
+                        cashSalesTotal += payment.amount;
+                    } else {
+                        otherPaymentsTotal += payment.amount;
+                    }
+                });
+            }
             return sum + sale.total;
         }
         return sum;
@@ -854,6 +867,10 @@ async function updateDailyTotals() {
     if (statsTotalSales) statsTotalSales.textContent = `$${dailySalesTotal.toFixed(2)}`;
     if (statsSalesCount) statsSalesCount.textContent = salesCount;
     if (statsTotalExpenses) statsTotalExpenses.textContent = `$${dailyExpensesTotal.toFixed(2)}`;
+
+    // Actualizar las nuevas estadísticas de pagos
+    if (statsCashSales) statsCashSales.textContent = `$${cashSalesTotal.toFixed(2)}`;
+    if (statsOtherSales) statsOtherSales.textContent = `$${otherPaymentsTotal.toFixed(2)}`;
 }
 
 function renderCashStatus() {
@@ -1680,6 +1697,7 @@ window.toggleSection = function(sectionId) {
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
+
     // Configurar la navegación principal del menú
     setupNavigation();
 
@@ -2028,7 +2046,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
+    
     // Toggle forms visibility
     if (toggleProductFormBtn) {
         toggleProductFormBtn.addEventListener('click', () => {
