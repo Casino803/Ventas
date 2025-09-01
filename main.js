@@ -1140,13 +1140,15 @@ if (cartTotalSpan) {
   }
 }
 
-input.addEventListener('input', updateRemainingAmount);
-select.addEventListener('change', () => {
-if (cartTotalSpan && paymentInputsContainer.children.length === 1) {
-input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
+if (input && select) {
+    input.addEventListener('input', updateRemainingAmount);
+    select.addEventListener('change', () => {
+        if (cartTotalSpan && paymentInputsContainer.children.length === 1) {
+            input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
+        }
+        updateRemainingAmount();
+    });
 }
-updateRemainingAmount();
-});
 
 const removeBtn = document.createElement('button');
 removeBtn.innerHTML = `<i class="fas fa-times-circle"></i>`;
@@ -1182,6 +1184,22 @@ if (cancelSplitBtn) {
   cancelSplitBtn.addEventListener('click', () => {
     if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
   });
+}
+
+function updateRemainingAmount() {
+if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
+const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+let sum = 0;
+paymentInputs.forEach(input => {
+sum += parseFloat(input.value) || 0;
+});
+const remaining = total - sum;
+paymentRemainingDisplay.textContent = `$${remaining.toFixed(2)}`;
+paymentRemainingDisplay.style.color = remaining < 0 ? '#ef4444' : '#f59e0b';
+if (remaining === 0) {
+paymentRemainingDisplay.style.color = '#10b981';
+}
 }
 
 if (processPaymentBtn) {
