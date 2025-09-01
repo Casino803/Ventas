@@ -1256,19 +1256,25 @@ if (processPaymentBtn) {
 
     showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
 
-    printReceipt({
+// Guarda los datos de la venta para la impresión
+const saleToPrint = {
     id: newSaleRef.id,
     items: cart,
     total: total,
     payments: payments,
     customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
     timestamp: new Date()
-    });
+};
 
-    cart = [];
-    renderCart();
-    if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-    if(customerSelect) customerSelect.value = "";
+// Muestra un cuadro de diálogo de confirmación para imprimir
+if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+    printReceipt(saleToPrint);
+}
+
+cart = [];
+renderCart();
+if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+if(customerSelect) customerSelect.value = "";
 
     } catch (error) {
     console.error("Error al finalizar la venta:", error);
