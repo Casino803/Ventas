@@ -704,9 +704,9 @@ function applyFilters(sales) {
         if (productName && !sale.items.some(item => item.name.toLowerCase().includes(productName))) {
             return false;
         }
-
+        
+        // Lógica de filtro para "Efectivo" y "Otras Formas de Pago"
         if (paymentMethod) {
-            // Lógica de filtro para "Efectivo" y "Otras Formas de Pago"
             if (paymentMethod === 'Efectivo') {
                 return sale.payments.some(p => p.method === 'Efectivo');
             } else if (paymentMethod === 'otras') {
@@ -1243,26 +1243,14 @@ if (cancelSplitBtn) {
     });
 }
 
-function updateRemainingAmount() {
-    if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
-    const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-    const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-    let sum = 0;
-    paymentInputs.forEach(input => {
-        sum += parseFloat(input.value) || 0;
-    });
-    const remaining = total - sum;
-    paymentRemainingDisplay.textContent = `$${remaining.toFixed(2)}`;
-    paymentRemainingDisplay.style.color = remaining < 0 ? '#ef4444' : '#f59e0b';
-    if (remaining === 0) {
-        paymentRemainingDisplay.style.color = '#10b981';
-    }
-}
-
 if (processPaymentBtn) {
     processPaymentBtn.addEventListener('click', async () => {
+        // Deshabilitar el botón para evitar clics duplicados
+        processPaymentBtn.disabled = true;
+
         if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
             console.error("Faltan elementos del DOM para procesar el pago.");
+            processPaymentBtn.disabled = false;
             return;
         }
         const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
@@ -1277,6 +1265,7 @@ if (processPaymentBtn) {
             const method = paymentSelects[i].value;
             if (isNaN(amount) || amount <= 0) {
                 showModal("Todos los montos deben ser números positivos.");
+                processPaymentBtn.disabled = false;
                 return;
             }
             sum += amount;
@@ -1285,6 +1274,7 @@ if (processPaymentBtn) {
 
         if (Math.abs(sum - total) > 0.01) {
             showModal("La suma de los pagos no coincide con el total.");
+            processPaymentBtn.disabled = false;
             return;
         }
         const cashId = new Date().toLocaleDateString('en-CA');
@@ -1333,6 +1323,8 @@ if (processPaymentBtn) {
         } catch (error) {
             console.error("Error al finalizar la venta:", error);
             showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
+        } finally {
+            processPaymentBtn.disabled = false;
         }
     });
 }
@@ -1891,8 +1883,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (processPaymentBtn) {
         processPaymentBtn.addEventListener('click', async () => {
+            // Deshabilitar el botón para evitar clics duplicados
+            processPaymentBtn.disabled = true;
+
             if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
                 console.error("Faltan elementos del DOM para procesar el pago.");
+                processPaymentBtn.disabled = false;
                 return;
             }
             const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
@@ -1907,6 +1903,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const method = paymentSelects[i].value;
                 if (isNaN(amount) || amount <= 0) {
                     showModal("Todos los montos deben ser números positivos.");
+                    processPaymentBtn.disabled = false;
                     return;
                 }
                 sum += amount;
@@ -1915,6 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (Math.abs(sum - total) > 0.01) {
                 showModal("La suma de los pagos no coincide con el total.");
+                processPaymentBtn.disabled = false;
                 return;
             }
             const cashId = new Date().toLocaleDateString('en-CA');
@@ -1963,6 +1961,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error al finalizar la venta:", error);
                 showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
+            } finally {
+                processPaymentBtn.disabled = false;
             }
         });
     }
