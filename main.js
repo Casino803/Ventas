@@ -93,6 +93,14 @@ const authPassword = document.getElementById('auth-password');
 const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
 
+// Referencias de la nueva página de configuración
+const addPaymentMethodForm = document.getElementById('add-payment-method-form');
+const newPaymentMethodName = document.getElementById('new-payment-method-name');
+const paymentMethodsList = document.getElementById('payment-methods-list');
+const addExpenseCategoryForm = document.getElementById('add-expense-category-form');
+const newExpenseCategoryName = document.getElementById('new-expense-category-name');
+const expenseCategoriesList = document.getElementById('expense-categories-list');
+
 
 let salesChart;
 let userId = '';
@@ -232,14 +240,22 @@ showModal("Error al cargar clientes.");
 
 const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
 onSnapshot(paymentMethodsCollection, (snapshot) => {
-userPaymentMethods = snapshot.docs.map(doc => doc.data().name);
+userPaymentMethods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderPaymentMethodFilters();
+renderPaymentMethodsList();
+}, (error) => {
+console.error("Error al escuchar métodos de pago:", error);
+showModal("Error al cargar los métodos de pago.");
 });
 
 const expenseCategoriesCollection = collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION);
 onSnapshot(expenseCategoriesCollection, (snapshot) => {
-userExpenseCategories = snapshot.docs.map(doc => doc.data().name);
+userExpenseCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderExpenseCategories();
+renderExpenseCategoriesList();
+}, (error) => {
+console.error("Error al escuchar categorías de gastos:", error);
+showModal("Error al cargar las categorías de gastos.");
 });
 
 
@@ -275,10 +291,114 @@ renderCashHistory(history);
 });
 }
 
+// Funciones de renderizado de configuración
+function renderPaymentMethodsList() {
+    paymentMethodsList.innerHTML = '';
+    const allMethods = [...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)];
+    allMethods.forEach(method => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+            <span>${method}</span>
+            <div class="flex space-x-2">
+                <button data-name="${method}" class="delete-payment-method-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        paymentMethodsList.appendChild(itemDiv);
+
+        itemDiv.querySelector('.delete-payment-method-btn').addEventListener('click', async () => {
+            if (confirm(`¿Estás seguro de que quieres eliminar la forma de pago '${method}'?`)) {
+                try {
+                    const methodToDelete = userPaymentMethods.find(m => m.name === method);
+                    if (methodToDelete) {
+                        const methodDocRef = doc(db, SHARED_PAYMENT_METHODS_COLLECTION, methodToDelete.id);
+                        await deleteDoc(methodDocRef);
+                        showModal("Forma de pago eliminada con éxito.");
+                    } else {
+                        showModal("No se puede eliminar una forma de pago por defecto.");
+                    }
+                } catch (error) {
+                    console.error("Error al eliminar la forma de pago:", error);
+                    showModal("Error al eliminar la forma de pago.");
+                }
+            }
+        });
+    });
+}
+
+function renderExpenseCategoriesList() {
+    expenseCategoriesList.innerHTML = '';
+    const allCategories = [...defaultExpenseCategories, ...userExpenseCategories.map(c => c.name)];
+    allCategories.forEach(category => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+            <span>${category}</span>
+            <div class="flex space-x-2">
+                <button data-name="${category}" class="delete-expense-category-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        expenseCategoriesList.appendChild(itemDiv);
+
+        itemDiv.querySelector('.delete-expense-category-btn').addEventListener('click', async () => {
+            if (confirm(`¿Estás seguro de que quieres eliminar la categoría de gasto '${category}'?`)) {
+                try {
+                    const categoryToDelete = userExpenseCategories.find(c => c.name === category);
+                    if (categoryToDelete) {
+                        const categoryDocRef = doc(db, SHARED_EXPENSE_CATEGORIES_COLLECTION, categoryToDelete.id);
+                        await deleteDoc(categoryDocRef);
+                        showModal("Categoría de gasto eliminada con éxito.");
+                    } else {
+                        showModal("No se puede eliminar una categoría de gasto por defecto.");
+                    }
+                } catch (error) {
+                    console.error("Error al eliminar la categoría de gasto:", error);
+                    showModal("Error al eliminar la categoría de gasto.");
+                }
+            }
+        });
+    });
+}
+
+addPaymentMethodForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newMethod = newPaymentMethodName.value.trim();
+    if (newMethod) {
+        try {
+            await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
+            newPaymentMethodName.value = '';
+            showModal("Forma de pago añadida con éxito.");
+        } catch (error) {
+            console.error("Error al añadir forma de pago:", error);
+            showModal("Error al añadir forma de pago.");
+        }
+    }
+});
+
+addExpenseCategoryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newCategory = newExpenseCategoryName.value.trim();
+    if (newCategory) {
+        try {
+            await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
+            newExpenseCategoryName.value = '';
+            showModal("Categoría de gasto añadida con éxito.");
+        } catch (error) {
+            console.error("Error al añadir categoría de gasto:", error);
+            showModal("Error al añadir categoría de gasto.");
+        }
+    }
+});
+
+
 function renderPaymentMethodFilters() {
 const selectFilter = document.getElementById('filter-payment-method');
 selectFilter.innerHTML = '<option value="">Todas</option>';
-const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods])];
+const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
 allMethods.forEach(method => {
 const option = document.createElement('option');
 option.value = method;
@@ -289,7 +409,7 @@ selectFilter.appendChild(option);
 
 function renderExpenseCategories() {
 expenseCategorySelect.innerHTML = '';
-const allCategories = [...new Set([...defaultExpenseCategories, ...userExpenseCategories])];
+const allCategories = [...new Set([...defaultExpenseCategories, ...userExpenseCategories.map(c => c.name)])];
 allCategories.forEach(category => {
 const option = document.createElement('option');
 option.value = category.toLowerCase();
@@ -831,7 +951,7 @@ addPaymentForm.addEventListener('submit', async (e) => {
 e.preventDefault();
 const newMethodName = document.getElementById('new-payment-name').value.trim();
 
-if (newMethodName && !userPaymentMethods.includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
+if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
 try {
 const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
 await addDoc(paymentMethodsCollection, { name: newMethodName });
@@ -853,7 +973,7 @@ row.className = "flex space-x-2";
 
 const select = document.createElement('select');
 select.className = "flex-grow px-4 py-2 border border-gray-300 rounded-lg";
-const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods])];
+const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
 allMethods.forEach(method => {
 const option = document.createElement('option');
 option.value = method;
