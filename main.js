@@ -583,8 +583,12 @@ function renderManageProduct(product) {
 function renderSalesHistory(sales) {
     if (!salesHistoryContainer) return;
     salesHistoryContainer.innerHTML = '';
-
+    
     const filteredSales = applyFilters(sales);
+    
+    // Nuevo cálculo para el total de la vista filtrada
+    let filteredTotal = 0;
+    const paymentMethodFilter = filterPaymentMethod?.value;
 
     const salesByDay = filteredSales.reduce((acc, sale) => {
         const timestamp = sale.timestamp;
@@ -593,13 +597,36 @@ function renderSalesHistory(sales) {
             if (!acc[date]) {
                 acc[date] = { total: 0, sales: [] };
             }
-            acc[date].total += sale.total;
+
+            // Sumar solo el monto del método de pago filtrado
+            if (paymentMethodFilter && paymentMethodFilter !== 'Todas') {
+                const filteredPayment = sale.payments.find(p => p.method === paymentMethodFilter);
+                if (filteredPayment) {
+                    acc[date].total += filteredPayment.amount;
+                    filteredTotal += filteredPayment.amount;
+                }
+            } else {
+                // Si no hay filtro de pago, sumar el total de la venta
+                acc[date].total += sale.total;
+                filteredTotal += sale.total;
+            }
+
             acc[date].sales.push(sale);
         }
         return acc;
     }, {});
 
     const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
+    
+    // Mostrar el total general de la vista filtrada
+    if (sortedDates.length > 0) {
+        const totalHeader = document.createElement('div');
+        totalHeader.className = "bg-blue-600 text-white p-4 rounded-lg mb-4 text-center";
+        totalHeader.innerHTML = `
+            <h3 class="font-bold text-xl">Total Filtrado: $${filteredTotal.toFixed(2)}</h3>
+        `;
+        salesHistoryContainer.appendChild(totalHeader);
+    }
 
     sortedDates.forEach(dateString => {
         const dailySales = salesByDay[dateString];
@@ -609,7 +636,7 @@ function renderSalesHistory(sales) {
         dayDiv.innerHTML = `
         <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
             <h3 class="font-bold text-lg">${dateString}</h3>
-            <span class="font-bold text-green-600 text-xl">Total: $${dailySales.total.toFixed(2)}</span>
+            <span class="font-bold text-green-600 text-xl">Total del día: $${dailySales.total.toFixed(2)}</span>
         </div>
         `;
 
