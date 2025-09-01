@@ -1472,16 +1472,25 @@ function mapVentasToFirebase(headers, values) {
         data[header] = values[index];
     });
 
-    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")), quantity: parseInt(data.UNIDADES) }];
-    const payments = [{ method: data['FORMA DE PAGO'] || 'EFECTIVO', amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) }];
+    const items = [{ 
+        name: data.ITEM, 
+        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0, 
+        quantity: parseInt(data.UNIDADES) || 0 
+    }];
 
-    const dateParts = data['FECHA'].split('/');
-    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${data.HORA}`);
+    // 'FECHA' ya está en formato YYYY-MM-DD, se puede crear la fecha directamente
+    const date = new Date(data['FECHA']);
+
+    // La forma de pago no está en este archivo, se establece por defecto a 'EFECTIVO'
+    const payments = [{ 
+        method: 'EFECTIVO', 
+        amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0 
+    }];
 
     return {
         items: items,
-        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
-        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0,
+        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0,
         payments: payments,
         timestamp: date,
         customerId: null,
