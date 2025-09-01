@@ -1472,25 +1472,26 @@ function mapVentasToFirebase(headers, values) {
         data[header] = values[index];
     });
 
-    const items = [{ 
-        name: data.ITEM, 
-        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0, 
-        quantity: parseInt(data.UNIDADES) || 0 
+    const price = data.PRECIO ? parseFloat(data.PRECIO.replace(/[^0-9.-]+/g, "")) || 0 : 0;
+    const quantity = data.UNIDADES ? parseInt(data.UNIDADES) || 0 : 0;
+    const total = data.TOTAL ? parseFloat(data.TOTAL.replace(/[^0-9.-]+/g, "")) || 0 : 0;
+    const items = [{
+        name: data.ITEM,
+        price: price,
+        quantity: quantity
     }];
 
-    // 'FECHA' ya está en formato YYYY-MM-DD, se puede crear la fecha directamente
-    const date = new Date(data['FECHA']);
+    const date = data.FECHA ? new Date(data.FECHA) : null;
 
-    // La forma de pago no está en este archivo, se establece por defecto a 'EFECTIVO'
-    const payments = [{ 
-        method: 'EFECTIVO', 
-        amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0 
+    const payments = [{
+        method: 'EFECTIVO',
+        amount: total
     }];
 
     return {
         items: items,
-        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0,
-        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0,
+        subtotal: total,
+        total: total,
         payments: payments,
         timestamp: date,
         customerId: null,
