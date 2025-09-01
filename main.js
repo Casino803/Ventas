@@ -81,7 +81,7 @@ const processPaymentBtn = document.getElementById('process-payment-btn');
 const importSalesBtn = document.getElementById('import-sales-btn');
 const importSalesInput = document.getElementById('import-sales-input');
 const exportSalesBtn = document.getElementById('export-sales-btn');
-const salesChartCtx = document.getElementById('salesChart').getContext('2d');
+const salesChartCtx = document.getElementById('salesChart')?.getContext('2d');
 const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
 const filtersContainer = document.getElementById('filters-container');
 
@@ -132,13 +132,17 @@ const defaultExpenseCategories = ["General", "Suministros", "Servicios"];
 let userExpenseCategories = [];
 
 function showModal(message) {
+if (modal && modalMessage) {
 modalMessage.textContent = message;
 modal.classList.remove('hidden');
 }
+}
 
-modalCloseBtn.addEventListener('click', () => {
-modal.classList.add('hidden');
-});
+if (modalCloseBtn) {
+  modalCloseBtn.addEventListener('click', () => {
+    if (modal) modal.classList.add('hidden');
+  });
+}
 
 // Hacemos que la función showPage sea global para que pueda ser llamada desde cualquier lugar
 function showPage(pageId) {
@@ -153,7 +157,7 @@ function showPage(pageId) {
 
 function showHomeMenu() {
     pages.forEach(page => page.classList.remove('active'));
-    document.getElementById('home-menu').classList.add('active');
+    if (homeMenu) homeMenu.classList.add('active');
 }
 
 function setupNavigation() {
@@ -191,15 +195,18 @@ function setupTabNavigation() {
     });
 }
 
-posSearchInput.addEventListener('input', (e) => {
-const searchTerm = e.target.value.toLowerCase();
-const filteredProducts = allProducts.filter(product =>
-product.name.toLowerCase().includes(searchTerm)
-);
-renderProducts(filteredProducts);
-});
+if (posSearchInput) {
+  posSearchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const filteredProducts = allProducts.filter(product =>
+    product.name.toLowerCase().includes(searchTerm)
+    );
+    renderProducts(filteredProducts);
+  });
+}
 
 function renderProducts(products) {
+if (!productsContainer) return;
 productsContainer.innerHTML = '';
 products.forEach(product => {
 renderProductCard(product);
@@ -210,10 +217,10 @@ onAuthStateChanged(auth, async (user) => {
 if (user) {
 userId = user.uid;
 setupRealtimeListeners();
-authModal.classList.add('hidden');
+if (authModal) authModal.classList.add('hidden');
 showPage('pos-page'); // Inicia en la página del POS
 } else {
-authModal.classList.remove('hidden');
+if (authModal) authModal.classList.remove('hidden');
 pages.forEach(page => page.classList.remove('active'));
 }
 });
@@ -229,7 +236,7 @@ const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
 onSnapshot(productsCollection, (snapshot) => {
 allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderProducts(allProducts);
-manageProductsContainer.innerHTML = '';
+if(manageProductsContainer) manageProductsContainer.innerHTML = '';
 allProducts.forEach(product => {
 renderManageProduct(product);
 });
@@ -243,7 +250,7 @@ onSnapshot(salesCollection, (snapshot) => {
 allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderSalesHistory(allSales);
 updateDailyTotals();
-renderSalesChart(allSales);
+if (salesChartCtx) renderSalesChart(allSales);
 }, (error) => {
 console.error("Error al escuchar ventas:", error);
 showModal("Error al cargar el historial de ventas.");
@@ -262,8 +269,8 @@ showModal("Error al cargar clientes.");
 const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
 onSnapshot(paymentMethodsCollection, (snapshot) => {
 userPaymentMethods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderPaymentMethodFilters();
-renderPaymentMethodsList();
+if(filterPaymentMethod) renderPaymentMethodFilters();
+if(paymentMethodsList) renderPaymentMethodsList();
 }, (error) => {
 console.error("Error al escuchar métodos de pago:", error);
 showModal("Error al cargar los métodos de pago.");
@@ -272,8 +279,8 @@ showModal("Error al cargar los métodos de pago.");
 const expenseCategoriesCollection = collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION);
 onSnapshot(expenseCategoriesCollection, (snapshot) => {
 userExpenseCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderExpenseCategories();
-renderExpenseCategoriesList();
+if(expenseCategorySelect) renderExpenseCategories();
+if(expenseCategoriesList) renderExpenseCategoriesList();
 }, (error) => {
 console.error("Error al escuchar categorías de gastos:", error);
 showModal("Error al cargar las categorías de gastos.");
@@ -284,7 +291,7 @@ showModal("Error al cargar las categorías de gastos.");
 const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
 onSnapshot(expensesCollection, (snapshot) => {
 const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderDailyExpenses(expenses);
+if(dailyExpensesContainer) renderDailyExpenses(expenses);
 updateDailyTotals();
 }, (error) => {
 console.error("Error al escuchar gastos:", error);
@@ -308,7 +315,7 @@ console.error("Error al escuchar la caja diaria:", error);
 const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
 onSnapshot(cashHistoryCollection, (snapshot) => {
 const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderCashHistory(history);
+if (cashHistoryContainer) renderCashHistory(history);
 }, (error) => {
 console.error("Error al escuchar el historial de cajas:", error);
 });
@@ -394,11 +401,12 @@ function renderExpenseCategoriesList() {
 if(addPaymentMethodForm) {
     addPaymentMethodForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newMethod = newPaymentMethodName.value.trim();
+        const newPaymentNameInput = document.getElementById('new-payment-method-name');
+        const newMethod = newPaymentNameInput?.value.trim();
         if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
             try {
                 await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
-                newPaymentMethodName.value = '';
+                if(newPaymentNameInput) newPaymentNameInput.value = '';
                 showModal("Forma de pago añadida con éxito.");
             } catch (error) {
                 console.error("Error al añadir forma de pago:", error);
@@ -413,11 +421,12 @@ if(addPaymentMethodForm) {
 if(addExpenseCategoryForm) {
     addExpenseCategoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newCategory = newExpenseCategoryName.value.trim();
+        const newExpenseNameInput = document.getElementById('new-expense-category-name');
+        const newCategory = newExpenseNameInput?.value.trim();
         if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
             try {
                 await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
-                newExpenseCategoryName.value = '';
+                if(newExpenseNameInput) newExpenseNameInput.value = '';
                 showModal("Categoría de gasto añadida con éxito.");
             } catch (error) {
                 console.error("Error al añadir categoría de gasto:", error);
@@ -430,6 +439,7 @@ if(addExpenseCategoryForm) {
 }
 
 function renderPaymentMethodFilters() {
+if(!filterPaymentMethod) return;
 const selectFilter = document.getElementById('filter-payment-method');
 selectFilter.innerHTML = '<option value="">Todas</option>';
 const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
@@ -442,6 +452,7 @@ selectFilter.appendChild(option);
 }
 
 function renderExpenseCategories() {
+if(!expenseCategorySelect) return;
 expenseCategorySelect.innerHTML = '';
 const allCategories = [...new Set([...defaultExpenseCategories, ...userExpenseCategories.map(c => c.name)])];
 allCategories.forEach(category => {
@@ -453,6 +464,7 @@ expenseCategorySelect.appendChild(option);
 }
 
 function renderProductCard(product) {
+if (!productsContainer) return;
 const card = document.createElement('div');
 card.className = "bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300";
 
@@ -481,6 +493,7 @@ addProductToCart(product);
 }
 
 function renderManageProduct(product) {
+if (!manageProductsContainer) return;
 const itemDiv = document.createElement('div');
 itemDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
 
@@ -508,29 +521,42 @@ class="delete-product-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hov
 `;
 manageProductsContainer.appendChild(itemDiv);
 
-// Corrección aquí: Usar itemDiv para encontrar los botones
-itemDiv.querySelector('.edit-product-btn').addEventListener('click', () => {
-document.getElementById('product-id').value = product.id;
-document.getElementById('product-name-input').value = product.name;
-document.getElementById('product-price-input').value = product.price;
-document.getElementById('product-stock-input').value = product.stock;
-});
+// Corregido: Usar itemDiv para encontrar los botones
+const editButton = itemDiv.querySelector('.edit-product-btn');
+if(editButton) {
+  editButton.addEventListener('click', () => {
+      const newName = prompt(`Editar nombre de cliente:`, product.name);
+      const productIdInput = document.getElementById('product-id');
+      const productNameInput = document.getElementById('product-name-input');
+      const productPriceInput = document.getElementById('product-price-input');
+      const productStockInput = document.getElementById('product-stock-input');
 
-itemDiv.querySelector('.delete-product-btn').addEventListener('click', async () => {
-if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-try {
-const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, product.id);
-await deleteDoc(productRef);
-showModal("Producto eliminado con éxito.");
-} catch (error) {
-console.error("Error al eliminar el producto:", error);
-showModal("Error al eliminar el producto. Por favor, intenta de nuevo.");
+      if (productIdInput) productIdInput.value = product.id;
+      if (productNameInput) productNameInput.value = product.name;
+      if (productPriceInput) productPriceInput.value = product.price;
+      if (productStockInput) productStockInput.value = product.stock;
+  });
 }
+
+const deleteButton = itemDiv.querySelector('.delete-product-btn');
+if(deleteButton) {
+  deleteButton.addEventListener('click', async () => {
+    if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+    try {
+    const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, product.id);
+    await deleteDoc(productRef);
+    showModal("Producto eliminado con éxito.");
+    } catch (error) {
+    console.error("Error al eliminar el producto:", error);
+    showModal("Error al eliminar el producto. Por favor, intenta de nuevo.");
+    }
+    }
+  });
 }
-});
 }
 
 function renderSalesHistory(sales) {
+if (!salesHistoryContainer) return;
 salesHistoryContainer.innerHTML = '';
 
 const filteredSales = applyFilters(sales);
@@ -622,10 +648,10 @@ printReceipt(saleToPrint);
 }
 
 function applyFilters(sales) {
-const startDate = filterStartDate.value ? new Date(filterStartDate.value) : null;
-const endDate = filterEndDate.value ? new Date(filterEndDate.value) : null;
-const productName = filterProduct.value.toLowerCase();
-const paymentMethod = filterPaymentMethod.value;
+const startDate = filterStartDate?.value ? new Date(filterStartDate.value) : null;
+const endDate = filterEndDate?.value ? new Date(filterEndDate.value) : null;
+const productName = filterProduct?.value.toLowerCase() || '';
+const paymentMethod = filterPaymentMethod?.value || '';
 
 return sales.filter(sale => {
 const saleDate = sale.timestamp ? new Date(sale.timestamp.seconds * 1000) : null;
@@ -645,19 +671,24 @@ return true;
 });
 }
 
-applyFiltersBtn.addEventListener('click', () => {
-renderSalesHistory(allSales);
-});
+if (applyFiltersBtn) {
+  applyFiltersBtn.addEventListener('click', () => {
+    renderSalesHistory(allSales);
+  });
+}
 
-clearFiltersBtn.addEventListener('click', () => {
-filterStartDate.value = '';
-filterEndDate.value = '';
-filterProduct.value = '';
-filterPaymentMethod.value = '';
-renderSalesHistory(allSales);
-});
+if (clearFiltersBtn) {
+  clearFiltersBtn.addEventListener('click', () => {
+    if (filterStartDate) filterStartDate.value = '';
+    if (filterEndDate) filterEndDate.value = '';
+    if (filterProduct) filterProduct.value = '';
+    if (filterPaymentMethod) filterPaymentMethod.value = '';
+    renderSalesHistory(allSales);
+  });
+}
 
 function renderDailyExpenses(expenses) {
+if (!dailyExpensesContainer) return;
 dailyExpensesContainer.innerHTML = '';
 expenses.forEach(expense => {
 const expenseDiv = document.createElement('div');
@@ -674,6 +705,7 @@ dailyExpensesContainer.appendChild(expenseDiv);
 }
 
 function renderCashHistory(history) {
+if(!cashHistoryContainer) return;
 cashHistoryContainer.innerHTML = '';
 
 const historyByMonth = history.reduce((acc, entry) => {
@@ -715,7 +747,7 @@ cashHistoryContainer.appendChild(monthDiv);
 
 async function updateDailyTotals() {
   if (!dailyCashData) {
-    currentCashDisplay.textContent = `$0.00`;
+    if(currentCashDisplay) currentCashDisplay.textContent = `$0.00`;
     if (cashStatsSection) cashStatsSection.classList.add('hidden');
     return;
   }
@@ -812,7 +844,7 @@ if (expenseForm) {
     e.preventDefault();
     const description = document.getElementById('expense-description').value;
     const amount = parseFloat(document.getElementById('expense-amount').value);
-    const category = expenseCategorySelect.value;
+    const category = expenseCategorySelect?.value;
 
     if (isNaN(amount) || amount <= 0) {
     showModal("El monto debe ser un número positivo.");
@@ -933,10 +965,10 @@ if (cartTotalSpan) cartTotalSpan.textContent = `$${total.toFixed(2)}`;
 if (productForm) {
   productForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const id = document.getElementById('product-id').value;
-    const name = document.getElementById('product-name-input').value;
-    const price = parseFloat(document.getElementById('product-price-input').value);
-    const stock = parseInt(document.getElementById('product-stock-input').value, 10);
+    const id = document.getElementById('product-id')?.value;
+    const name = document.getElementById('product-name-input')?.value;
+    const price = parseFloat(document.getElementById('product-price-input')?.value);
+    const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
 
     if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
     showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
@@ -953,8 +985,9 @@ if (productForm) {
     await addDoc(productsCollection, { name, price, stock });
     showModal("Producto añadido con éxito.");
     }
-    productForm.reset();
-    document.getElementById('product-id').value = '';
+    if (productForm) productForm.reset();
+    const productIdInput = document.getElementById('product-id');
+    if (productIdInput) productIdInput.value = '';
     } catch (error) {
     console.error("Error al guardar el producto:", error);
     showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
@@ -974,40 +1007,41 @@ if (checkoutBtn) {
     }
 
     const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-    paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
-    paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
+    if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
+    if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
-    paymentInputsContainer.innerHTML = '';
+    if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
     addPaymentInput(total);
 
-    splitPaymentModal.classList.remove('hidden');
+    if (splitPaymentModal) splitPaymentModal.classList.remove('hidden');
   });
 }
 
 if (addPaymentMethodBtn) {
   addPaymentMethodBtn.addEventListener('click', () => {
-    paymentModal.classList.remove('hidden');
+    if (paymentModal) paymentModal.classList.remove('hidden');
   });
 }
 
 if (cancelPaymentBtn) {
   cancelPaymentBtn.addEventListener('click', () => {
-    paymentModal.classList.add('hidden');
+    if (paymentModal) paymentModal.classList.add('hidden');
   });
 }
 
 if (addPaymentForm) {
   addPaymentForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const newMethodName = document.getElementById('new-payment-name').value.trim();
+    const newPaymentNameInput = document.getElementById('new-payment-name');
+    const newMethodName = newPaymentNameInput?.value.trim();
 
     if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
     try {
     const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
     await addDoc(paymentMethodsCollection, { name: newMethodName });
+    if(addPaymentForm) addPaymentForm.reset();
+    if(paymentModal) paymentModal.classList.add('hidden');
     showModal("Forma de pago añadida con éxito.");
-    addPaymentForm.reset();
-    paymentModal.classList.add('hidden');
     } catch (error) {
     console.error("Error al añadir la forma de pago:", error);
     showModal("Error al añadir la forma de pago.");
@@ -1019,6 +1053,7 @@ if (addPaymentForm) {
 }
 
 function addPaymentInput(amount = 0) {
+if (!paymentInputsContainer) return;
 const row = document.createElement('div');
 row.className = "flex space-x-2";
 
@@ -1038,15 +1073,17 @@ input.placeholder = "Monto";
 input.step = "0.01";
 input.className = "w-full px-4 py-2 border border-gray-300 rounded-lg";
 
-if (paymentInputsContainer.children.length === 0) {
-input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
-} else {
-input.value = amount.toFixed(2);
+if (cartTotalSpan) {
+  if (paymentInputsContainer.children.length === 0) {
+    input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
+  } else {
+    input.value = amount.toFixed(2);
+  }
 }
 
 input.addEventListener('input', updateRemainingAmount);
 select.addEventListener('change', () => {
-if (paymentInputsContainer.children.length === 1) {
+if (cartTotalSpan && paymentInputsContainer.children.length === 1) {
 input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
 }
 updateRemainingAmount();
@@ -1057,7 +1094,7 @@ removeBtn.innerHTML = `<i class="fas fa-times-circle"></i>`;
 removeBtn.className = "px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600";
 removeBtn.addEventListener('click', () => {
 row.remove();
-if (paymentInputsContainer.children.length === 0) {
+if (cartTotalSpan && paymentInputsContainer.children.length === 0) {
 addPaymentInput(parseFloat(cartTotalSpan.textContent.replace('$', '')));
 }
 updateRemainingAmount();
@@ -1069,9 +1106,9 @@ row.appendChild(removeBtn);
 paymentInputsContainer.appendChild(row);
 
 if (paymentInputsContainer.children.length >= 1) {
-addPaymentInputBtn.classList.remove('hidden');
+if (addPaymentInputBtn) addPaymentInputBtn.classList.remove('hidden');
 } else {
-addPaymentInputBtn.classList.add('hidden');
+if (addPaymentInputBtn) addPaymentInputBtn.classList.add('hidden');
 }
 updateRemainingAmount();
 }
@@ -1084,11 +1121,12 @@ if (addPaymentInputBtn) {
 
 if (cancelSplitBtn) {
   cancelSplitBtn.addEventListener('click', () => {
-    splitPaymentModal.classList.add('hidden');
+    if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
   });
 }
 
 function updateRemainingAmount() {
+if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
 const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
 const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
 let sum = 0;
@@ -1105,6 +1143,10 @@ paymentRemainingDisplay.style.color = '#10b981';
 
 if (processPaymentBtn) {
   processPaymentBtn.addEventListener('click', async () => {
+    if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+    console.error("Faltan elementos del DOM para procesar el pago.");
+    return;
+    }
     const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
     const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
     const paymentSelects = paymentInputsContainer.querySelectorAll('select');
@@ -1164,7 +1206,7 @@ if (processPaymentBtn) {
 
     cart = [];
     renderCart();
-    splitPaymentModal.classList.add('hidden');
+    if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
     customerSelect.value = "";
 
     } catch (error) {
@@ -1176,7 +1218,7 @@ if (processPaymentBtn) {
 
 if (importSalesBtn) {
   importSalesBtn.addEventListener('click', () => {
-    importSalesInput.click();
+    if (importSalesInput) importSalesInput.click();
   });
 }
 
@@ -1274,7 +1316,7 @@ showModal(message);
 if (addCustomerForm) {
   addCustomerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('customer-name-input').value.trim();
+    const name = document.getElementById('customer-name-input')?.value.trim();
     if (!name) {
     showModal("El nombre del cliente no puede estar vacío.");
     return;
@@ -1282,7 +1324,7 @@ if (addCustomerForm) {
     try {
     const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
     await addDoc(customersCollection, { name });
-    addCustomerForm.reset();
+    if(addCustomerForm) addCustomerForm.reset();
     showModal(`Cliente '${name}' añadido con éxito.`);
     } catch (error) {
     console.error("Error al añadir cliente:", error);
@@ -1310,21 +1352,33 @@ function renderCustomersList(customers) {
         `;
         customersListContainer.appendChild(itemDiv);
 
-        // Corregido: Usar itemDiv para buscar los botones y asignar eventos
-        itemDiv.querySelector('.edit-customer-btn').addEventListener('click', () => {
-            const newName = prompt(`Editar nombre de cliente:`, customer.name);
-            if (newName && newName.trim()) {
-                const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-                setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
-            }
-        });
-        itemDiv.querySelector('.delete-customer-btn').addEventListener('click', async () => {
+        // Corregido: Usar itemDiv para encontrar los botones
+        const editButton = itemDiv.querySelector('.edit-customer-btn');
+        if(editButton) {
+          editButton.addEventListener('click', () => {
+              const newName = prompt(`Editar nombre de cliente:`, customer.name);
+              const productIdInput = document.getElementById('product-id');
+              const productNameInput = document.getElementById('product-name-input');
+              const productPriceInput = document.getElementById('product-price-input');
+              const productStockInput = document.getElementById('product-stock-input');
+
+              if (productIdInput) productIdInput.value = product.id;
+              if (productNameInput) productNameInput.value = product.name;
+              if (productPriceInput) productPriceInput.value = product.price;
+              if (productStockInput) productStockInput.value = product.stock;
+          });
+        }
+        
+        const deleteButton = itemDiv.querySelector('.delete-customer-btn');
+        if(deleteButton) {
+          deleteButton.addEventListener('click', async () => {
             if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
-                const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-                await deleteDoc(customerDocRef);
-                showModal("Cliente eliminado.");
+            const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+            await deleteDoc(customerDocRef);
+            showModal("Cliente eliminado.");
             }
-        });
+          });
+        }
     });
 }
 
@@ -1341,52 +1395,53 @@ function renderCustomerSelect(customers) {
 
 // Lógica de gráficos de ventas
 function renderSalesChart(sales) {
-const salesByDay = sales.reduce((acc, sale) => {
-if (sale.timestamp && sale.timestamp.seconds) {
-const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
-acc[date] = (acc[date] || 0) + sale.total;
-}
-return acc;
-}, {});
+  if (!salesChartCtx) return;
+  const salesByDay = sales.reduce((acc, sale) => {
+    if (sale.timestamp && sale.timestamp.seconds) {
+      const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
+      acc[date] = (acc[date] || 0) + sale.total;
+    }
+    return acc;
+  }, {});
 
-const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
-const salesData = sortedDates.map(date => salesByDay[date]);
+  const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+  const salesData = sortedDates.map(date => salesByDay[date]);
 
-if (salesChart) {
-salesChart.destroy();
-}
+  if (salesChart) {
+    salesChart.destroy();
+  }
 
-salesChart = new Chart(salesChartCtx, {
-type: 'bar',
-data: {
-labels: sortedDates,
-datasets: [{
-label: 'Ventas Diarias',
-data: salesData,
-backgroundColor: 'rgba(59, 130, 246, 0.5)',
-borderColor: 'rgba(59, 130, 246, 1)',
-borderWidth: 1
-}]
-},
-options: {
-responsive: true,
-scales: {
-y: {
-beginAtZero: true,
-title: {
-display: true,
-text: 'Ventas Totales ($)'
-}
-},
-x: {
-title: {
-display: true,
-text: 'Fecha'
-}
-}
-}
-}
-});
+  salesChart = new Chart(salesChartCtx, {
+    type: 'bar',
+    data: {
+      labels: sortedDates,
+      datasets: [{
+        label: 'Ventas Diarias',
+        data: salesData,
+        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+        borderColor: 'rgba(59, 130, 246, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Ventas Totales ($)'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Fecha'
+          }
+        }
+      }
+    }
+  });
 }
 
 // Impresión de recibos
@@ -1459,12 +1514,12 @@ printWindow.print();
 if (loginBtn) {
     loginBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        const email = authEmail.value;
-        const password = authPassword.value;
+        const email = authEmail?.value;
+        const password = authPassword?.value;
         try {
             await signInWithEmailAndPassword(auth, email, password);
             showModal("Inicio de sesión exitoso.");
-            authModal.classList.add('hidden');
+            if (authModal) authModal.classList.add('hidden');
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
             showModal("Error al iniciar sesión. Verifica tus credenciales.");
@@ -1475,8 +1530,8 @@ if (loginBtn) {
 if (registerBtn) {
     registerBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        const email = authEmail.value;
-        const password = authPassword.value;
+        const email = authEmail?.value;
+        const password = authPassword?.value;
         try {
             await createUserWithEmailAndPassword(auth, email, password);
             showModal("Registro exitoso. Ahora puedes iniciar sesión.");
@@ -1554,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             userId = user.uid;
             setupRealtimeListeners();
-            authModal.classList.add('hidden');
+            if (authModal) authModal.classList.add('hidden');
             // Al iniciar sesión, mostrar el POS y activar su pestaña
             showPage('pos-page'); 
             const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
@@ -1562,7 +1617,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 posTab.classList.add('active');
             }
         } else {
-            authModal.classList.remove('hidden');
+            if (authModal) authModal.classList.remove('hidden');
             pages.forEach(page => page.classList.remove('active'));
         }
     });
@@ -1570,7 +1625,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addCustomerForm) {
       addCustomerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = document.getElementById('customer-name-input').value.trim();
+        const name = document.getElementById('customer-name-input')?.value.trim();
         if (!name) {
           showModal("El nombre del cliente no puede estar vacío.");
           return;
@@ -1578,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
           await addDoc(customersCollection, { name });
-          addCustomerForm.reset();
+          if(addCustomerForm) addCustomerForm.reset();
           showModal(`Cliente '${name}' añadido con éxito.`);
         } catch (error) {
           console.error("Error al añadir cliente:", error);
@@ -1590,10 +1645,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (productForm) {
       productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = document.getElementById('product-id').value;
-        const name = document.getElementById('product-name-input').value;
-        const price = parseFloat(document.getElementById('product-price-input').value);
-        const stock = parseInt(document.getElementById('product-stock-input').value, 10);
+        const id = document.getElementById('product-id')?.value;
+        const name = document.getElementById('product-name-input')?.value;
+        const price = parseFloat(document.getElementById('product-price-input')?.value);
+        const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
     
         if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
           showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
@@ -1610,8 +1665,9 @@ document.addEventListener('DOMContentLoaded', () => {
             await addDoc(productsCollection, { name, price, stock });
             showModal("Producto añadido con éxito.");
           }
-          productForm.reset();
-          document.getElementById('product-id').value = '';
+          if (productForm) productForm.reset();
+          const productIdInput = document.getElementById('product-id');
+          if (productIdInput) productIdInput.value = '';
         } catch (error) {
           console.error("Error al guardar el producto:", error);
           showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
@@ -1630,14 +1686,19 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
     
+        if (!cartTotalSpan || !paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal) {
+            console.error("Faltan elementos del DOM para el checkout.");
+            return;
+        }
+
         const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
         paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
         paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
-    
-        if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
+
+        paymentInputsContainer.innerHTML = '';
         addPaymentInput(total);
-    
-        if (splitPaymentModal) splitPaymentModal.classList.remove('hidden');
+
+        splitPaymentModal.classList.remove('hidden');
       });
     }
     
@@ -1656,15 +1717,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addPaymentForm) {
       addPaymentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newMethodName = document.getElementById('new-payment-name').value.trim();
+        const newPaymentNameInput = document.getElementById('new-payment-name');
+        const newMethodName = newPaymentNameInput?.value.trim();
     
         if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
           try {
             const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
             await addDoc(paymentMethodsCollection, { name: newMethodName });
+            if(addPaymentForm) addPaymentForm.reset();
+            if(paymentModal) paymentModal.classList.add('hidden');
             showModal("Forma de pago añadida con éxito.");
-            addPaymentForm.reset();
-            if (paymentModal) paymentModal.classList.add('hidden');
           } catch (error) {
             console.error("Error al añadir la forma de pago:", error);
             showModal("Error al añadir la forma de pago.");
@@ -1689,6 +1751,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (processPaymentBtn) {
       processPaymentBtn.addEventListener('click', async () => {
+        if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+            console.error("Faltan elementos del DOM para procesar el pago.");
+            return;
+        }
         const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
         const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
         const paymentSelects = paymentInputsContainer.querySelectorAll('select');
@@ -1748,7 +1814,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
           cart = [];
           renderCart();
-          if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+          splitPaymentModal.classList.add('hidden');
           customerSelect.value = "";
     
         } catch (error) {
@@ -1760,7 +1826,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (importSalesBtn) {
       importSalesBtn.addEventListener('click', () => {
-        importSalesInput.click();
+        if (importSalesInput) importSalesInput.click();
       });
     }
 
@@ -1792,10 +1858,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (clearFiltersBtn) {
       clearFiltersBtn.addEventListener('click', () => {
-        filterStartDate.value = '';
-        filterEndDate.value = '';
-        filterProduct.value = '';
-        filterPaymentMethod.value = '';
+        if (filterStartDate) filterStartDate.value = '';
+        if (filterEndDate) filterEndDate.value = '';
+        if (filterProduct) filterProduct.value = '';
+        if (filterPaymentMethod) filterPaymentMethod.value = '';
         renderSalesHistory(allSales);
       });
     }
@@ -1803,11 +1869,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addPaymentMethodForm) {
       addPaymentMethodForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newMethod = newPaymentMethodName.value.trim();
+        const newPaymentNameInput = document.getElementById('new-payment-method-name');
+        const newMethod = newPaymentNameInput?.value.trim();
         if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
             try {
                 await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
-                newPaymentMethodName.value = '';
+                if(newPaymentNameInput) newPaymentNameInput.value = '';
                 showModal("Forma de pago añadida con éxito.");
             } catch (error) {
                 console.error("Error al añadir forma de pago:", error);
@@ -1822,11 +1889,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addExpenseCategoryForm) {
       addExpenseCategoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newCategory = newExpenseCategoryName.value.trim();
+        const newExpenseNameInput = document.getElementById('new-expense-category-name');
+        const newCategory = newExpenseNameInput?.value.trim();
         if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
             try {
                 await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
-                newExpenseCategoryName.value = '';
+                if(newExpenseNameInput) newExpenseNameInput.value = '';
                 showModal("Categoría de gasto añadida con éxito.");
             } catch (error) {
                 console.error("Error al añadir categoría de gasto:", error);
