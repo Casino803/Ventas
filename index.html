@@ -35,6 +35,9 @@
 <button data-page="history-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
 <i class="fas fa-clipboard-list mr-2"></i> Historial de Ventas
 </button>
+<button data-page="stats-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
+<i class="fas fa-chart-line mr-2"></i> Estadísticas
+</button>
 <button data-page="cash-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
 <i class="fas fa-wallet mr-2"></i> Caja
 </button>
@@ -191,13 +194,26 @@ class="flex-grow px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-lg 
 </button>
 </div>
 
-<h3 class="text-lg font-semibold text-gray-700 mb-4">Análisis de Ventas</h3>
-<div class="mb-6 bg-gray-100 p-4 rounded-lg">
-<canvas id="salesChart"></canvas>
-</div>
-
 <div id="sales-history-container" class="space-y-4 overflow-y-scroll max-h-64">
 </div>
+</div>
+
+<div id="stats-page" class="page-content hidden">
+  <h2 class="text-xl font-semibold text-gray-700 mb-4">Estadísticas</h2>
+  <div class="space-y-6">
+    <div class="mb-6 bg-gray-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Análisis de Ventas</h3>
+      <canvas id="salesChart"></canvas>
+    </div>
+    <div class="mb-6 bg-gray-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Top 5 Productos más Vendidos</h3>
+      <canvas id="topProductsChart"></canvas>
+    </div>
+    <div class="mb-6 bg-gray-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Ventas por Forma de Pago</h3>
+      <canvas id="paymentMethodsChart"></canvas>
+    </div>
+  </div>
 </div>
 
 <div id="cash-page" class="page-content hidden">
