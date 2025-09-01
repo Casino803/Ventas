@@ -97,6 +97,10 @@ const salesChartCtx = document.getElementById('salesChart')?.getContext('2d');
 const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
 const filtersContainer = document.getElementById('filters-container');
 
+// Referencias de la nueva página de estadísticas
+const topProductsChartCtx = document.getElementById('topProductsChart')?.getContext('2d');
+const paymentMethodsChartCtx = document.getElementById('paymentMethodsChart')?.getContext('2d');
+
 // Referencias del modal de autenticación
 const authModal = document.getElementById('auth-modal');
 const authForm = document.getElementById('auth-form');
@@ -116,6 +120,8 @@ const tabButtons = document.querySelectorAll('.tab-btn');
 
 
 let salesChart;
+let topProductsChart;
+let paymentMethodsChart;
 let userId = '';
 let cart = [];
 let allProducts = [];
@@ -286,6 +292,8 @@ function setupRealtimeListeners() {
         renderSalesHistory(allSales);
         updateDailyTotals();
         if (salesChartCtx) renderSalesChart(allSales);
+        if (topProductsChartCtx) renderTopProductsChart(allSales);
+        if (paymentMethodsChartCtx) renderPaymentMethodsChart(allSales);
     }, (error) => {
         console.error("Error al escuchar ventas:", error);
         showModal("Error al cargar el historial de ventas.");
@@ -1223,6 +1231,32 @@ if (checkoutBtn) {
     });
 }
 
+if (applyDiscountSurchargeBtn) {
+    applyDiscountSurchargeBtn.addEventListener('click', () => {
+        const value = parseFloat(discountSurchargeValueInput?.value);
+        const type = discountSurchargeTypeSelect?.value;
+
+        if (isNaN(value) || value <= 0) {
+            showModal("El valor del descuento/recargo debe ser un número positivo.");
+            return;
+        }
+
+        currentDiscountSurcharge.value = value;
+        currentDiscountSurcharge.type = type;
+
+        renderCart();
+    });
+}
+
+if (clearDiscountSurchargeBtn) {
+    clearDiscountSurchargeBtn.addEventListener('click', () => {
+        currentDiscountSurcharge.value = 0;
+        currentDiscountSurcharge.type = null;
+        discountSurchargeValueInput.value = '';
+        renderCart();
+    });
+}
+
 
 function addPaymentInput(amount = 0) {
     if (!paymentInputsContainer) return;
@@ -1343,13 +1377,15 @@ if (exportSalesBtn) {
     }
 
 function exportSalesToCsv(sales) {
-    const headers = ["ID", "Fecha", "Total", "Pagos", "Cliente", "Items"];
+    const headers = ["ID", "Fecha", "Subtotal", "Ajuste", "Total", "Pagos", "Cliente", "Items"];
     const rows = sales.map(sale => {
         const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000).toLocaleString('es-ES') : '';
+        const subtotal = sale.subtotal ? sale.subtotal.toFixed(2) : '';
+        const adjustment = sale.adjustment ? `${sale.adjustment.amount.toFixed(2)} (${sale.adjustment.type})` : '';
         const payments = JSON.stringify(sale.payments);
         const items = JSON.stringify(sale.items);
         const customer = sale.customerName || '';
-        return `"${sale.id}","${date}",${sale.total.toFixed(2)},"${payments}","${customer}","${items}"`;
+        return `"${sale.id}","${date}","${subtotal}","${adjustment}",${sale.total.toFixed(2)},"${payments}","${customer}","${items}"`;
     });
 
     const csvContent = [headers.join(","), ...rows].join("\n");
@@ -1491,7 +1527,6 @@ function renderCustomerSelect(customers) {
     });
 }
 
-// Lógica de gráficos de ventas
 function renderSalesChart(sales) {
     if (!salesChartCtx) return;
     const salesByDay = sales.reduce((acc, sale) => {
@@ -1535,6 +1570,107 @@ function renderSalesChart(sales) {
                     title: {
                         display: true,
                         text: 'Fecha'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTopProductsChart(sales) {
+    if (!topProductsChartCtx) return;
+
+    const productSales = sales.flatMap(sale => sale.items).reduce((acc, item) => {
+        acc[item.name] = (acc[item.name] || 0) + item.quantity;
+        return acc;
+    }, {});
+
+    const sortedProducts = Object.entries(productSales).sort(([, a], [, b]) => b - a).slice(0, 5);
+    const labels = sortedProducts.map(([name]) => name);
+    const data = sortedProducts.map(([, quantity]) => quantity);
+
+    if (topProductsChart) {
+        topProductsChart.destroy();
+    }
+
+    topProductsChart = new Chart(topProductsChartCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: data,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Producto'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderPaymentMethodsChart(sales) {
+    if (!paymentMethodsChartCtx) return;
+
+    const paymentTotals = sales.reduce((acc, sale) => {
+        sale.payments.forEach(payment => {
+            acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
+        });
+        return acc;
+    }, {});
+
+    const labels = Object.keys(paymentTotals);
+    const data = Object.values(paymentTotals);
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6b7280'];
+
+    if (paymentMethodsChart) {
+        paymentMethodsChart.destroy();
+    }
+
+    paymentMethodsChart = new Chart(paymentMethodsChartCtx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += `$${context.parsed.toFixed(2)}`;
+                            }
+                            return label;
+                        }
                     }
                 }
             }
@@ -1838,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCart();
         });
     }
-    
+
     if (clearDiscountSurchargeBtn) {
         clearDiscountSurchargeBtn.addEventListener('click', () => {
             currentDiscountSurcharge.value = 0;
@@ -1847,6 +1983,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCart();
         });
     }
+
 
     if (addPaymentInputBtn) {
         addPaymentInputBtn.addEventListener('click', () => {
