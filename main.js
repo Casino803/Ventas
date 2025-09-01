@@ -100,6 +100,7 @@ const paymentMethodsList = document.getElementById('payment-methods-list');
 const addExpenseCategoryForm = document.getElementById('add-expense-category-form');
 const newExpenseCategoryName = document.getElementById('new-expense-category-name');
 const expenseCategoriesList = document.getElementById('expense-categories-list');
+const tabButtons = document.querySelectorAll('.tab-btn');
 
 
 let salesChart;
@@ -159,7 +160,12 @@ function setupNavigation() {
     menuButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetPageId = btn.dataset.page;
-            showPage(targetPageId);
+            // Manejar la lógica de pestañas si el botón no es del menú principal
+            if (!btn.classList.contains('tab-btn')) {
+                // Desactivar la pestaña activa
+                document.querySelector('.tab-btn.active')?.classList.remove('active');
+                showPage(targetPageId);
+            }
         });
     });
 
@@ -181,15 +187,6 @@ function setupTabNavigation() {
             btn.classList.add('active');
             // Mostrar la página correspondiente
             showPage(targetPageId);
-        });
-    });
-
-    // Restaurar el menú principal
-    backToMenuBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Eliminar la clase activa de las pestañas
-            document.querySelector('.tab-btn.active')?.classList.remove('active');
-            showHomeMenu();
         });
     });
 }
@@ -1480,4 +1477,63 @@ function toggleSection(sectionId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', setupTabNavigation);
+document.addEventListener('DOMContentLoaded', () => {
+    // Manejar la navegación de pestañas
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelector('.tab-btn.active')?.classList.remove('active');
+            btn.classList.add('active');
+            showPage(btn.dataset.page);
+        });
+    });
+
+    // Manejar la navegación de botones principales
+    menuButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetPageId = btn.dataset.page;
+            showPage(targetPageId);
+            // Si no estamos en el menú principal, desactivar la pestaña activa
+            if(targetPageId !== 'home-menu') {
+                document.querySelector('.tab-btn.active')?.classList.remove('active');
+            }
+        });
+    });
+    
+    // Asignar el evento al botón de logout en el menú superior
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            showModal("Sesión cerrada correctamente.");
+            cart = [];
+            renderCart();
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            showModal("Hubo un error al cerrar la sesión.");
+        }
+    });
+
+    // Asignar el evento de clic a las cabeceras de las secciones colapsables
+    document.querySelectorAll('[onclick^="toggleSection"]').forEach(header => {
+        header.addEventListener('click', () => {
+            const sectionId = header.getAttribute('onclick').split("'")[1];
+            toggleSection(sectionId);
+        });
+    });
+
+    // Inicializar la página en el POS al cargar si el usuario está autenticado
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            userId = user.uid;
+            setupRealtimeListeners();
+            authModal.classList.add('hidden');
+            showPage('pos-page');
+            document.querySelector('.tab-btn[data-page="pos-page"]').classList.add('active');
+        } else {
+            authModal.classList.remove('hidden');
+            pages.forEach(page => page.classList.remove('active'));
+        }
+    });
+
+    setupTabNavigation(); // Asocia eventos a los botones de pestañas
+});
