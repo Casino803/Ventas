@@ -294,80 +294,82 @@ renderCashHistory(history);
 // Funciones de renderizado de configuración
 function renderPaymentMethodsList() {
     paymentMethodsList.innerHTML = '';
-    const allMethods = [...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)];
+    const allMethods = [...defaultPaymentMethods.map(name => ({name: name, id: null})), ...userPaymentMethods];
     allMethods.forEach(method => {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
         itemDiv.innerHTML = `
-            <span>${method}</span>
+            <span>${method.name}</span>
             <div class="flex space-x-2">
-                <button data-name="${method}" class="delete-payment-method-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                <button data-id="${method.id}" class="delete-payment-method-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
         `;
         paymentMethodsList.appendChild(itemDiv);
 
-        itemDiv.querySelector('.delete-payment-method-btn').addEventListener('click', async () => {
-            if (confirm(`¿Estás seguro de que quieres eliminar la forma de pago '${method}'?`)) {
-                try {
-                    const methodToDelete = userPaymentMethods.find(m => m.name === method);
-                    if (methodToDelete) {
-                        const methodDocRef = doc(db, SHARED_PAYMENT_METHODS_COLLECTION, methodToDelete.id);
+        const deleteButton = itemDiv.querySelector('.delete-payment-method-btn');
+        if (method.id) {
+            deleteButton.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que quieres eliminar la forma de pago '${method.name}'?`)) {
+                    try {
+                        const methodDocRef = doc(db, SHARED_PAYMENT_METHODS_COLLECTION, method.id);
                         await deleteDoc(methodDocRef);
                         showModal("Forma de pago eliminada con éxito.");
-                    } else {
-                        showModal("No se puede eliminar una forma de pago por defecto.");
+                    } catch (error) {
+                        console.error("Error al eliminar la forma de pago:", error);
+                        showModal("Error al eliminar la forma de pago.");
                     }
-                } catch (error) {
-                    console.error("Error al eliminar la forma de pago:", error);
-                    showModal("Error al eliminar la forma de pago.");
                 }
-            }
-        });
+            });
+        } else {
+            deleteButton.disabled = true;
+            deleteButton.classList.add('opacity-50', 'cursor-not-allowed');
+        }
     });
 }
 
 function renderExpenseCategoriesList() {
     expenseCategoriesList.innerHTML = '';
-    const allCategories = [...defaultExpenseCategories, ...userExpenseCategories.map(c => c.name)];
+    const allCategories = [...defaultExpenseCategories.map(name => ({name: name, id: null})), ...userExpenseCategories];
     allCategories.forEach(category => {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
         itemDiv.innerHTML = `
-            <span>${category}</span>
+            <span>${category.name}</span>
             <div class="flex space-x-2">
-                <button data-name="${category}" class="delete-expense-category-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                <button data-id="${category.id}" class="delete-expense-category-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
         `;
         expenseCategoriesList.appendChild(itemDiv);
-
-        itemDiv.querySelector('.delete-expense-category-btn').addEventListener('click', async () => {
-            if (confirm(`¿Estás seguro de que quieres eliminar la categoría de gasto '${category}'?`)) {
-                try {
-                    const categoryToDelete = userExpenseCategories.find(c => c.name === category);
-                    if (categoryToDelete) {
-                        const categoryDocRef = doc(db, SHARED_EXPENSE_CATEGORIES_COLLECTION, categoryToDelete.id);
+        
+        const deleteButton = itemDiv.querySelector('.delete-expense-category-btn');
+        if (category.id) {
+            deleteButton.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que quieres eliminar la categoría de gasto '${category.name}'?`)) {
+                    try {
+                        const categoryDocRef = doc(db, SHARED_EXPENSE_CATEGORIES_COLLECTION, category.id);
                         await deleteDoc(categoryDocRef);
                         showModal("Categoría de gasto eliminada con éxito.");
-                    } else {
-                        showModal("No se puede eliminar una categoría de gasto por defecto.");
+                    } catch (error) {
+                        console.error("Error al eliminar la categoría de gasto:", error);
+                        showModal("Error al eliminar la categoría de gasto.");
                     }
-                } catch (error) {
-                    console.error("Error al eliminar la categoría de gasto:", error);
-                    showModal("Error al eliminar la categoría de gasto.");
                 }
-            }
-        });
+            });
+        } else {
+            deleteButton.disabled = true;
+            deleteButton.classList.add('opacity-50', 'cursor-not-allowed');
+        }
     });
 }
 
 addPaymentMethodForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const newMethod = newPaymentMethodName.value.trim();
-    if (newMethod) {
+    if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
         try {
             await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
             newPaymentMethodName.value = '';
@@ -376,13 +378,15 @@ addPaymentMethodForm.addEventListener('submit', async (e) => {
             console.error("Error al añadir forma de pago:", error);
             showModal("Error al añadir forma de pago.");
         }
+    } else {
+        showModal("Esa forma de pago ya existe o no es válida.");
     }
 });
 
 addExpenseCategoryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const newCategory = newExpenseCategoryName.value.trim();
-    if (newCategory) {
+    if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
         try {
             await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
             newExpenseCategoryName.value = '';
@@ -391,6 +395,8 @@ addExpenseCategoryForm.addEventListener('submit', async (e) => {
             console.error("Error al añadir categoría de gasto:", error);
             showModal("Error al añadir categoría de gasto.");
         }
+    } else {
+        showModal("Esa categoría de gasto ya existe o no es válida.");
     }
 });
 
