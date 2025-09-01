@@ -102,10 +102,6 @@ const newExpenseCategoryName = document.getElementById('new-expense-category-nam
 const expenseCategoriesList = document.getElementById('expense-categories-list');
 const tabButtons = document.querySelectorAll('.tab-btn');
 
-const cashTabContent = document.getElementById('cash-tab-content');
-const expensesTabContent = document.getElementById('expenses-tab-content');
-const cashTabButtons = document.querySelectorAll('.cash-tab-btn');
-
 
 let salesChart;
 let userId = '';
@@ -200,7 +196,8 @@ function setupTabNavigation() {
 }
 
 function setupCashTabNavigation() {
-    if(!cashTabButtons || !cashTabContent || !expensesTabContent) return;
+    const cashTabButtons = document.querySelectorAll('.cash-tab-btn');
+    const cashTabPages = document.querySelectorAll('.cash-tab-page');
 
     cashTabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -209,13 +206,8 @@ function setupCashTabNavigation() {
             cashTabButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            if (targetPageId === 'cash-tab-content') {
-                cashTabContent.classList.add('active');
-                expensesTabContent.classList.remove('active');
-            } else if (targetPageId === 'expenses-tab-content') {
-                expensesTabContent.classList.add('active');
-                cashTabContent.classList.remove('active');
-            }
+            cashTabPages.forEach(p => p.classList.remove('active'));
+            document.getElementById(targetPageId)?.classList.add('active');
         });
     });
 }
@@ -547,7 +539,6 @@ class="delete-product-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hov
 `;
 manageProductsContainer.appendChild(itemDiv);
 
-// Corregido: Usar itemDiv para encontrar los botones
 const editButton = itemDiv.querySelector('.edit-product-btn');
 if(editButton) {
   editButton.addEventListener('click', () => {
@@ -714,53 +705,53 @@ if (clearFiltersBtn) {
 }
 
 function renderDailyExpenses(expenses) {
-if (!dailyExpensesContainer) return;
-dailyExpensesContainer.innerHTML = '';
+    if (!dailyExpensesContainer) return;
+    dailyExpensesContainer.innerHTML = '';
 
-// Agrupar gastos por día
-const expensesByDay = expenses.reduce((acc, expense) => {
-    const timestamp = expense.timestamp;
-    if (timestamp && timestamp.seconds) {
-        const date = new Date(timestamp.seconds * 1000).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-        if (!acc[date]) {
-            acc[date] = { total: 0, expenses: [] };
+    // Agrupar gastos por día
+    const expensesByDay = expenses.reduce((acc, expense) => {
+        const timestamp = expense.timestamp;
+        if (timestamp && timestamp.seconds) {
+            const date = new Date(timestamp.seconds * 1000).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            if (!acc[date]) {
+                acc[date] = { total: 0, expenses: [] };
+            }
+            acc[date].total += expense.amount;
+            acc[date].expenses.push(expense);
         }
-        acc[date].total += expense.amount;
-        acc[date].expenses.push(expense);
-    }
-    return acc;
-}, {});
+        return acc;
+    }, {});
 
-const sortedDates = Object.keys(expensesByDay).sort((a, b) => new Date(b) - new Date(a));
+    const sortedDates = Object.keys(expensesByDay).sort((a, b) => new Date(b) - new Date(a));
 
-sortedDates.forEach(dateString => {
-    const dailyExpenses = expensesByDay[dateString];
+    sortedDates.forEach(dateString => {
+        const dailyExpenses = expensesByDay[dateString];
 
-    const dayDiv = document.createElement('div');
-    dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
-    dayDiv.innerHTML = `
-        <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
-            <h3 class="font-bold text-lg">${dateString}</h3>
-            <span class="font-bold text-red-600 text-xl">Total: -$${dailyExpenses.total.toFixed(2)}</span>
-        </div>
-    `;
-
-    dailyExpenses.expenses.forEach(expense => {
-        const expenseDiv = document.createElement('div');
-        expenseDiv.className = "bg-white p-3 rounded-lg shadow-sm flex justify-between items-center my-2";
-        const formattedTime = new Date(expense.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
-        expenseDiv.innerHTML = `
-            <div>
-                <span class="font-semibold">${expense.description}</span>
-                <span class="text-gray-500 text-sm"> (${expense.category})</span>
-                <span class="text-gray-500 text-sm block"> - a las ${formattedTime}</span>
+        const dayDiv = document.createElement('div');
+        dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
+        dayDiv.innerHTML = `
+            <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
+                <h3 class="font-bold text-lg">${dateString}</h3>
+                <span class="font-bold text-red-600 text-xl">Total: -$${dailyExpenses.total.toFixed(2)}</span>
             </div>
-            <span class="text-red-600 font-bold">-$${expense.amount.toFixed(2)}</span>
         `;
-        dayDiv.appendChild(expenseDiv);
+
+        dailyExpenses.expenses.forEach(expense => {
+            const expenseDiv = document.createElement('div');
+            expenseDiv.className = "bg-white p-3 rounded-lg shadow-sm flex justify-between items-center my-2";
+            const formattedTime = new Date(expense.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
+            expenseDiv.innerHTML = `
+                <div>
+                    <span class="font-semibold">${expense.description}</span>
+                    <span class="text-gray-500 text-sm"> (${expense.category})</span>
+                    <span class="text-gray-500 text-sm block"> - a las ${formattedTime}</span>
+                </div>
+                <span class="text-red-600 font-bold">-$${expense.amount.toFixed(2)}</span>
+            `;
+            dayDiv.appendChild(expenseDiv);
+        });
+        dailyExpensesContainer.appendChild(dayDiv);
     });
-    dailyExpensesContainer.appendChild(dayDiv);
-});
 }
 
 function renderCashHistory(history) {
@@ -1787,4 +1778,193 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (addPaymentInputBtn) {
-      addPaymentInputBtn.addEventListener('click', () =>
+      addPaymentInputBtn.addEventListener('click', () => {
+        addPaymentInput(0);
+      });
+    }
+    
+    if (cancelSplitBtn) {
+      cancelSplitBtn.addEventListener('click', () => {
+        if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+      });
+    }
+
+    if (processPaymentBtn) {
+      processPaymentBtn.addEventListener('click', async () => {
+        if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+            console.error("Faltan elementos del DOM para procesar el pago.");
+            return;
+        }
+        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+        const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+        const paymentSelects = paymentInputsContainer.querySelectorAll('select');
+    
+        let sum = 0;
+        const payments = [];
+    
+        for (let i = 0; i < paymentInputs.length; i++) {
+          const amount = parseFloat(paymentInputs[i].value);
+          const method = paymentSelects[i].value;
+          if (isNaN(amount) || amount <= 0) {
+            showModal("Todos los montos deben ser números positivos.");
+            return;
+          }
+          sum += amount;
+          payments.push({ method: method, amount: amount });
+        }
+    
+        if (Math.abs(sum - total) > 0.01) {
+          showModal("La suma de los pagos no coincide con el total.");
+          return;
+        }
+        const cashId = new Date().toLocaleDateString('en-CA');
+        try {
+          const productUpdates = cart.map(item => {
+            const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+            return updateDoc(productDocRef, {
+              stock: item.stock - item.quantity
+            });
+          });
+          await Promise.all(productUpdates);
+    
+          const customerId = customerSelect.value;
+          const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+    
+          const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+          const newSaleRef = await addDoc(salesCollection, {
+            items: cart,
+            total: total,
+            payments: payments,
+            customerId: customerId || null,
+            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+            timestamp: serverTimestamp(),
+            cashId: cashId
+          });
+    
+          showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+
+          printReceipt({
+            id: newSaleRef.id,
+            items: cart,
+            total: total,
+            payments: payments,
+            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+            timestamp: new Date()
+          });
+    
+          cart = [];
+          renderCart();
+          if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+          if(customerSelect) customerSelect.value = "";
+    
+        } catch (error) {
+          console.error("Error al finalizar la venta:", error);
+          showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
+        }
+      });
+    }
+
+    if (importSalesBtn) {
+      importSalesBtn.addEventListener('click', () => {
+        if (importSalesInput) importSalesInput.click();
+      });
+    }
+
+    if (importSalesInput) {
+      importSalesInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            const csvData = event.target.result;
+            await processImportedSales(csvData);
+          };
+          reader.readAsText(file);
+        }
+      });
+    }
+
+    if (exportSalesBtn) {
+      exportSalesBtn.addEventListener('click', () => {
+        exportSalesToCsv(allSales);
+      });
+    }
+
+    if (applyFiltersBtn) {
+      applyFiltersBtn.addEventListener('click', () => {
+        renderSalesHistory(allSales);
+      });
+    }
+
+    if (clearFiltersBtn) {
+      clearFiltersBtn.addEventListener('click', () => {
+        if (filterStartDate) filterStartDate.value = '';
+        if (filterEndDate) filterEndDate.value = '';
+        if (filterProduct) filterProduct.value = '';
+        if (filterPaymentMethod) filterPaymentMethod.value = '';
+        renderSalesHistory(allSales);
+      });
+    }
+
+    if (addPaymentMethodForm) {
+      addPaymentMethodForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newPaymentNameInput = document.getElementById('new-payment-method-name');
+        const newMethod = newPaymentNameInput?.value.trim();
+        if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
+            try {
+                await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
+                if(newPaymentNameInput) newPaymentNameInput.value = '';
+                showModal("Forma de pago añadida con éxito.");
+            } catch (error) {
+                console.error("Error al añadir forma de pago:", error);
+                showModal("Error al añadir forma de pago.");
+            }
+        } else {
+            showModal("Esa forma de pago ya existe o no es válida.");
+        }
+      });
+    }
+
+    if (addExpenseCategoryForm) {
+      addExpenseCategoryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newExpenseNameInput = document.getElementById('new-expense-category-name');
+        const newCategory = newExpenseNameInput?.value.trim();
+        if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
+            try {
+                await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
+                if(newExpenseNameInput) newExpenseNameInput.value = '';
+                showModal("Categoría de gasto añadida con éxito.");
+            } catch (error) {
+                console.error("Error al añadir categoría de gasto:", error);
+                showModal("Error al añadir categoría de gasto.");
+            }
+        } else {
+            showModal("Esa categoría de gasto ya existe o no es válida.");
+        }
+      });
+    }
+
+    const topSettingsButton = document.querySelector('button[data-page="settings-page"]');
+    if (topSettingsButton) {
+        topSettingsButton.addEventListener('click', () => {
+            showPage('settings-page');
+            document.querySelector('.tab-btn.active')?.classList.remove('active');
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                showModal("Sesión cerrada correctamente.");
+                cart = [];
+                renderCart();
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+                showModal("Hubo un error al cerrar la sesión.");
+            }
+        });
+    }
+});
