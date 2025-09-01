@@ -1355,6 +1355,76 @@ function updateRemainingAmount() {
     }
 }
 
+if (processPaymentBtn) {
+    processPaymentBtn.addEventListener('click', async () => {
+        if (isProcessingPayment) return;
+        isProcessingPayment = true;
+
+        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+        const paymentInputs = document.querySelectorAll('#payment-inputs-container input');
+        const paymentSelects = document.querySelectorAll('#payment-inputs-container select');
+
+        let totalPaid = 0;
+        let payments = [];
+        let errors = [];
+
+        paymentInputs.forEach((input, index) => {
+            const amount = parseFloat(input.value);
+            const method = paymentSelects[index].value;
+            if (isNaN(amount) || amount <= 0) {
+                errors.push(`Monto de pago inválido para la forma de pago ${method}.`);
+            }
+            payments.push({ method, amount });
+            totalPaid += amount;
+        });
+
+        if (Math.abs(totalPaid - total) > 0.01) {
+            errors.push("El total pagado no coincide con el total de la venta.");
+        }
+
+        if (errors.length > 0) {
+            showModal(errors.join('\n'));
+            isProcessingPayment = false;
+            return;
+        }
+
+        const customerId = customerSelect.value || null;
+        const customerName = customerId ? customerSelect.options[customerSelect.selectedIndex].text : null;
+        const cashId = new Date().toLocaleDateString('en-CA');
+        const { subtotal, adjustmentAmount, total: finalTotal } = calculateTotal();
+
+        try {
+            await addDoc(collection(db, SHARED_SALES_COLLECTION), {
+                items: cart.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
+                subtotal: subtotal,
+                total: finalTotal,
+                adjustment: { amount: adjustmentAmount, type: currentDiscountSurcharge.type },
+                payments: payments,
+                timestamp: serverTimestamp(),
+                customerId: customerId,
+                customerName: customerName,
+                cashId: cashId
+            });
+
+            const batch = writeBatch(db);
+            for (const item of cart) {
+                const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                batch.update(productRef, { stock: increment(-item.quantity) });
+            }
+            await batch.commit();
+
+            showModal("Venta registrada con éxito.");
+            cart = [];
+            renderCart();
+            if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Error al procesar la venta:", error);
+            showModal("Hubo un error al procesar la venta. Por favor, intenta de nuevo.");
+        } finally {
+            isProcessingPayment = false;
+        }
+    });
+}
 
 if (importSalesBtn) {
     importSalesBtn.addEventListener('click', () => {
