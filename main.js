@@ -1423,7 +1423,7 @@ function exportSalesToCsv(sales) {
 
 // Lógica de importación de CSV
 async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
-    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== ''); // Cambio para manejar saltos de línea
+    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== '');
     if (rows.length < 2) {
         showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
         return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
@@ -1434,490 +1434,14 @@ async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
     let importedCount = 0;
     let errors = [];
 
-    const csvRegex = /(?:(")([^"]*(?:"")?)*(")|([^,]*))(?:,|$)/g;
-
-    for (const row of dataRows) {
-        const values = [];
-        let match;
-        while ((match = csvRegex.exec(row)) !== null) {
-            let value = match[2] || match[4] || '';
-            value = value.replace(/""/g, '"').trim();
-            values.push(value);
-        }
-
-        if (values.length !== headers.length) {
-            errors.push(`Fila con formato incorrecto. Esperado ${headers.length} campos, encontrado ${values.length}: ${row}`);
-            continue;
-        }
-
-        const item = mappingFunction(headers, values);
-        if (item) {
-            try {
-                await addDoc(collection(db, collectionName), item);
-                importedCount++;
-            } catch (error) {
-                errors.push(`Error al guardar en Firebase para la fila: ${row}. Error: ${error}`);
-            }
-        }
-    }
-
-    return { importedCount, errors };
-}
-
-
-function mapVentasToFirebase(headers, values) {
-    const data = {};
-    headers.forEach((header, index) => {
-        data[header] = values[index]);
-    });
-
-    // Se asume que 'IDITEM' y 'ITEM' están relacionados con el producto, pero el ID del producto no está en el CSV de VENTAS.
-    // Para simplificar, se crea un array de items con la información disponible.
-    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")), quantity: parseInt(data.UNIDADES) }];
-    const payments = [{ method: data['FORMA DE PAGO'] || 'EFECTIVO', amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) }];
-
-    const dateParts = data['FECHA'].split('/');
-    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${data.HORA}`);
-
-    return {
-        items: items,
-        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
-        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
-        payments: payments,
-        timestamp: date,
-        customerId: null, // No se encuentra en el CSV de ventas
-        customerName: null,
-        cashId: data.ID_Caja_FK || null
-    };
-}
-
-function mapArticulosToFirebase(headers, values) {
-    const data = {};
-    headers.forEach((header, index) => {
-        data[header] = values[index];
-    });
-    return {
-        name: data.NOMBRE,
-        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")),
-        stock: parseInt(data.CANTIDAD)
-    };
-}
-
-function mapClientesToFirebase(headers, values) {
-    const data = {};
-    headers.forEach((header, index) => {
-        data[header] = values[index];
-    });
-    return {
-        name: data.CLIENTES
-    };
-}
-// Lógica de clientes
-if (addCustomerForm) {
-    addCustomerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('customer-name-input')?.value.trim();
-        if (!name) {
-            showModal("El nombre del cliente no puede estar vacío.");
-            return;
-        }
-        try {
-            const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
-            await addDoc(customersCollection, { name });
-            if(addCustomerForm) addCustomerForm.reset();
-            showModal(`Cliente '${name}' añadido con éxito.`);
-            
-            // Ocultar el formulario después de guardar
-            if (customerFormContainer) customerFormContainer.classList.add('hidden');
-            
-        } catch (error) {
-            console.error("Error al añadir cliente:", error);
-            showModal("Error al añadir cliente. Intenta de nuevo.");
-        }
-    });
-}
-
-function renderCustomersList(customers) {
-    if (!customersListContainer) return;
-    customersListContainer.innerHTML = '';
-    customers.forEach(customer => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
-        itemDiv.innerHTML = `
-        <span>${customer.name}</span>
-        <div class="flex space-x-2">
-            <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-        </div>
-        `;
-        customersListContainer.appendChild(itemDiv);
-
-        const editButton = itemDiv.querySelector('.edit-customer-btn');
-        if(editButton) {
-            editButton.addEventListener('click', () => {
-                const newName = prompt(`Editar nombre de cliente:`, customer.name);
-                if (newName && newName.trim()) {
-                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-                    setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
-                }
-            });
-        }
-
-        const deleteButton = itemDiv.querySelector('.delete-customer-btn');
-        if(deleteButton) {
-            deleteButton.addEventListener('click', async () => {
-                if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
-                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-                    await deleteDoc(customerDocRef);
-                    showModal("Cliente eliminado.");
-                }
-            });
-        }
-    });
-}
-
-function renderCustomerSelect(customers) {
-    if (!customerSelect) return;
-    customerSelect.innerHTML = '<option value="">Seleccionar Cliente</option>';
-    customers.forEach(customer => {
-        const option = document.createElement('option');
-        option.value = customer.id;
-        option.textContent = customer.name;
-        customerSelect.appendChild(option);
-    });
-}
-
-function renderSalesChart(sales) {
-    if (!salesChartCtx) return;
-    const salesByDay = sales.reduce((acc, sale) => {
-        if (sale.timestamp && sale.timestamp.seconds) {
-            const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
-            acc[date] = (acc[date] || 0) + sale.total;
-        }
-        return acc;
-    }, {});
-
-    const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
-    const salesData = sortedDates.map(date => salesByDay[date]);
-
-    if (salesChart) {
-        salesChart.destroy();
-    }
-
-    salesChart = new Chart(salesChartCtx, {
-        type: 'bar',
-        data: {
-            labels: sortedDates,
-            datasets: [{
-                label: 'Ventas Diarias',
-                data: salesData,
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Ventas Totales ($)'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Fecha'
-                    }
-                }
-            }
-        }
-    });
-}
-
-function renderTopProductsChart(sales) {
-    if (!topProductsChartCtx) return;
-
-    const productSales = sales.flatMap(sale => sale.items).reduce((acc, item) => {
-        acc[item.name] = (acc[item.name] || 0) + item.quantity;
-        return acc;
-    }, {});
-
-    const sortedProducts = Object.entries(productSales).sort(([, a], [, b]) => b - a).slice(0, 5);
-    const labels = sortedProducts.map(([name]) => name);
-    const data = sortedProducts.map(([, quantity]) => quantity);
-
-    if (topProductsChart) {
-        topProductsChart.destroy();
-    }
-
-    topProductsChart = new Chart(topProductsChartCtx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Cantidad Vendida',
-                data: data,
-                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Cantidad'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Producto'
-                    }
-                }
-            }
-        }
-    });
-}
-
-function renderPaymentMethodsChart(sales) {
-    if (!paymentMethodsChartCtx) return;
-
-    const paymentTotals = sales.reduce((acc, sale) => {
-        sale.payments.forEach(payment => {
-            acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
-        });
-        return acc;
-    }, {});
-
-    const labels = Object.keys(paymentTotals);
-    const data = Object.values(paymentTotals);
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6b7280'];
-
-    if (paymentMethodsChart) {
-        paymentMethodsChart.destroy();
-    }
-
-    paymentMethodsChart = new Chart(paymentMethodsChartCtx, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors.slice(0, labels.length)
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed !== null) {
-                                label += `$${context.parsed.toFixed(2)}`;
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Impresión de recibos
-function printReceipt(sale) {
-    const paymentsHtml = sale.payments.map(p => `
-        <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
-    `).join('');
-
-    const content = `
-    <div id="print-area">
-        <style>
-            body { font-family: 'Inter', sans-serif; padding: 20px; }
-            .receipt-header { text-align: center; margin-bottom: 20px; }
-            .receipt-body { margin-bottom: 20px; }
-            .receipt-footer { text-align: center; border-top: 1px dashed black; padding-top: 10px; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { text-align: left; padding: 5px 0; border-bottom: 1px solid #ccc; }
-            .total-row td { font-weight: bold; font-size: 1.2em; border-top: 2px solid black; }
-            .payment-row { margin-top: 10px; }
-            @media print {
-                body > *:not(#print-area) {
-                    display: none;
-                }
-                #print-area {
-                    display: block !important;
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background-color: white;
-                    z-index: 9999;
-                }
-            }
-        </style>
-        <div class="receipt-header">
-            <h2>Recibo de Venta</h2>
-            <p>Fecha: ${new Date().toLocaleString()}</p>
-            ${sale.customerName ? `<p>Cliente: ${sale.customerName}</p>` : ''}
-        </div>
-        <div class="receipt-body">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Precio Unit.</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${sale.items.map(item => `
-                        <tr>
-                            <td>${item.name}</td>
-                            <td>${item.quantity}</td>
-                            <td>$${item.price.toFixed(2)}</td>
-                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <div style="text-align: right; margin-top: 20px;">
-                <p><strong>Total: $${sale.total.toFixed(2)}</strong></p>
-                ${paymentsHtml}
-            </div>
-        </div>
-        <div class="receipt-footer">
-            <p>¡Gracias por tu compra!</p>
-        </div>
-    </div>
-    `;
-
-    // 1. Crea un contenedor temporal
-    const printArea = document.createElement('div');
-    printArea.innerHTML = content;
-    document.body.appendChild(printArea);
-
-    // 2. Espera a que el DOM se actualice y luego imprime
-    setTimeout(() => {
-        window.print();
-        // 3. Elimina el contenedor temporal después de la impresión
-        document.body.removeChild(printArea);
-    }, 500);
-}
-
-// Lógica de autenticación
-if (loginBtn) {
-    loginBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const email = authEmail?.value;
-        const password = authPassword?.value;
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            showModal("Inicio de sesión exitoso.");
-            if (authModal) authModal.classList.add('hidden');
-        } catch (error) {
-            console.error("Error al iniciar sesión:", error);
-            showModal("Error al iniciar sesión. Verifica tus credenciales.");
-        }
-    });
-}
-
-if (registerBtn) {
-    registerBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const email = authEmail?.value;
-        const password = authPassword?.value;
-        try {
-            await createUserWithEmailAndPassword(auth, email, password);
-            showModal("Registro exitoso. Ahora puedes iniciar sesión.");
-        } catch (error) {
-            console.error("Error al registrar:", error);
-            if (error.code === 'auth/email-already-in-use') {
-                showModal("El correo electrónico ya está en uso.");
-            } else {
-                showModal("Error al registrarse. Intenta de nuevo.");
-            }
-        }
-    });
-}
-
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-        try {
-            await signOut(auth);
-            showModal("Sesión cerrada correctamente.");
-            cart = [];
-            renderCart();
-        } catch (error) {
-            console.error("Error al cerrar sesión:", error);
-            showModal("Hubo un error al cerrar la sesión.");
-        }
-    });
-}
-
-function toggleFilters() {
-    if (filtersContainer) {
-        filtersContainer.classList.toggle('hidden');
-    }
-}
-
-if (toggleFiltersBtn) {
-    toggleFiltersBtn.addEventListener('click', toggleFilters);
-}
-
-// Se hace global para poder llamarla desde el HTML con onclick
-window.toggleSection = function(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.classList.toggle('hidden');
-        const icon = section.previousElementSibling?.querySelector('i');
-        if (icon) {
-            icon.classList.toggle('fa-chevron-down');
-            icon.classList.toggle('fa-chevron-up');
-        }
-    }
-}
-
-// Lógica de importación de CSV
-async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
-    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== ''); // Cambio para manejar saltos de línea
-    if (rows.length < 2) {
-        showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
-        return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
-    }
-
-    const headers = rows[0].split(',').map(h => h.trim().replace(/\ufeff/g, ''));
-    const dataRows = rows.slice(1);
-    let importedCount = 0;
-    let errors = [];
-
+    // Regex mejorada para manejar comas dentro de comillas
     const csvRegex = /(?:^|,)(?:"([^"]*(?:"")?)*"|([^,]*))(?:,|$)/g;
 
     for (const row of dataRows) {
         const values = [];
         let match;
         while ((match = csvRegex.exec(row)) !== null) {
-            let value = match[2] || match[4] || '';
+            let value = match[1] || match[2] || '';
             value = value.replace(/""/g, '"').trim();
             values.push(value);
         }
@@ -2864,13 +2388,14 @@ async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
     let importedCount = 0;
     let errors = [];
 
+    // Regex mejorada para manejar comas dentro de comillas
     const csvRegex = /(?:^|,)(?:"([^"]*(?:"")?)*"|([^,]*))(?:,|$)/g;
 
     for (const row of dataRows) {
         const values = [];
         let match;
         while ((match = csvRegex.exec(row)) !== null) {
-            let value = match[2] || match[4] || '';
+            let value = match[1] || match[2] || '';
             value = value.replace(/""/g, '"').trim();
             values.push(value);
         }
@@ -2926,7 +2451,484 @@ function mapArticulosToFirebase(headers, values) {
     });
     return {
         name: data.NOMBRE,
-        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")),
+        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0,
+        stock: parseInt(data.CANTIDAD) || 0
+    };
+}
+
+function mapClientesToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.CLIENTES
+    };
+}
+
+// Lógica de clientes
+if (addCustomerForm) {
+    addCustomerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('customer-name-input')?.value.trim();
+        if (!name) {
+            showModal("El nombre del cliente no puede estar vacío.");
+            return;
+        }
+        try {
+            const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
+            await addDoc(customersCollection, { name });
+            if(addCustomerForm) addCustomerForm.reset();
+            showModal(`Cliente '${name}' añadido con éxito.`);
+            
+            // Ocultar el formulario después de guardar
+            if (customerFormContainer) customerFormContainer.classList.add('hidden');
+            
+        } catch (error) {
+            console.error("Error al añadir cliente:", error);
+            showModal("Error al añadir cliente. Intenta de nuevo.");
+        }
+    });
+}
+
+function renderCustomersList(customers) {
+    if (!customersListContainer) return;
+    customersListContainer.innerHTML = '';
+    customers.forEach(customer => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+        <span>${customer.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        `;
+        customersListContainer.appendChild(itemDiv);
+
+        const editButton = itemDiv.querySelector('.edit-customer-btn');
+        if(editButton) {
+            editButton.addEventListener('click', () => {
+                const newName = prompt(`Editar nombre de cliente:`, customer.name);
+                if (newName && newName.trim()) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
+                }
+            });
+        }
+
+        const deleteButton = itemDiv.querySelector('.delete-customer-btn');
+        if(deleteButton) {
+            deleteButton.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    await deleteDoc(customerDocRef);
+                    showModal("Cliente eliminado.");
+                }
+            });
+        }
+    });
+}
+
+function renderCustomerSelect(customers) {
+    if (!customerSelect) return;
+    customerSelect.innerHTML = '<option value="">Seleccionar Cliente</option>';
+    customers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.id;
+        option.textContent = customer.name;
+        customerSelect.appendChild(option);
+    });
+}
+
+function renderSalesChart(sales) {
+    if (!salesChartCtx) return;
+    const salesByDay = sales.reduce((acc, sale) => {
+        if (sale.timestamp && sale.timestamp.seconds) {
+            const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
+            acc[date] = (acc[date] || 0) + sale.total;
+        }
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+    const salesData = sortedDates.map(date => salesByDay[date]);
+
+    if (salesChart) {
+        salesChart.destroy();
+    }
+
+    salesChart = new Chart(salesChartCtx, {
+        type: 'bar',
+        data: {
+            labels: sortedDates,
+            datasets: [{
+                label: 'Ventas Diarias',
+                data: salesData,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Ventas Totales ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Fecha'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTopProductsChart(sales) {
+    if (!topProductsChartCtx) return;
+
+    const productSales = sales.flatMap(sale => sale.items).reduce((acc, item) => {
+        acc[item.name] = (acc[item.name] || 0) + item.quantity;
+        return acc;
+    }, {});
+
+    const sortedProducts = Object.entries(productSales).sort(([, a], [, b]) => b - a).slice(0, 5);
+    const labels = sortedProducts.map(([name]) => name);
+    const data = sortedProducts.map(([, quantity]) => quantity);
+
+    if (topProductsChart) {
+        topProductsChart.destroy();
+    }
+
+    topProductsChart = new Chart(topProductsChartCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Cantidad Vendida',
+                data: data,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Producto'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderPaymentMethodsChart(sales) {
+    if (!paymentMethodsChartCtx) return;
+
+    const paymentTotals = sales.reduce((acc, sale) => {
+        sale.payments.forEach(payment => {
+            acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
+        });
+        return acc;
+    }, {});
+
+    const labels = Object.keys(paymentTotals);
+    const data = Object.values(paymentTotals);
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6b7280'];
+
+    if (paymentMethodsChart) {
+        paymentMethodsChart.destroy();
+    }
+
+    paymentMethodsChart = new Chart(paymentMethodsChartCtx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += `$${context.parsed.toFixed(2)}`;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Impresión de recibos
+function printReceipt(sale) {
+    const paymentsHtml = sale.payments.map(p => `
+        <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
+    `).join('');
+
+    const content = `
+    <div id="print-area">
+        <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; }
+            .receipt-header { text-align: center; margin-bottom: 20px; }
+            .receipt-body { margin-bottom: 20px; }
+            .receipt-footer { text-align: center; border-top: 1px dashed black; padding-top: 10px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 5px 0; border-bottom: 1px solid #ccc; }
+            .total-row td { font-weight: bold; font-size: 1.2em; border-top: 2px solid black; }
+            .payment-row { margin-top: 10px; }
+            @media print {
+                body > *:not(#print-area) {
+                    display: none;
+                }
+                #print-area {
+                    display: block !important;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: white;
+                    z-index: 9999;
+                }
+            }
+        </style>
+        <div class="receipt-header">
+            <h2>Recibo de Venta</h2>
+            <p>Fecha: ${new Date().toLocaleString()}</p>
+            ${sale.customerName ? `<p>Cliente: ${sale.customerName}</p>` : ''}
+        </div>
+        <div class="receipt-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio Unit.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sale.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${item.price.toFixed(2)}</td>
+                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div style="text-align: right; margin-top: 20px;">
+                <p><strong>Total: $${sale.total.toFixed(2)}</strong></p>
+                ${paymentsHtml}
+            </div>
+        </div>
+        <div class="receipt-footer">
+            <p>¡Gracias por tu compra!</p>
+        </div>
+    </div>
+    `;
+
+    // 1. Crea un contenedor temporal
+    const printArea = document.createElement('div');
+    printArea.innerHTML = content;
+    document.body.appendChild(printArea);
+
+    // 2. Espera a que el DOM se actualice y luego imprime
+    setTimeout(() => {
+        window.print();
+        // 3. Elimina el contenedor temporal después de la impresión
+        document.body.removeChild(printArea);
+    }, 500);
+}
+
+// Lógica de autenticación
+if (loginBtn) {
+    loginBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            showModal("Inicio de sesión exitoso.");
+            if (authModal) authModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Error al iniciar sesión:", error);
+            showModal("Error al iniciar sesión. Verifica tus credenciales.");
+        }
+    });
+}
+
+if (registerBtn) {
+    registerBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail?.value;
+        const password = authPassword?.value;
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            showModal("Registro exitoso. Ahora puedes iniciar sesión.");
+        } catch (error) {
+            console.error("Error al registrar:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                showModal("El correo electrónico ya está en uso.");
+            } else {
+                showModal("Error al registrarse. Intenta de nuevo.");
+            }
+        }
+    });
+}
+
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            showModal("Sesión cerrada correctamente.");
+            cart = [];
+            renderCart();
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            showModal("Hubo un error al cerrar la sesión.");
+        }
+    });
+}
+
+function toggleFilters() {
+    if (filtersContainer) {
+        filtersContainer.classList.toggle('hidden');
+    }
+}
+
+if (toggleFiltersBtn) {
+    toggleFiltersBtn.addEventListener('click', toggleFilters);
+}
+
+// Se hace global para poder llamarla desde el HTML con onclick
+window.toggleSection = function(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.toggle('hidden');
+        const icon = section.previousElementSibling?.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+    }
+}
+
+// Lógica de importación de CSV
+async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
+    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== '');
+    if (rows.length < 2) {
+        showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
+        return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
+    }
+
+    const headers = rows[0].split(',').map(h => h.trim().replace(/\ufeff/g, ''));
+    const dataRows = rows.slice(1);
+    let importedCount = 0;
+    let errors = [];
+
+    // Regex mejorada para manejar comas dentro de comillas
+    const csvRegex = /(?:^|,)(?:"([^"]*(?:"")?)*"|([^,]*))(?:,|$)/g;
+
+    for (const row of dataRows) {
+        const values = [];
+        let match;
+        while ((match = csvRegex.exec(row)) !== null) {
+            let value = match[1] || match[2] || '';
+            value = value.replace(/""/g, '"').trim();
+            values.push(value);
+        }
+
+        if (values.length !== headers.length) {
+            errors.push(`Fila con formato incorrecto. Esperado ${headers.length} campos, encontrado ${values.length}: ${row}`);
+            continue;
+        }
+
+        const item = mappingFunction(headers, values);
+        if (item) {
+            try {
+                await addDoc(collection(db, collectionName), item);
+                importedCount++;
+            } catch (error) {
+                errors.push(`Error al guardar en Firebase para la fila: ${row}. Error: ${error}`);
+            }
+        }
+    }
+
+    return { importedCount, errors };
+}
+
+
+function mapVentasToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+
+    const items = [{ name: data.ITEM, price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")), quantity: parseInt(data.UNIDADES) }];
+    const payments = [{ method: data['FORMA DE PAGO'] || 'EFECTIVO', amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) }];
+
+    const dateParts = data['FECHA'].split('/');
+    const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${data.HORA}`);
+
+    return {
+        items: items,
+        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")),
+        payments: payments,
+        timestamp: date,
+        customerId: null,
+        customerName: null,
+        cashId: data.ID_Caja_FK || null
+    };
+}
+
+function mapArticulosToFirebase(headers, values) {
+    const data = {};
+    headers.forEach((header, index) => {
+        data[header] = values[index];
+    });
+    return {
+        name: data.NOMBRE,
+        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0,
         stock: parseInt(data.CANTIDAD) || 0
     };
 }
