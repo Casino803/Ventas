@@ -708,42 +708,51 @@ function renderCashHistory(history) {
 if(!cashHistoryContainer) return;
 cashHistoryContainer.innerHTML = '';
 
-const historyByMonth = history.reduce((acc, entry) => {
-const timestamp = entry.fecha;
-if (timestamp && timestamp.seconds) {
-const date = new Date(timestamp.seconds * 1000);
-const monthYear = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
-if (!acc[monthYear]) {
-acc[monthYear] = [];
-}
-acc[monthYear].push(entry);
-}
-return acc;
+const historyByDay = history.reduce((acc, entry) => {
+    const date = new Date(entry.fecha.seconds * 1000).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    if (!acc[date]) {
+        acc[date] = [];
+    }
+    acc[date].push(entry);
+    return acc;
 }, {});
 
-const sortedMonths = Object.keys(historyByMonth).sort((a, b) => new Date(b) - new Date(a));
+const sortedDates = Object.keys(historyByDay).sort((a, b) => new Date(b) - new Date(a));
 
-sortedMonths.forEach(month => {
-const monthDiv = document.createElement('div');
-monthDiv.className = "mb-6";
-monthDiv.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-4">${month}</h3>`;
+sortedDates.forEach(dateString => {
+    const dayDiv = document.createElement('div');
+    dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
+    
+    let totalSalesDay = 0;
+    let totalExpensesDay = 0;
 
-historyByMonth[month].forEach(entry => {
-const entryDiv = document.createElement('div');
-entryDiv.className = "bg-gray-100 p-4 rounded-lg shadow-sm space-y-1 mb-2";
-const date = new Date(entry.fecha.seconds * 1000).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-entryDiv.innerHTML = `
-<div class="font-bold">${date}</div>
-<div class="text-sm">Apertura: <span class="font-semibold">$${entry.abertura.toFixed(2)}</span></div>
-<div class="text-sm">Ventas Totales: <span class="font-semibold text-green-600">$${entry.ventasTotales.toFixed(2)}</span></div>
-<div class="text-sm">Gastos Totales: <span class="font-semibold text-red-600">$${entry.gastosTotales.toFixed(2)}</span></div>
-<div class="text-lg font-bold mt-2">Cierre: <span class="text-blue-600">$${entry.cierre.toFixed(2)}</span></div>
-`;
-monthDiv.appendChild(entryDiv);
-});
-cashHistoryContainer.appendChild(monthDiv);
+    const entriesHtml = historyByDay[dateString].map(entry => {
+        totalSalesDay += entry.ventasTotales;
+        totalExpensesDay += entry.gastosTotales;
+        const entryDate = new Date(entry.fecha.seconds * 1000).toLocaleTimeString('es-ES');
+        return `
+            <div class="bg-white p-3 rounded-lg shadow-sm my-2">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="font-bold text-gray-800">Caja cerrada a las ${entryDate}</span>
+                </div>
+                <div class="text-sm">Apertura: <span class="font-semibold">$${entry.abertura.toFixed(2)}</span></div>
+                <div class="text-sm">Ventas Totales: <span class="font-semibold text-green-600">$${entry.ventasTotales.toFixed(2)}</span></div>
+                <div class="text-sm">Gastos Totales: <span class="font-semibold text-red-600">$${entry.gastosTotales.toFixed(2)}</span></div>
+                <div class="text-lg font-bold mt-2">Cierre: <span class="text-blue-600">$${entry.cierre.toFixed(2)}</span></div>
+            </div>
+        `;
+    }).join('');
+
+    dayDiv.innerHTML = `
+        <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
+            <h3 class="font-bold text-lg">${dateString}</h3>
+        </div>
+        ${entriesHtml}
+    `;
+    cashHistoryContainer.appendChild(dayDiv);
 });
 }
+
 
 async function updateDailyTotals() {
   if (!dailyCashData) {
@@ -1334,7 +1343,7 @@ if (addCustomerForm) {
 }
 
 function renderCustomersList(customers) {
-    if (!customersListContainer) return; // Validación agregada
+    if (!customersListContainer) return;
     customersListContainer.innerHTML = '';
     customers.forEach(customer => {
         const itemDiv = document.createElement('div');
@@ -1352,20 +1361,14 @@ function renderCustomersList(customers) {
         `;
         customersListContainer.appendChild(itemDiv);
 
-        // Corregido: Usar itemDiv para encontrar los botones
         const editButton = itemDiv.querySelector('.edit-customer-btn');
         if(editButton) {
           editButton.addEventListener('click', () => {
               const newName = prompt(`Editar nombre de cliente:`, customer.name);
-              const productIdInput = document.getElementById('product-id');
-              const productNameInput = document.getElementById('product-name-input');
-              const productPriceInput = document.getElementById('product-price-input');
-              const productStockInput = document.getElementById('product-stock-input');
-
-              if (productIdInput) productIdInput.value = product.id;
-              if (productNameInput) productNameInput.value = product.name;
-              if (productPriceInput) productPriceInput.value = product.price;
-              if (productStockInput) productStockInput.value = product.stock;
+              if (newName && newName.trim()) {
+                  const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                  setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
+              }
           });
         }
         
@@ -1802,7 +1805,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
     
           showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-    
+
           printReceipt({
             id: newSaleRef.id,
             items: cart,
@@ -1814,8 +1817,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
           cart = [];
           renderCart();
-          splitPaymentModal.classList.add('hidden');
-          customerSelect.value = "";
+          if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+          if(customerSelect) customerSelect.value = "";
     
         } catch (error) {
           console.error("Error al finalizar la venta:", error);
