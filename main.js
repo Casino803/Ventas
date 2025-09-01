@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Referencias de la UI
+// Referencias de la UI (globales para que puedan ser utilizadas en cualquier función)
 const menuButtons = document.querySelectorAll('button[data-page]');
 const pages = document.querySelectorAll('.page-content');
 const homeMenu = document.getElementById('home-menu');
@@ -101,14 +101,6 @@ const addExpenseCategoryForm = document.getElementById('add-expense-category-for
 const newExpenseCategoryName = document.getElementById('new-expense-category-name');
 const expenseCategoriesList = document.getElementById('expense-categories-list');
 const tabButtons = document.querySelectorAll('.tab-btn');
-
-// Nuevas referencias para los botones y contenedores de formularios
-const toggleProductFormBtn = document.getElementById('toggle-product-form-btn');
-const productFormContainer = document.getElementById('product-form-container');
-const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
-const expenseFormContainer = document.getElementById('expense-form-container');
-const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
-const customerFormContainer = document.getElementById('customer-form-container');
 
 
 let salesChart;
@@ -929,7 +921,11 @@ if (expenseForm) {
             });
             expenseForm.reset();
             showModal("Gasto registrado con éxito.");
+            
+            // Ocultar el formulario después de guardar
+            const expenseFormContainer = document.getElementById('expense-form-container');
             if (expenseFormContainer) expenseFormContainer.classList.add('hidden');
+            
         } catch (error) {
             console.error("Error al registrar el gasto:", error);
             showModal("Hubo un error al registrar el gasto. Intenta de nuevo.");
@@ -1056,7 +1052,11 @@ if (productForm) {
             if (productForm) productForm.reset();
             const productIdInput = document.getElementById('product-id');
             if (productIdInput) productIdInput.value = '';
+            
+            // Ocultar el formulario después de guardar
+            const productFormContainer = document.getElementById('product-form-container');
             if (productFormContainer) productFormContainer.classList.add('hidden');
+            
         } catch (error) {
             console.error("Error al guardar el producto:", error);
             showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
@@ -1400,7 +1400,11 @@ if (addCustomerForm) {
             await addDoc(customersCollection, { name });
             if(addCustomerForm) addCustomerForm.reset();
             showModal(`Cliente '${name}' añadido con éxito.`);
+            
+            // Ocultar el formulario después de guardar
+            const customerFormContainer = document.getElementById('customer-form-container');
             if (customerFormContainer) customerFormContainer.classList.add('hidden');
+            
         } catch (error) {
             console.error("Error al añadir cliente:", error);
             showModal("Error al añadir cliente. Intenta de nuevo.");
@@ -1671,6 +1675,14 @@ window.toggleSection = function(sectionId) {
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
+    // Referencias para los nuevos botones y contenedores de formularios
+    const toggleProductFormBtn = document.getElementById('toggle-product-form-btn');
+    const productFormContainer = document.getElementById('product-form-container');
+    const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
+    const expenseFormContainer = document.getElementById('expense-form-container');
+    const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
+    const customerFormContainer = document.getElementById('customer-form-container');
+
     // Configurar la navegación principal del menú
     setupNavigation();
 
