@@ -1,147 +1,410 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ventas</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Punto de Venta</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="bg-gray-100 p-4 min-h-screen">
 
-    <div class="auth-container" id="auth-container">
-        <h2>Ingresar</h2>
-        <form id="login-form">
-            <input type="email" id="login-email" placeholder="Correo electrónico" required>
-            <input type="password" id="login-password" placeholder="Contraseña" required>
-            <button type="submit">Ingresar</button>
-        </form>
-        <button id="show-signup-btn">Crear una cuenta</button>
+<div class="fixed top-0 left-0 right-0 p-4 flex justify-between z-50">
+<button data-page="settings-page" class="menu-btn bg-blue-600 text-white font-bold p-3 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+<i class="fas fa-cog"></i>
+</button>
+<button id="logout-btn" class="menu-btn bg-red-600 text-white font-bold p-3 rounded-lg shadow-md hover:bg-red-700 transition-colors">
+<i class="fas fa-sign-out-alt"></i>
+</button>
+</div>
+
+<div class="max-w-6xl mx-auto mt-16">
+<h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Punto de Venta</h1>
+
+<div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+
+<div id="main-tabs" class="flex flex-wrap mb-4 border-b border-gray-200">
+<button data-page="pos-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg active">
+<i class="fas fa-cash-register mr-2"></i> Punto de Venta
+</button>
+<button data-page="products-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
+<i class="fas fa-boxes-stacked mr-2"></i> Gestión de Productos
+</button>
+<button data-page="history-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
+<i class="fas fa-clipboard-list mr-2"></i> Historial de Ventas
+</button>
+<button data-page="stats-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
+<i class="fas fa-chart-line mr-2"></i> Estadísticas
+</button>
+<button data-page="cash-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
+<i class="fas fa-wallet mr-2"></i> Caja
+</button>
+<button data-page="expenses-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
+<i class="fas fa-minus-circle mr-2"></i> Gastos
+</button>
+<button data-page="customers-page" class="tab-btn px-4 py-2 text-sm font-medium text-center text-gray-700 bg-gray-100 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 rounded-t-lg">
+<i class="fas fa-users mr-2"></i> Clientes
+</button>
+</div>
+
+<div id="pos-page" class="page-content active">
+<div class="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
+<div class="md:w-2/3">
+<div class="mb-4 flex space-x-2">
+<input type="text" id="pos-search-input" placeholder="Buscar productos..."
+class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+<select id="customer-select" class="w-1/3 px-4 py-2 border rounded-lg">
+<option value="">Seleccionar Cliente</option>
+</select>
+</div>
+<div id="product-list" class="mb-6">
+<h2 class="text-xl font-semibold text-gray-700 mb-4">Productos Disponibles</h2>
+<div id="products-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 overflow-y-scroll max-h-64">
+</div>
+</div>
+</div>
+<div class="md:w-1/3 p-4 bg-gray-50 rounded-xl shadow-inner flex flex-col h-full">
+<h2 class="text-xl font-semibold text-gray-700 mb-4"><i class="fas fa-shopping-cart"></i> Carrito de Compras</h2>
+<div id="cart-container" class="space-y-2 mb-4 flex-grow overflow-y-scroll">
+</div>
+<div class="mt-auto">
+<div class="flex justify-between items-center text-sm text-gray-600 border-t-2 border-gray-300 pt-4 mt-4">
+    <span>Subtotal:</span>
+    <span id="cart-subtotal">$0.00</span>
+</div>
+<div id="discount-surcharge-display" class="flex justify-between items-center text-sm text-gray-600">
+    <span>Descuento/Recargo:</span>
+    <span id="discount-surcharge-amount">$0.00</span>
+</div>
+<div class="flex justify-between items-center text-lg font-bold text-gray-800">
+<span>Total:</span>
+<span id="cart-total">$0.00</span>
+</div>
+
+<div class="mt-4 p-3 bg-white rounded-lg shadow">
+    <h3 class="font-semibold text-gray-700 mb-2">Aplicar Descuento/Recargo</h3>
+    <div class="flex space-x-2 mb-2">
+        <input type="number" id="discount-surcharge-value" placeholder="Valor" step="0.01" class="w-2/5 px-2 py-1 border rounded-lg text-sm">
+        <select id="discount-surcharge-type" class="w-3/5 px-2 py-1 border rounded-lg text-sm">
+            <option value="percentage_discount">% Descuento</option>
+            <option value="fixed_discount">Monto Descuento</option>
+            <option value="percentage_surcharge">% Recargo</option>
+            <option value="fixed_surcharge">Monto Recargo</option>
+        </select>
     </div>
-
-    <div class="main-container" id="main-container" style="display:none;">
-        <header class="navbar navbar-expand-lg">
-            <div class="container-fluid">
-                <a class="navbar-brand">Casino</a>
-                <div class="d-flex align-items-center">
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                            <li class="nav-item">
-                                <a class="nav-link active" aria-current="page" href="#ventas">Ventas</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#caja">Caja</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#configuracion">Configuración</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <button id="logout-btn" class="btn btn-danger">Cerrar Sesión</button>
-                </div>
-            </div>
-        </header>
-
-        <main>
-            <div id="ventas-view" class="view">
-                <div class="ventas-sidebar">
-                    <div class="sales-list-container">
-                        <h3>Ventas</h3>
-                        <div id="sales-list" class="sales-list"></div>
-                        <div id="total-price" class="total-price">Total: $0.00</div>
-                        <button id="checkout-btn" class="btn btn-primary mt-3">Finalizar Venta</button>
-                    </div>
-                </div>
-
-                <div class="products-main">
-                    <h2>Productos</h2>
-                    <div class="search-container">
-                        <input type="text" id="product-search" placeholder="Buscar productos...">
-                        <select id="category-filter"></select>
-                    </div>
-                    <div id="products-container" class="products-container"></div>
-                </div>
-            </div>
-
-            <div id="caja-view" class="view" style="display:none;">
-                <div id="caja-estado-container">
-                    <h2 id="caja-status">Estado de la Caja: <span class="badge text-bg-danger">Caja cerrada</span></h2>
-                    <button id="caja-abrir-btn" class="btn btn-success mt-2">Abrir Caja</button>
-                    <button id="caja-cerrar-btn" class="btn btn-warning mt-2" style="display:none;">Cerrar Caja</button>
-                </div>
-                <div id="caja-details" style="display:none;">
-                    <h3>Detalles de la Caja</h3>
-                    <p>Monto Inicial: <span id="caja-monto-inicial"></span></p>
-                    <p>Ingresos por Ventas: <span id="caja-ingresos"></span></p>
-                    <p>Egresos (Gastos): <span id="caja-egresos"></span></p>
-                    <p>Total de Efectivo: <span id="caja-total-efectivo"></span></p>
-                    <p>Total de Tarjeta: <span id="caja-total-tarjeta"></span></p>
-                </div>
-                <div class="caja-actions">
-                    <button id="gastos-btn" class="btn btn-secondary mt-2">Registrar Gasto</button>
-                    <div id="gastos-form-container" style="display: none;">
-                        <h3>Registrar Nuevo Gasto</h3>
-                        <form id="gastos-form">
-                            <input type="number" id="gasto-monto" placeholder="Monto" required>
-                            <input type="text" id="gasto-descripcion" placeholder="Descripción" required>
-                            <button type="submit" class="btn btn-primary">Guardar Gasto</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div id="configuracion-view" class="view" style="display:none;">
-                <div class="config-tabs">
-                    <button class="config-tab-btn active" data-tab="add-product-section">Añadir Producto</button>
-                    <button class="config-tab-btn" data-tab="add-category-section">Añadir Categoría</button>
-                    <button class="config-tab-btn" data-tab="add-user-section">Añadir Usuario</button>
-                </div>
-
-                <div id="config-content">
-                    <div id="add-product-section" class="add-new-container">
-                        <h3>Añadir Nuevo Producto</h3>
-                        <form id="add-product-form" class="add-form">
-                            <label for="product-name">Nombre del Producto:</label>
-                            <input type="text" id="product-name" required>
-                            <label for="product-price">Precio:</label>
-                            <input type="number" id="product-price" required>
-                            <label for="product-category">Categoría:</label>
-                            <select id="product-category" required></select>
-                            <button type="submit" class="btn btn-primary">Guardar Producto</button>
-                        </form>
-                    </div>
-
-                    <div id="add-category-section" class="add-new-container" style="display: none;">
-                        <h3>Añadir Nueva Categoría</h3>
-                        <form id="add-category-form" class="add-form">
-                            <label for="category-name">Nombre de la categoría:</label>
-                            <input type="text" id="category-name" required>
-                            <button type="submit" class="btn btn-primary">Guardar Categoría</button>
-                        </form>
-                    </div>
-
-                    <div id="add-user-section" class="add-new-container" style="display: none;">
-                        <h3>Añadir Nuevo Usuario</h3>
-                        <form id="add-user-form" class="add-form">
-                            <label for="user-email">Correo Electrónico:</label>
-                            <input type="email" id="user-email" required>
-                            <label for="user-password">Contraseña:</label>
-                            <input type="password" id="user-password" required>
-                            <button type="submit" class="btn btn-primary">Crear Usuario</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <div class="flex space-x-2">
+        <button id="apply-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm">Aplicar</button>
+        <button id="clear-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm">Limpiar</button>
     </div>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="main.js"></script>
+<button id="checkout-btn"
+class="w-full mt-4 px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+<i class="fas fa-hand-holding-usd"></i> Finalizar Venta
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<div id="products-page" class="page-content hidden">
+  <h2 class="text-xl font-semibold text-gray-700 mb-4">Gestión de Productos</h2>
+  <div class="mb-6">
+    <button id="toggle-product-form-btn" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 mb-4">
+      <i class="fas fa-plus"></i> Añadir Nuevo Producto
+    </button>
+    <div id="product-form-container" class="hidden">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Añadir/Editar Producto</h3>
+      <form id="product-form" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <input type="hidden" id="product-id">
+        <input type="text" id="product-name-input" placeholder="Nombre del Producto" required
+          class="md:col-span-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="number" id="product-price-input" placeholder="Precio" step="0.01" required
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="number" id="product-stock-input" placeholder="Stock" required
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="submit"
+          class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+          <i class="fas fa-save"></i> Guardar Producto
+        </button>
+      </form>
+    </div>
+  </div>
+  <hr class="border-t-2 border-gray-200 mb-6">
+  <div>
+    <h2 class="text-xl font-semibold text-gray-700 mb-4">Lista de Productos</h2>
+    <div id="manage-products-container" class="space-y-2 overflow-y-scroll max-h-64">
+    </div>
+  </div>
+</div>
+
+<div id="history-page" class="page-content hidden">
+<h2 class="text-xl font-semibold text-gray-700 mb-4">Historial de Ventas</h2>
+
+<button id="toggle-filters-btn" class="mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
+<i class="fas fa-filter"></i> Mostrar/Ocultar Filtros
+</button>
+
+<div id="filters-container" class="mb-6 p-4 rounded-lg bg-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
+<div class="space-y-2">
+<label for="filter-start-date" class="block text-sm font-medium text-gray-700">Fecha de inicio</label>
+<input type="date" id="filter-start-date"
+class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+</div>
+<div class="space-y-2">
+<label for="filter-end-date" class="block text-sm font-medium text-gray-700">Fecha de fin</label>
+<input type="date" id="filter-end-date"
+class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+</div>
+<div class="space-y-2">
+<label for="filter-product" class="block text-sm font-medium text-gray-700">Filtrar por producto</label>
+<input type="text" id="filter-product" placeholder="Nombre del producto"
+class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+</div>
+<div class="space-y-2">
+<label for="filter-payment-method" class="block text-sm font-medium text-gray-700">Forma de pago</label>
+<select id="filter-payment-method"
+class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+<option value="">Todas</option>
+</select>
+</div>
+<div class="col-span-1 md:col-span-3 flex items-end justify-end space-x-2">
+<button id="apply-filters-btn"
+class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
+<i class="fas fa-filter"></i> Aplicar Filtros
+</button>
+<button id="clear-filters-btn"
+class="px-4 py-2 bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:bg-gray-500 transition duration-300">
+<i class="fas fa-eraser"></i> Limpiar
+</button>
+</div>
+</div>
+
+<div class="mb-6 flex space-x-2">
+<button id="import-sales-btn"
+class="flex-grow px-4 py-3 bg-indigo-600 text-white font-bold text-lg rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+<i class="fas fa-file-import mr-2"></i> Importar Ventas desde CSV
+</button>
+<input type="file" id="import-sales-input" accept=".csv" class="hidden">
+<button id="export-sales-btn"
+class="flex-grow px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+<i class="fas fa-file-export mr-2"></i> Exportar Ventas a CSV
+</button>
+</div>
+
+<div id="sales-history-container" class="space-y-4 overflow-y-scroll max-h-64">
+</div>
+</div>
+
+<div id="stats-page" class="page-content hidden">
+  <h2 class="text-xl font-semibold text-gray-700 mb-4">Estadísticas</h2>
+  <div class="space-y-6">
+    <div class="mb-6 bg-gray-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Análisis de Ventas</h3>
+      <canvas id="salesChart"></canvas>
+    </div>
+    <div class="mb-6 bg-gray-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Top 5 Productos más Vendidos</h3>
+      <canvas id="topProductsChart"></canvas>
+    </div>
+    <div class="mb-6 bg-gray-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Ventas por Forma de Pago</h3>
+      <canvas id="paymentMethodsChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div id="cash-page" class="page-content hidden">
+<h2 class="text-xl font-semibold text-gray-700 mb-4">Gestión de Caja</h2>
+<div id="cash-status" class="mb-4 p-4 rounded-lg bg-gray-100 flex justify-between items-center">
+<span id="cash-status-text" class="text-lg font-bold">Caja cerrada</span>
+<span id="current-cash-display" class="text-2xl font-bold text-green-600">$0.00</span>
+</div>
+<form id="open-cash-form" class="space-y-4">
+<h3 class="font-semibold text-gray-700">Abrir Caja</h3>
+<input type="number" id="open-cash-amount" placeholder="Monto de apertura" step="0.01" required
+class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+<button type="submit" id="open-cash-btn"
+class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+<i class="fas fa-box-open"></i> Abrir Caja
+</button>
+</form>
+<div id="cash-stats" class="mt-6 p-4 rounded-lg bg-gray-100 hidden">
+<h3 class="font-semibold text-gray-700 mb-2">Resumen del Día</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+<div>
+<span class="block font-bold text-gray-800 text-2xl" id="stats-total-sales">$0.00</span>
+<span class="text-sm text-gray-500">Total de Ventas</span>
+</div>
+<div>
+<span class="block font-bold text-gray-800 text-2xl" id="stats-sales-count">0</span>
+<span class="text-sm text-gray-500">Ventas</span>
+</div>
+<div>
+<span class="block font-bold text-red-600 text-2xl" id="stats-total-expenses">$0.00</span>
+<span class="text-sm text-gray-500">Total de Gastos</span>
+</div>
+</div>
+<hr class="border-t-2 border-gray-200 my-4">
+<div id="payment-stats-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center mt-4">
+  </div>
+</div>
+<hr id="close-separator" class="border-t-2 border-gray-200 my-6 hidden">
+<button id="close-cash-btn" class="w-full px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600 transition duration-300 hidden">
+<i class="fas fa-lock"></i> Cerrar Caja
+</button>
+<hr class="border-t-2 border-gray-200 my-6">
+<div id="cash-history-section">
+<h2 class="text-xl font-semibold text-gray-700 mb-4">Historial de Cajas</h2>
+<div id="cash-history-container" class="space-y-4 overflow-y-scroll max-h-64">
+</div>
+</div>
+</div>
+
+<div id="expenses-page" class="page-content hidden">
+  <h2 class="text-xl font-semibold text-gray-700 mb-4">Gestión de Gastos</h2>
+  <div class="mb-4">
+    <button id="toggle-expense-form-btn" class="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 mb-4">
+      <i class="fas fa-plus"></i> Registrar Nuevo Gasto
+    </button>
+    <div id="expense-form-container" class="hidden">
+      <h3 class="font-semibold text-gray-700 mb-2">Formulario de Gasto</h3>
+      <form id="expense-form" class="space-y-4">
+        <input type="text" id="expense-description" placeholder="Descripción del gasto" required
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="number" id="expense-amount" placeholder="Monto" step="0.01" required
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select id="expense-category-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+          <option value="general">General</option>
+          <option value="suministros">Suministros</option>
+          <option value="servicios">Servicios</option>
+        </select>
+        <button type="submit"
+          class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300">
+          <i class="fas fa-minus-circle"></i> Guardar Gasto
+        </button>
+      </form>
+    </div>
+  </div>
+  <hr class="border-t-2 border-gray-200 my-6">
+  <div class="mb-4 mt-6">
+    <h4 class="font-semibold text-gray-700 mb-2">Historial de Gastos</h4>
+    <div id="daily-expenses-container" class="space-y-4 overflow-y-scroll max-h-64">
+    </div>
+  </div>
+</div>
+
+<div id="customers-page" class="page-content hidden">
+  <h2 class="text-xl font-semibold text-gray-700 mb-4">Gestión de Clientes</h2>
+  <div class="mb-4">
+    <button id="toggle-customer-form-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mb-4">
+      <i class="fas fa-plus"></i> Añadir Nuevo Cliente
+    </button>
+    <div id="customer-form-container" class="hidden">
+      <h3 class="font-semibold text-gray-700 mb-2">Formulario de Cliente</h3>
+      <form id="add-customer-form" class="flex space-x-2">
+        <input type="text" id="customer-name-input" placeholder="Nombre del cliente" required class="flex-grow px-4 py-2 border rounded-lg">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+          <i class="fas fa-user-plus"></i> Guardar
+        </button>
+      </form>
+    </div>
+  </div>
+  <div id="customers-list-container" class="space-y-2 overflow-y-scroll max-h-64">
+  </div>
+</div>
+
+<div id="settings-page" class="page-content hidden">
+<h2 class="text-xl font-semibold text-gray-700 mb-6">Configuración</h2>
+
+<div class="mb-8 p-4 bg-gray-100 rounded-lg">
+<h3 class="flex justify-between items-center text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleSection('payment-methods-content')">
+<span>Gestión de Formas de Pago</span>
+<i class="fas fa-chevron-down text-gray-500"></i>
+</h3>
+<div id="payment-methods-content" class="mt-4 hidden">
+<form id="add-payment-method-form" class="flex space-x-2 mb-4">
+<input type="text" id="new-payment-method-name" placeholder="Nueva forma de pago" required class="flex-grow px-4 py-2 border rounded-lg">
+<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir</button>
+</form>
+<div id="payment-methods-list" class="space-y-2 overflow-y-scroll max-h-48">
+</div>
+</div>
+</div>
+
+<div class="mb-8 p-4 bg-gray-100 rounded-lg">
+<h3 class="flex justify-between items-center text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleSection('expense-categories-content')">
+<span>Gestión de Categorías de Gastos</span>
+<i class="fas fa-chevron-down text-gray-500"></i>
+</h3>
+<div id="expense-categories-content" class="mt-4 hidden">
+<form id="add-expense-category-form" class="flex space-x-2 mb-4">
+<input type="text" id="new-expense-category-name" placeholder="Nueva categoría de gasto" required class="flex-grow px-4 py-2 border rounded-lg">
+<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir</button>
+</form>
+<div id="expense-categories-list" class="space-y-2 overflow-y-scroll max-h-48">
+</div>
+</div>
+</div>
+</div>
+
+<div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+<div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center">
+<p id="modal-message" class="text-lg font-semibold mb-4"></p>
+<button id="modal-close-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg">Cerrar</button>
+</div>
+</div>
+
+<div id="split-payment-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+<div class="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+<h3 class="text-xl font-semibold mb-2">Procesar Pago</h3>
+<p class="text-gray-600 mb-4">Total a pagar: <span id="payment-total-display" class="font-bold">$0.00</span></p>
+
+<div id="payment-inputs-container" class="space-y-4 mb-4">
+</div>
+
+<div class="flex justify-between items-center mb-4">
+<button id="add-payment-input-btn" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+<i class="fas fa-plus"></i> Añadir Pago
+</button>
+<div class="text-lg font-bold">
+Restante: <span id="payment-remaining-display" class="text-red-600">$0.00</span>
+</div>
+</div>
+
+<div class="flex justify-end space-x-2">
+<button id="cancel-split-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg">
+Cancelar
+</button>
+<button id="process-payment-btn" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
+Confirmar Pago
+</button>
+</div>
+</div>
+</div>
+
+<div id="auth-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center active">
+<div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+<h3 class="text-xl font-semibold mb-4 text-center">Iniciar Sesión / Registrarse</h3>
+<form id="auth-form" class="space-y-4">
+<input type="email" id="auth-email" placeholder="Correo electrónico" required
+class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+<input type="password" id="auth-password" placeholder="Contraseña" required
+class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+<div class="flex justify-between space-x-2">
+<button type="submit" id="login-btn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+<i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+</button>
+<button type="button" id="register-btn" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+<i class="fas fa-user-plus"></i> Registrarse
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<script type="module" src="main.js"></script>
 </body>
 </html>
