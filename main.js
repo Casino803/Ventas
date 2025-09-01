@@ -71,6 +71,7 @@ const statsSalesCount = document.getElementById('stats-sales-count');
 const statsTotalExpenses = document.getElementById('stats-total-expenses');
 const statsCashSales = document.getElementById('stats-cash-sales');
 const statsOtherSales = document.getElementById('stats-other-sales');
+const paymentStatsContainer = document.getElementById('payment-stats-container');
 
 // Referencias del modal de pago múltiple
 const splitPaymentModal = document.getElementById('split-payment-modal');
@@ -827,20 +828,22 @@ async function updateDailyTotals() {
     const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
     const salesSnapshot = await getDocs(salesQuery);
     let salesCount = 0;
-    let cashSalesTotal = 0;
-    let otherPaymentsTotal = 0;
+    let paymentMethodTotals = {};
+
+    // Obtener todos los métodos de pago disponibles
+    const allPaymentMethods = [...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)];
+    allPaymentMethods.forEach(method => {
+        paymentMethodTotals[method] = 0;
+    });
 
     dailySalesTotal = salesSnapshot.docs.reduce((sum, doc) => {
         const sale = doc.data();
         if (sale.total && !isNaN(sale.total)) {
             salesCount++;
-            // Clasificar y sumar por forma de pago
             if (sale.payments) {
                 sale.payments.forEach(payment => {
-                    if (payment.method === "Efectivo") {
-                        cashSalesTotal += payment.amount;
-                    } else {
-                        otherPaymentsTotal += payment.amount;
+                    if (paymentMethodTotals.hasOwnProperty(payment.method)) {
+                        paymentMethodTotals[payment.method] += payment.amount;
                     }
                 });
             }
@@ -860,7 +863,7 @@ async function updateDailyTotals() {
         return sum;
     }, 0);
 
-    const currentCash = dailyCashData.abertura + cashSalesTotal - dailyExpensesTotal;
+    const currentCash = dailyCashData.abertura + paymentMethodTotals['Efectivo'] - dailyExpensesTotal;
     if (currentCashDisplay) currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
 
     // Actualizar las estadísticas
@@ -868,9 +871,36 @@ async function updateDailyTotals() {
     if (statsSalesCount) statsSalesCount.textContent = salesCount;
     if (statsTotalExpenses) statsTotalExpenses.textContent = `$${dailyExpensesTotal.toFixed(2)}`;
 
-    // Actualizar las nuevas estadísticas de pagos
-    if (statsCashSales) statsCashSales.textContent = `$${cashSalesTotal.toFixed(2)}`;
-    if (statsOtherSales) statsOtherSales.textContent = `$${otherPaymentsTotal.toFixed(2)}`;
+    // Renderizar dinámicamente los totales de pago
+    renderPaymentStats(paymentMethodTotals);
+}
+
+function renderPaymentStats(paymentMethodTotals) {
+    if (!paymentStatsContainer) return;
+
+    // Limpiar el contenedor antes de renderizar
+    paymentStatsContainer.innerHTML = '';
+    
+    // Convertir el objeto a un array de pares [clave, valor]
+    const paymentMethodsArray = Object.entries(paymentMethodTotals);
+
+    // Renderizar cada forma de pago
+    paymentMethodsArray.forEach(([method, total]) => {
+        const div = document.createElement('div');
+        let totalSalesText = '';
+        let textColor = 'text-green-600';
+
+        if(method === 'Efectivo') {
+            totalSalesText = `Total en ${method}`;
+        } else {
+            totalSalesText = `Total en ${method}`;
+        }
+        div.innerHTML = `
+            <span class="block font-bold ${textColor} text-xl">$${total.toFixed(2)}</span>
+            <span class="text-sm text-gray-500">${totalSalesText}</span>
+        `;
+        paymentStatsContainer.appendChild(div);
+    });
 }
 
 function renderCashStatus() {
