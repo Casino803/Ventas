@@ -25,8 +25,8 @@
 
 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
 
-<div id="home-menu" class="page-content active text-center">
-<h2 class="text-2xl font-bold text-gray-800 mb-6">Menú Principal</h2>
+<div id="home-menu" class="page-content active">
+<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Menú Principal</h2>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 <button data-page="pos-page" class="menu-btn bg-blue-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
 <i class="fas fa-cash-register mr-2"></i> Punto de Venta
@@ -57,7 +57,7 @@
 <i class="fas fa-user-plus"></i> Añadir
 </button>
 </form>
-<div id="customers-list-container" class="space-y-2">
+<div id="customers-list-container" class="space-y-2 overflow-y-scroll max-h-64">
 </div>
 </div>
 
@@ -76,13 +76,13 @@ class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none 
 </div>
 <div id="product-list" class="mb-6">
 <h2 class="text-xl font-semibold text-gray-700 mb-4">Productos Disponibles</h2>
-<div id="products-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+<div id="products-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-scroll max-h-64">
 </div>
 </div>
 </div>
 <div class="md:w-1/3 p-4 bg-gray-50 rounded-xl shadow-inner flex flex-col h-full">
 <h2 class="text-xl font-semibold text-gray-700 mb-4"><i class="fas fa-shopping-cart"></i> Carrito de Compras</h2>
-<div id="cart-container" class="space-y-2 mb-4 flex-grow">
+<div id="cart-container" class="space-y-2 mb-4 flex-grow overflow-y-scroll">
 </div>
 <div class="mt-auto">
 <div class="flex justify-between items-center text-lg font-bold text-gray-800 border-t-2 border-gray-300 pt-4 mt-4">
@@ -125,7 +125,7 @@ class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-m
 <hr class="border-t-2 border-gray-200 mb-6">
 <div>
 <h2 class="text-xl font-semibold text-gray-700 mb-4">Lista de Productos</h2>
-<div id="manage-products-container" class="space-y-2">
+<div id="manage-products-container" class="space-y-2 overflow-y-scroll max-h-64">
 </div>
 </div>
 </div>
@@ -192,7 +192,7 @@ class="flex-grow px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-lg 
 <canvas id="salesChart"></canvas>
 </div>
 
-<div id="sales-history-container" class="space-y-4">
+<div id="sales-history-container" class="space-y-4 overflow-y-scroll max-h-64">
 </div>
 </div>
 
@@ -236,7 +236,7 @@ class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md
 </form>
 <div class="mb-4 mt-6">
 <h4 class="font-semibold text-gray-700 mb-2">Gastos de Hoy</h4>
-<div id="daily-expenses-container" class="space-y-2">
+<div id="daily-expenses-container" class="space-y-2 overflow-y-scroll max-h-48">
 </div>
 </div>
 </div>
@@ -266,7 +266,7 @@ class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md
 
 <div id="cash-history-section">
 <h2 class="text-xl font-semibold text-gray-700 mb-4">Historial de Cajas</h2>
-<div id="cash-history-container" class="space-y-4">
+<div id="cash-history-container" class="space-y-4 overflow-y-scroll max-h-64">
 </div>
 </div>
 </div>
@@ -283,7 +283,7 @@ class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md
         <input type="text" id="new-payment-method-name" placeholder="Nueva forma de pago" required class="flex-grow px-4 py-2 border rounded-lg">
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir</button>
     </form>
-    <div id="payment-methods-list" class="space-y-2">
+    <div id="payment-methods-list" class="space-y-2 overflow-y-scroll max-h-48">
         </div>
 </div>
 
@@ -293,7 +293,7 @@ class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md
         <input type="text" id="new-expense-category-name" placeholder="Nueva categoría de gasto" required class="flex-grow px-4 py-2 border rounded-lg">
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir</button>
     </form>
-    <div id="expense-categories-list" class="space-y-2">
+    <div id="expense-categories-list" class="space-y-2 overflow-y-scroll max-h-48">
         </div>
 </div>
 </div>
