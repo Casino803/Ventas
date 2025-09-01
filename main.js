@@ -4,13 +4,13 @@ import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, s
 
 // CONFIGURACIÓN DE FIREBASE
 const firebaseConfig = {
-apiKey: "AIzaSyDaeiHDKjK_DkdYNF9FvL8aMGINPGvU9uc",
-authDomain: "ventas-casino.firebaseapp.com",
-projectId: "ventas-casino",
-storageBucket: "ventas-casino.firebasestorage.app",
-messagingSenderId: "683247450522",
-appId: "1:683247450522:web:87a57e190d2c252d0a6223",
-measurementId: "G-XYG0ZNEQ61"
+    apiKey: "AIzaSyDaeiHDKjK_DkdYNF9FvL8aMGINPGvU9uc",
+    authDomain: "ventas-casino.firebaseapp.com",
+    projectId: "ventas-casino",
+    storageBucket: "ventas-casino.firebasestorage.app",
+    messagingSenderId: "683247450522",
+    appId: "1:683247450522:web:87a57e190d2c252d0a6223",
+    measurementId: "G-XYG0ZNEQ61"
 };
 
 const appId = firebaseConfig.appId;
@@ -132,16 +132,16 @@ const defaultExpenseCategories = ["General", "Suministros", "Servicios"];
 let userExpenseCategories = [];
 
 function showModal(message) {
-if (modal && modalMessage) {
-modalMessage.textContent = message;
-modal.classList.remove('hidden');
-}
+    if (modal && modalMessage) {
+        modalMessage.textContent = message;
+        modal.classList.remove('hidden');
+    }
 }
 
 if (modalCloseBtn) {
-  modalCloseBtn.addEventListener('click', () => {
-    if (modal) modal.classList.add('hidden');
-  });
+    modalCloseBtn.addEventListener('click', () => {
+        if (modal) modal.classList.add('hidden');
+    });
 }
 
 // Hacemos que la función showPage sea global para que pueda ser llamada desde cualquier lugar
@@ -214,129 +214,129 @@ function setupCashTabNavigation() {
 
 
 if (posSearchInput) {
-  posSearchInput.addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const filteredProducts = allProducts.filter(product =>
-    product.name.toLowerCase().includes(searchTerm)
-    );
-    renderProducts(filteredProducts);
-  });
+    posSearchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredProducts = allProducts.filter(product =>
+            product.name.toLowerCase().includes(searchTerm)
+        );
+        renderProducts(filteredProducts);
+    });
 }
 
 function renderProducts(products) {
-if (!productsContainer) return;
-productsContainer.innerHTML = '';
-products.forEach(product => {
-renderProductCard(product);
-});
+    if (!productsContainer) return;
+    productsContainer.innerHTML = '';
+    products.forEach(product => {
+        renderProductCard(product);
+    });
 }
 
 onAuthStateChanged(auth, async (user) => {
-if (user) {
-userId = user.uid;
-setupRealtimeListeners();
-if (authModal) authModal.classList.add('hidden');
-showPage('pos-page'); // Inicia en la página del POS
-} else {
-if (authModal) authModal.classList.remove('hidden');
-pages.forEach(page => page.classList.remove('active'));
-}
+    if (user) {
+        userId = user.uid;
+        setupRealtimeListeners();
+        if (authModal) authModal.classList.add('hidden');
+        showPage('pos-page'); // Inicia en la página del POS
+    } else {
+        if (authModal) authModal.classList.remove('hidden');
+        pages.forEach(page => page.classList.remove('active'));
+    }
 });
 
 function setupRealtimeListeners() {
-if (!userId) {
-console.error("UserID no disponible, no se pueden configurar los oyentes.");
-return;
-}
+    if (!userId) {
+        console.error("UserID no disponible, no se pueden configurar los oyentes.");
+        return;
+    }
 
-// Colecciones compartidas
-const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-onSnapshot(productsCollection, (snapshot) => {
-allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderProducts(allProducts);
-if(manageProductsContainer) manageProductsContainer.innerHTML = '';
-allProducts.forEach(product => {
-renderManageProduct(product);
-});
-}, (error) => {
-console.error("Error al escuchar productos:", error);
-showModal("Error al cargar productos. Por favor, recarga la página.");
-});
+    // Colecciones compartidas
+    const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
+    onSnapshot(productsCollection, (snapshot) => {
+        allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderProducts(allProducts);
+        if(manageProductsContainer) manageProductsContainer.innerHTML = '';
+        allProducts.forEach(product => {
+            renderManageProduct(product);
+        });
+    }, (error) => {
+        console.error("Error al escuchar productos:", error);
+        showModal("Error al cargar productos. Por favor, recarga la página.");
+    });
 
-const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-onSnapshot(salesCollection, (snapshot) => {
-allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderSalesHistory(allSales);
-updateDailyTotals();
-if (salesChartCtx) renderSalesChart(allSales);
-}, (error) => {
-console.error("Error al escuchar ventas:", error);
-showModal("Error al cargar el historial de ventas.");
-});
+    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+    onSnapshot(salesCollection, (snapshot) => {
+        allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderSalesHistory(allSales);
+        updateDailyTotals();
+        if (salesChartCtx) renderSalesChart(allSales);
+    }, (error) => {
+        console.error("Error al escuchar ventas:", error);
+        showModal("Error al cargar el historial de ventas.");
+    });
 
-const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
-onSnapshot(customersCollection, (snapshot) => {
-allCustomers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-renderCustomersList(allCustomers);
-renderCustomerSelect(allCustomers);
-}, (error) => {
-console.error("Error al escuchar clientes:", error);
-showModal("Error al cargar clientes.");
-});
+    const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
+    onSnapshot(customersCollection, (snapshot) => {
+        allCustomers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderCustomersList(allCustomers);
+        renderCustomerSelect(allCustomers);
+    }, (error) => {
+        console.error("Error al escuchar clientes:", error);
+        showModal("Error al cargar clientes.");
+    });
 
-const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
-onSnapshot(paymentMethodsCollection, (snapshot) => {
-userPaymentMethods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-if(filterPaymentMethod) renderPaymentMethodFilters();
-if(paymentMethodsList) renderPaymentMethodsList();
-}, (error) => {
-console.error("Error al escuchar métodos de pago:", error);
-showModal("Error al cargar los métodos de pago.");
-});
+    const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
+    onSnapshot(paymentMethodsCollection, (snapshot) => {
+        userPaymentMethods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if(filterPaymentMethod) renderPaymentMethodFilters();
+        if(paymentMethodsList) renderPaymentMethodsList();
+    }, (error) => {
+        console.error("Error al escuchar métodos de pago:", error);
+        showModal("Error al cargar los métodos de pago.");
+    });
 
-const expenseCategoriesCollection = collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION);
-onSnapshot(expenseCategoriesCollection, (snapshot) => {
-userExpenseCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-if(expenseCategorySelect) renderExpenseCategories();
-if(expenseCategoriesList) renderExpenseCategoriesList();
-}, (error) => {
-console.error("Error al escuchar categorías de gastos:", error);
-showModal("Error al cargar las categorías de gastos.");
-});
+    const expenseCategoriesCollection = collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION);
+    onSnapshot(expenseCategoriesCollection, (snapshot) => {
+        userExpenseCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if(expenseCategorySelect) renderExpenseCategories();
+        if(expenseCategoriesList) renderExpenseCategoriesList();
+    }, (error) => {
+        console.error("Error al escuchar categorías de gastos:", error);
+        showModal("Error al cargar las categorías de gastos.");
+    });
 
 
-// Colecciones ahora compartidas
-const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
-onSnapshot(expensesCollection, (snapshot) => {
-const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-if(dailyExpensesContainer) renderDailyExpenses(expenses);
-updateDailyTotals();
-}, (error) => {
-console.error("Error al escuchar gastos:", error);
-showModal("Error al cargar los gastos.");
-});
+    // Colecciones ahora compartidas
+    const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
+    onSnapshot(expensesCollection, (snapshot) => {
+        const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if(dailyExpensesContainer) renderDailyExpenses(expenses);
+        updateDailyTotals();
+    }, (error) => {
+        console.error("Error al escuchar gastos:", error);
+        showModal("Error al cargar los gastos.");
+    });
 
-const today = new Date().toLocaleDateString('en-CA');
-const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
-onSnapshot(cashDocRef, (doc) => {
-if (doc.exists()) {
-dailyCashData = doc.data();
-renderCashStatus();
-} else {
-dailyCashData = null;
-renderCashStatus();
-}
-}, (error) => {
-console.error("Error al escuchar la caja diaria:", error);
-});
+    const today = new Date().toLocaleDateString('en-CA');
+    const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
+    onSnapshot(cashDocRef, (doc) => {
+        if (doc.exists()) {
+            dailyCashData = doc.data();
+            renderCashStatus();
+        } else {
+            dailyCashData = null;
+            renderCashStatus();
+        }
+    }, (error) => {
+        console.error("Error al escuchar la caja diaria:", error);
+    });
 
-const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
-onSnapshot(cashHistoryCollection, (snapshot) => {
-const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-if (cashHistoryContainer) renderCashHistory(history);
-}, (error) => {
-console.error("Error al escuchar el historial de cajas:", error);
-});
+    const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
+    onSnapshot(cashHistoryCollection, (snapshot) => {
+        const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (cashHistoryContainer) renderCashHistory(history);
+    }, (error) => {
+        console.error("Error al escuchar el historial de cajas:", error);
+    });
 }
 
 // Funciones de renderizado de configuración
@@ -348,12 +348,12 @@ function renderPaymentMethodsList() {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
         itemDiv.innerHTML = `
-            <span>${method.name}</span>
-            <div class="flex space-x-2">
-                <button data-id="${method.id}" class="delete-payment-method-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
+        <span>${method.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${method.id}" class="delete-payment-method-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
         `;
         paymentMethodsList.appendChild(itemDiv);
 
@@ -386,15 +386,15 @@ function renderExpenseCategoriesList() {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
         itemDiv.innerHTML = `
-            <span>${category.name}</span>
-            <div class="flex space-x-2">
-                <button data-id="${category.id}" class="delete-expense-category-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
+        <span>${category.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${category.id}" class="delete-expense-category-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
         `;
         expenseCategoriesList.appendChild(itemDiv);
-        
+
         const deleteButton = itemDiv.querySelector('.delete-expense-category-btn');
         if (category.id) {
             deleteButton.addEventListener('click', async () => {
@@ -457,251 +457,251 @@ if(addExpenseCategoryForm) {
 }
 
 function renderPaymentMethodFilters() {
-if(!filterPaymentMethod) return;
-const selectFilter = document.getElementById('filter-payment-method');
-selectFilter.innerHTML = '<option value="">Todas</option>';
-const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
-allMethods.forEach(method => {
-const option = document.createElement('option');
-option.value = method;
-option.textContent = method;
-selectFilter.appendChild(option);
-});
+    if(!filterPaymentMethod) return;
+    const selectFilter = document.getElementById('filter-payment-method');
+    selectFilter.innerHTML = '<option value="">Todas</option>';
+    const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
+    allMethods.forEach(method => {
+        const option = document.createElement('option');
+        option.value = method;
+        option.textContent = method;
+        selectFilter.appendChild(option);
+    });
 }
 
 function renderExpenseCategories() {
-if(!expenseCategorySelect) return;
-expenseCategorySelect.innerHTML = '';
-const allCategories = [...new Set([...defaultExpenseCategories, ...userExpenseCategories.map(c => c.name)])];
-allCategories.forEach(category => {
-const option = document.createElement('option');
-option.value = category.toLowerCase();
-option.textContent = category;
-expenseCategorySelect.appendChild(option);
-});
+    if(!expenseCategorySelect) return;
+    expenseCategorySelect.innerHTML = '';
+    const allCategories = [...new Set([...defaultExpenseCategories, ...userExpenseCategories.map(c => c.name)])];
+    allCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.toLowerCase();
+        option.textContent = category;
+        expenseCategorySelect.appendChild(option);
+    });
 }
 
 function renderProductCard(product) {
-if (!productsContainer) return;
-const card = document.createElement('div');
-card.className = "bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300";
+    if (!productsContainer) return;
+    const card = document.createElement('div');
+    card.className = "bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300";
 
-let stockHtml = '';
-if (product.stock !== undefined) {
-stockHtml = `<p class="text-sm text-gray-500">Stock: ${product.stock}</p>`;
-if (product.stock <= 5) {
-stockHtml = `<p class="text-sm font-bold text-red-500">Stock Bajo: ${product.stock}</p>`;
-}
-}
+    let stockHtml = '';
+    if (product.stock !== undefined) {
+        stockHtml = `<p class="text-sm text-gray-500">Stock: ${product.stock}</p>`;
+        if (product.stock <= 5) {
+            stockHtml = `<p class="text-sm font-bold text-red-500">Stock Bajo: ${product.stock}</p>`;
+        }
+    }
 
-card.innerHTML = `
-<h3 class="font-bold text-gray-800 text-lg mb-2">${product.name}</h3>
-<p class="text-xl font-bold text-green-600">$${product.price.toFixed(2)}</p>
-${stockHtml}
-<button data-product-id="${product.id}"
-class="mt-4 w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-<i class="fas fa-plus-circle"></i> Añadir al Carrito
-</button>
-`;
-productsContainer.appendChild(card);
+    card.innerHTML = `
+    <h3 class="font-bold text-gray-800 text-lg mb-2">${product.name}</h3>
+    <p class="text-xl font-bold text-green-600">$${product.price.toFixed(2)}</p>
+    ${stockHtml}
+    <button data-product-id="${product.id}"
+        class="mt-4 w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+        <i class="fas fa-plus-circle"></i> Añadir al Carrito
+    </button>
+    `;
+    productsContainer.appendChild(card);
 
-card.querySelector('button').addEventListener('click', () => {
-addProductToCart(product);
-});
+    card.querySelector('button').addEventListener('click', () => {
+        addProductToCart(product);
+    });
 }
 
 function renderManageProduct(product) {
-if (!manageProductsContainer) return;
-const itemDiv = document.createElement('div');
-itemDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
+    if (!manageProductsContainer) return;
+    const itemDiv = document.createElement('div');
+    itemDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
 
-let stockDisplay = '';
-if (product.stock !== undefined) {
-stockDisplay = `<span class="text-sm text-gray-500"> (Stock: ${product.stock})</span>`;
-}
-
-itemDiv.innerHTML = `
-<div class="flex-grow">
-<span class="font-semibold">${product.name}</span>
-<span class="text-gray-500"> - $${product.price.toFixed(2)}</span>
-${stockDisplay}
-</div>
-<div class="flex space-x-2">
-<button data-product-id="${product.id}"
-class="edit-product-btn px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
-<i class="fas fa-edit"></i>
-</button>
-<button data-product-id="${product.id}"
-class="delete-product-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
-<i class="fas fa-trash-alt"></i>
-</button>
-</div>
-`;
-manageProductsContainer.appendChild(itemDiv);
-
-const editButton = itemDiv.querySelector('.edit-product-btn');
-if(editButton) {
-  editButton.addEventListener('click', () => {
-      const newName = prompt(`Editar nombre de cliente:`, product.name);
-      const productIdInput = document.getElementById('product-id');
-      const productNameInput = document.getElementById('product-name-input');
-      const productPriceInput = document.getElementById('product-price-input');
-      const productStockInput = document.getElementById('product-stock-input');
-
-      if (productIdInput) productIdInput.value = product.id;
-      if (productNameInput) productNameInput.value = product.name;
-      if (productPriceInput) productPriceInput.value = product.price;
-      if (productStockInput) productStockInput.value = product.stock;
-  });
-}
-
-const deleteButton = itemDiv.querySelector('.delete-product-btn');
-if(deleteButton) {
-  deleteButton.addEventListener('click', async () => {
-    if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-    try {
-    const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, product.id);
-    await deleteDoc(productRef);
-    showModal("Producto eliminado con éxito.");
-    } catch (error) {
-    console.error("Error al eliminar el producto:", error);
-    showModal("Error al eliminar el producto. Por favor, intenta de nuevo.");
+    let stockDisplay = '';
+    if (product.stock !== undefined) {
+        stockDisplay = `<span class="text-sm text-gray-500"> (Stock: ${product.stock})</span>`;
     }
+
+    itemDiv.innerHTML = `
+    <div class="flex-grow">
+        <span class="font-semibold">${product.name}</span>
+        <span class="text-gray-500"> - $${product.price.toFixed(2)}</span>
+        ${stockDisplay}
+    </div>
+    <div class="flex space-x-2">
+        <button data-product-id="${product.id}"
+            class="edit-product-btn px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button data-product-id="${product.id}"
+            class="delete-product-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    </div>
+    `;
+    manageProductsContainer.appendChild(itemDiv);
+
+    const editButton = itemDiv.querySelector('.edit-product-btn');
+    if(editButton) {
+        editButton.addEventListener('click', () => {
+            const newName = prompt(`Editar nombre de cliente:`, product.name);
+            const productIdInput = document.getElementById('product-id');
+            const productNameInput = document.getElementById('product-name-input');
+            const productPriceInput = document.getElementById('product-price-input');
+            const productStockInput = document.getElementById('product-stock-input');
+
+            if (productIdInput) productIdInput.value = product.id;
+            if (productNameInput) productNameInput.value = product.name;
+            if (productPriceInput) productPriceInput.value = product.price;
+            if (productStockInput) productStockInput.value = product.stock;
+        });
     }
-  });
-}
+
+    const deleteButton = itemDiv.querySelector('.delete-product-btn');
+    if(deleteButton) {
+        deleteButton.addEventListener('click', async () => {
+            if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+                try {
+                    const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, product.id);
+                    await deleteDoc(productRef);
+                    showModal("Producto eliminado con éxito.");
+                } catch (error) {
+                    console.error("Error al eliminar el producto:", error);
+                    showModal("Error al eliminar el producto. Por favor, intenta de nuevo.");
+                }
+            }
+        });
+    }
 }
 
 function renderSalesHistory(sales) {
-if (!salesHistoryContainer) return;
-salesHistoryContainer.innerHTML = '';
+    if (!salesHistoryContainer) return;
+    salesHistoryContainer.innerHTML = '';
 
-const filteredSales = applyFilters(sales);
+    const filteredSales = applyFilters(sales);
 
-const salesByDay = filteredSales.reduce((acc, sale) => {
-const timestamp = sale.timestamp;
-if (timestamp && timestamp.seconds) {
-const date = new Date(timestamp.seconds * 1000).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-if (!acc[date]) {
-acc[date] = { total: 0, sales: [] };
-}
-acc[date].total += sale.total;
-acc[date].sales.push(sale);
-}
-return acc;
-}, {});
+    const salesByDay = filteredSales.reduce((acc, sale) => {
+        const timestamp = sale.timestamp;
+        if (timestamp && timestamp.seconds) {
+            const date = new Date(timestamp.seconds * 1000).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            if (!acc[date]) {
+                acc[date] = { total: 0, sales: [] };
+            }
+            acc[date].total += sale.total;
+            acc[date].sales.push(sale);
+        }
+        return acc;
+    }, {});
 
-const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
+    const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
 
-sortedDates.forEach(dateString => {
-const dailySales = salesByDay[dateString];
+    sortedDates.forEach(dateString => {
+        const dailySales = salesByDay[dateString];
 
-const dayDiv = document.createElement('div');
-dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
-dayDiv.innerHTML = `
-<div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
-<h3 class="font-bold text-lg">${dateString}</h3>
-<span class="font-bold text-green-600 text-xl">Total: $${dailySales.total.toFixed(2)}</span>
-</div>
-`;
+        const dayDiv = document.createElement('div');
+        dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
+        dayDiv.innerHTML = `
+        <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
+            <h3 class="font-bold text-lg">${dateString}</h3>
+            <span class="font-bold text-green-600 text-xl">Total: $${dailySales.total.toFixed(2)}</span>
+        </div>
+        `;
 
-dailySales.sales.forEach(sale => {
-const saleDiv = document.createElement('div');
-saleDiv.className = "bg-white p-3 rounded-lg shadow-sm my-2";
-const formattedTime = new Date(sale.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
+        dailySales.sales.forEach(sale => {
+            const saleDiv = document.createElement('div');
+            saleDiv.className = "bg-white p-3 rounded-lg shadow-sm my-2";
+            const formattedTime = new Date(sale.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
 
-let itemsHtml = sale.items.map(item => `
-<li class="flex justify-between text-sm">
-<span class="text-gray-700">${item.name} x${item.quantity}</span>
-<span class="text-gray-700">$${(item.price * item.quantity).toFixed(2)}</span>
-</li>
-`).join('');
+            let itemsHtml = sale.items.map(item => `
+            <li class="flex justify-between text-sm">
+                <span class="text-gray-700">${item.name} x${item.quantity}</span>
+                <span class="text-gray-700">$${(item.price * item.quantity).toFixed(2)}</span>
+            </li>
+            `).join('');
 
-let paymentsHtml = '';
-if (sale.payments && sale.payments.length > 0) {
-paymentsHtml = '<p class="mt-2 text-sm text-gray-600">Pagos:</p><ul class="space-y-1">';
-paymentsHtml += sale.payments.map(p => `
-<li class="flex justify-between text-sm">
-<span class="text-gray-700">${p.method}</span>
-<span class="text-gray-700">$${p.amount.toFixed(2)}</span>
-</li>
-`).join('');
-paymentsHtml += '</ul>';
-}
+            let paymentsHtml = '';
+            if (sale.payments && sale.payments.length > 0) {
+                paymentsHtml = '<p class="mt-2 text-sm text-gray-600">Pagos:</p><ul class="space-y-1">';
+                paymentsHtml += sale.payments.map(p => `
+                <li class="flex justify-between text-sm">
+                    <span class="text-gray-700">${p.method}</span>
+                    <span class="text-gray-700">$${p.amount.toFixed(2)}</span>
+                </li>
+                `).join('');
+                paymentsHtml += '</ul>';
+            }
 
-let customerHtml = sale.customerId ? `<p class="mt-2 text-sm text-gray-600">Cliente: <span class="font-semibold">${sale.customerName}</span></p>` : '';
+            let customerHtml = sale.customerId ? `<p class="mt-2 text-sm text-gray-600">Cliente: <span class="font-semibold">${sale.customerName}</span></p>` : '';
 
 
-saleDiv.innerHTML = `
-<div class="flex justify-between items-center mb-2">
-<h4 class="font-semibold text-gray-800">Venta a las ${formattedTime}</h4>
-<span class="font-bold text-gray-800">$${sale.total.toFixed(2)}</span>
-</div>
-<ul class="space-y-1">
-${itemsHtml}
-</ul>
-${paymentsHtml}
-${customerHtml}
-<div class="flex justify-end">
-<button class="print-receipt-btn px-3 py-1 mt-2 bg-blue-500 text-white rounded-lg text-sm" data-sale-id="${sale.id}">
-<i class="fas fa-print"></i> Recibo
-</button>
-</div>
-`;
-dayDiv.appendChild(saleDiv);
-});
-salesHistoryContainer.appendChild(dayDiv);
-});
-// Attach print events
-document.querySelectorAll('.print-receipt-btn').forEach(btn => {
-btn.addEventListener('click', (e) => {
-const saleId = e.target.dataset.saleId;
-const saleToPrint = allSales.find(s => s.id === saleId);
-if (saleToPrint) {
-printReceipt(saleToPrint);
-}
-});
-});
+            saleDiv.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <h4 class="font-semibold text-gray-800">Venta a las ${formattedTime}</h4>
+                <span class="font-bold text-gray-800">$${sale.total.toFixed(2)}</span>
+            </div>
+            <ul class="space-y-1">
+                ${itemsHtml}
+            </ul>
+            ${paymentsHtml}
+            ${customerHtml}
+            <div class="flex justify-end">
+                <button class="print-receipt-btn px-3 py-1 mt-2 bg-blue-500 text-white rounded-lg text-sm" data-sale-id="${sale.id}">
+                    <i class="fas fa-print"></i> Recibo
+                </button>
+            </div>
+            `;
+            dayDiv.appendChild(saleDiv);
+        });
+        salesHistoryContainer.appendChild(dayDiv);
+    });
+    // Attach print events
+    document.querySelectorAll('.print-receipt-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const saleId = e.target.dataset.saleId;
+            const saleToPrint = allSales.find(s => s.id === saleId);
+            if (saleToPrint) {
+                printReceipt(saleToPrint);
+            }
+        });
+    });
 }
 
 function applyFilters(sales) {
-const startDate = filterStartDate?.value ? new Date(filterStartDate.value) : null;
-const endDate = filterEndDate?.value ? new Date(filterEndDate.value) : null;
-const productName = filterProduct?.value.toLowerCase() || '';
-const paymentMethod = filterPaymentMethod?.value || '';
+    const startDate = filterStartDate?.value ? new Date(filterStartDate.value) : null;
+    const endDate = filterEndDate?.value ? new Date(filterEndDate.value) : null;
+    const productName = filterProduct?.value.toLowerCase() || '';
+    const paymentMethod = filterPaymentMethod?.value || '';
 
-return sales.filter(sale => {
-const saleDate = sale.timestamp ? new Date(sale.timestamp.seconds * 1000) : null;
+    return sales.filter(sale => {
+        const saleDate = sale.timestamp ? new Date(sale.timestamp.seconds * 1000) : null;
 
-if (startDate && (!saleDate || saleDate < startDate)) return false;
-if (endDate && (!saleDate || saleDate > endDate)) return false;
+        if (startDate && (!saleDate || saleDate < startDate)) return false;
+        if (endDate && (!saleDate || saleDate > endDate)) return false;
 
-if (productName && !sale.items.some(item => item.name.toLowerCase().includes(productName))) {
-return false;
-}
+        if (productName && !sale.items.some(item => item.name.toLowerCase().includes(productName))) {
+            return false;
+        }
 
-if (paymentMethod && !sale.payments.some(p => p.method === paymentMethod)) {
-return false;
-}
+        if (paymentMethod && !sale.payments.some(p => p.method === paymentMethod)) {
+            return false;
+        }
 
-return true;
-});
+        return true;
+    });
 }
 
 if (applyFiltersBtn) {
-  applyFiltersBtn.addEventListener('click', () => {
-    renderSalesHistory(allSales);
-  });
+    applyFiltersBtn.addEventListener('click', () => {
+        renderSalesHistory(allSales);
+    });
 }
 
 if (clearFiltersBtn) {
-  clearFiltersBtn.addEventListener('click', () => {
-    if (filterStartDate) filterStartDate.value = '';
-    if (filterEndDate) filterEndDate.value = '';
-    if (filterProduct) filterProduct.value = '';
-    if (filterPaymentMethod) filterPaymentMethod.value = '';
-    renderSalesHistory(allSales);
-  });
+    clearFiltersBtn.addEventListener('click', () => {
+        if (filterStartDate) filterStartDate.value = '';
+        if (filterEndDate) filterEndDate.value = '';
+        if (filterProduct) filterProduct.value = '';
+        if (filterPaymentMethod) filterPaymentMethod.value = '';
+        renderSalesHistory(allSales);
+    });
 }
 
 function renderDailyExpenses(expenses) {
@@ -730,10 +730,10 @@ function renderDailyExpenses(expenses) {
         const dayDiv = document.createElement('div');
         dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
         dayDiv.innerHTML = `
-            <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
-                <h3 class="font-bold text-lg">${dateString}</h3>
-                <span class="font-bold text-red-600 text-xl">Total: -$${dailyExpenses.total.toFixed(2)}</span>
-            </div>
+        <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
+            <h3 class="font-bold text-lg">${dateString}</h3>
+            <span class="font-bold text-red-600 text-xl">Total: -$${dailyExpenses.total.toFixed(2)}</span>
+        </div>
         `;
 
         dailyExpenses.expenses.forEach(expense => {
@@ -741,12 +741,12 @@ function renderDailyExpenses(expenses) {
             expenseDiv.className = "bg-white p-3 rounded-lg shadow-sm flex justify-between items-center my-2";
             const formattedTime = new Date(expense.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
             expenseDiv.innerHTML = `
-                <div>
-                    <span class="font-semibold">${expense.description}</span>
-                    <span class="text-gray-500 text-sm"> (${expense.category})</span>
-                    <span class="text-gray-500 text-sm block"> - a las ${formattedTime}</span>
-                </div>
-                <span class="text-red-600 font-bold">-$${expense.amount.toFixed(2)}</span>
+            <div>
+                <span class="font-semibold">${expense.description}</span>
+                <span class="text-gray-500 text-sm"> (${expense.category})</span>
+                <span class="text-gray-500 text-sm block"> - a las ${formattedTime}</span>
+            </div>
+            <span class="text-red-600 font-bold">-$${expense.amount.toFixed(2)}</span>
             `;
             dayDiv.appendChild(expenseDiv);
         });
@@ -755,32 +755,32 @@ function renderDailyExpenses(expenses) {
 }
 
 function renderCashHistory(history) {
-if(!cashHistoryContainer) return;
-cashHistoryContainer.innerHTML = '';
+    if(!cashHistoryContainer) return;
+    cashHistoryContainer.innerHTML = '';
 
-const historyByDay = history.reduce((acc, entry) => {
-    const date = new Date(entry.fecha.seconds * 1000).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-    if (!acc[date]) {
-        acc[date] = [];
-    }
-    acc[date].push(entry);
-    return acc;
-}, {});
+    const historyByDay = history.reduce((acc, entry) => {
+        const date = new Date(entry.fecha.seconds * 1000).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+        if (!acc[date]) {
+            acc[date] = [];
+        }
+        acc[date].push(entry);
+        return acc;
+    }, {});
 
-const sortedDates = Object.keys(historyByDay).sort((a, b) => new Date(b) - new Date(a));
+    const sortedDates = Object.keys(historyByDay).sort((a, b) => new Date(b) - new Date(a));
 
-sortedDates.forEach(dateString => {
-    const dayDiv = document.createElement('div');
-    dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
-    
-    let totalSalesDay = 0;
-    let totalExpensesDay = 0;
+    sortedDates.forEach(dateString => {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
 
-    const entriesHtml = historyByDay[dateString].map(entry => {
-        totalSalesDay += entry.ventasTotales;
-        totalExpensesDay += entry.gastosTotales;
-        const entryDate = new Date(entry.fecha.seconds * 1000).toLocaleTimeString('es-ES');
-        return `
+        let totalSalesDay = 0;
+        let totalExpensesDay = 0;
+
+        const entriesHtml = historyByDay[dateString].map(entry => {
+            totalSalesDay += entry.ventasTotales;
+            totalExpensesDay += entry.gastosTotales;
+            const entryDate = new Date(entry.fecha.seconds * 1000).toLocaleTimeString('es-ES');
+            return `
             <div class="bg-white p-3 rounded-lg shadow-sm my-2">
                 <div class="flex justify-between items-center mb-1">
                     <span class="font-bold text-gray-800">Caja cerrada a las ${entryDate}</span>
@@ -790,614 +790,611 @@ sortedDates.forEach(dateString => {
                 <div class="text-sm">Gastos Totales: <span class="font-semibold text-red-600">$${entry.gastosTotales.toFixed(2)}</span></div>
                 <div class="text-lg font-bold mt-2">Cierre: <span class="text-blue-600">$${entry.cierre.toFixed(2)}</span></div>
             </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
 
-    dayDiv.innerHTML = `
+        dayDiv.innerHTML = `
         <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
             <h3 class="font-bold text-lg">${dateString}</h3>
         </div>
         ${entriesHtml}
-    `;
-    cashHistoryContainer.appendChild(dayDiv);
-});
+        `;
+        cashHistoryContainer.appendChild(dayDiv);
+    });
 }
 
 
 async function updateDailyTotals() {
-  if (!dailyCashData) {
-    if(currentCashDisplay) currentCashDisplay.textContent = `$0.00`;
-    if (cashStatsSection) cashStatsSection.classList.add('hidden');
-    return;
-  }
-  
-  if (cashStatsSection) cashStatsSection.classList.remove('hidden');
-
-  const today = new Date().toLocaleDateString('en-CA');
-
-  // Obtener ventas asociadas a la caja de hoy
-  const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
-  const salesSnapshot = await getDocs(salesQuery);
-  let salesCount = 0;
-  dailySalesTotal = salesSnapshot.docs.reduce((sum, doc) => {
-    const sale = doc.data();
-    if (sale.total && !isNaN(sale.total)) {
-      salesCount++;
-      return sum + sale.total;
+    if (!dailyCashData) {
+        if(currentCashDisplay) currentCashDisplay.textContent = `$0.00`;
+        if (cashStatsSection) cashStatsSection.classList.add('hidden');
+        return;
     }
-    return sum;
-  }, 0);
 
-  // Obtener gastos asociados a la caja de hoy
-  const expensesQuery = query(collection(db, SHARED_EXPENSES_COLLECTION), where("cashId", "==", today));
-  const expensesSnapshot = await getDocs(expensesQuery);
-  dailyExpensesTotal = expensesSnapshot.docs.reduce((sum, doc) => {
-    const expense = doc.data();
-    if (expense.amount && !isNaN(expense.amount)) {
-      return sum + expense.amount;
-    }
-    return sum;
-  }, 0);
+    if (cashStatsSection) cashStatsSection.classList.remove('hidden');
 
-  const currentCash = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
-  if (currentCashDisplay) currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
+    const today = new Date().toLocaleDateString('en-CA');
 
-  // Actualizar las estadísticas
-  if (statsTotalSales) statsTotalSales.textContent = `$${dailySalesTotal.toFixed(2)}`;
-  if (statsSalesCount) statsSalesCount.textContent = salesCount;
-  if (statsTotalExpenses) statsTotalExpenses.textContent = `$${dailyExpensesTotal.toFixed(2)}`;
+    // Obtener ventas asociadas a la caja de hoy
+    const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
+    const salesSnapshot = await getDocs(salesQuery);
+    let salesCount = 0;
+    dailySalesTotal = salesSnapshot.docs.reduce((sum, doc) => {
+        const sale = doc.data();
+        if (sale.total && !isNaN(sale.total)) {
+            salesCount++;
+            return sum + sale.total;
+        }
+        return sum;
+    }, 0);
+
+    // Obtener gastos asociados a la caja de hoy
+    const expensesQuery = query(collection(db, SHARED_EXPENSES_COLLECTION), where("cashId", "==", today));
+    const expensesSnapshot = await getDocs(expensesQuery);
+    dailyExpensesTotal = expensesSnapshot.docs.reduce((sum, doc) => {
+        const expense = doc.data();
+        if (expense.amount && !isNaN(expense.amount)) {
+            return sum + expense.amount;
+        }
+        return sum;
+    }, 0);
+
+    const currentCash = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
+    if (currentCashDisplay) currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
+
+    // Actualizar las estadísticas
+    if (statsTotalSales) statsTotalSales.textContent = `$${dailySalesTotal.toFixed(2)}`;
+    if (statsSalesCount) statsSalesCount.textContent = salesCount;
+    if (statsTotalExpenses) statsTotalExpenses.textContent = `$${dailyExpensesTotal.toFixed(2)}`;
 }
 
 function renderCashStatus() {
-if (dailyCashData && !dailyCashData.cerrada) {
-if (cashStatusText) cashStatusText.textContent = `Caja abierta: $${dailyCashData.abertura.toFixed(2)}`;
-if (openCashForm) openCashForm.classList.add('hidden');
-if (expenseSection) expenseSection.classList.remove('hidden');
-if (expenseSeparator) expenseSeparator.classList.remove('hidden');
-if (closeCashBtn) closeCashBtn.classList.remove('hidden');
-if (closeSeparator) closeSeparator.classList.remove('hidden');
-if (cashStatsSection) cashStatsSection.classList.remove('hidden');
-} else {
-if (cashStatusText) cashStatusText.textContent = "Caja cerrada";
-if (currentCashDisplay) currentCashDisplay.textContent = "$0.00";
-if (openCashForm) openCashForm.classList.remove('hidden');
-if (expenseSection) expenseSection.classList.add('hidden');
-if (expenseSeparator) expenseSeparator.classList.add('hidden');
-if (closeCashBtn) closeCashBtn.classList.add('hidden');
-if (closeSeparator) closeSeparator.classList.add('hidden');
-if (cashStatsSection) cashStatsSection.classList.add('hidden');
-}
+    if (dailyCashData && !dailyCashData.cerrada) {
+        if (cashStatusText) cashStatusText.textContent = `Caja abierta: $${dailyCashData.abertura.toFixed(2)}`;
+        if (openCashForm) openCashForm.classList.add('hidden');
+        if (expenseSection) expenseSection.classList.remove('hidden');
+        if (expenseSeparator) expenseSeparator.classList.remove('hidden');
+        if (closeCashBtn) closeCashBtn.classList.remove('hidden');
+        if (closeSeparator) closeSeparator.classList.remove('hidden');
+        if (cashStatsSection) cashStatsSection.classList.remove('hidden');
+    } else {
+        if (cashStatusText) cashStatusText.textContent = "Caja cerrada";
+        if (currentCashDisplay) currentCashDisplay.textContent = "$0.00";
+        if (openCashForm) openCashForm.classList.remove('hidden');
+        if (expenseSection) expenseSection.classList.add('hidden');
+        if (expenseSeparator) expenseSeparator.classList.add('hidden');
+        if (closeCashBtn) closeCashBtn.classList.add('hidden');
+        if (closeSeparator) closeSeparator.classList.add('hidden');
+        if (cashStatsSection) cashStatsSection.classList.add('hidden');
+    }
 }
 
 if (openCashForm) {
-  openCashForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const amount = parseFloat(document.getElementById('open-cash-amount').value);
-    if (isNaN(amount) || amount < 0) {
-    showModal("El monto debe ser un número positivo.");
-    return;
-    }
+    openCashForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const amount = parseFloat(document.getElementById('open-cash-amount').value);
+        if (isNaN(amount) || amount < 0) {
+            showModal("El monto debe ser un número positivo.");
+            return;
+        }
 
-    const today = new Date().toLocaleDateString('en-CA');
-    const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
+        const today = new Date().toLocaleDateString('en-CA');
+        const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
 
-    try {
-    await setDoc(cashDocRef, {
-    abertura: amount,
-    fecha: new Date(),
-    cerrada: false,
-    ventasTotales: 0,
-    gastosTotales: 0
+        try {
+            await setDoc(cashDocRef, {
+                abertura: amount,
+                fecha: new Date(),
+                cerrada: false,
+                ventasTotales: 0,
+                gastosTotales: 0
+            });
+            openCashForm.reset();
+            showModal("Caja abierta con éxito.");
+        } catch (error) {
+            console.error("Error al abrir la caja:", error);
+            showModal("Hubo un error al abrir la caja. Intenta de nuevo.");
+        }
     });
-    openCashForm.reset();
-    showModal("Caja abierta con éxito.");
-    } catch (error) {
-    console.error("Error al abrir la caja:", error);
-    showModal("Hubo un error al abrir la caja. Intenta de nuevo.");
-    }
-  });
 }
 
 if (expenseForm) {
-  expenseForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const description = document.getElementById('expense-description').value;
-    const amount = parseFloat(document.getElementById('expense-amount').value);
-    const category = expenseCategorySelect?.value;
+    expenseForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const description = document.getElementById('expense-description').value;
+        const amount = parseFloat(document.getElementById('expense-amount').value);
+        const category = expenseCategorySelect?.value;
 
-    if (isNaN(amount) || amount <= 0) {
-    showModal("El monto debe ser un número positivo.");
-    return;
-    }
-    const cashId = new Date().toLocaleDateString('en-CA');
-    try {
-    const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
-    await addDoc(expensesCollection, {
-    description: description,
-    amount: amount,
-    category: category,
-    timestamp: serverTimestamp(),
-    cashId: cashId
+        if (isNaN(amount) || amount <= 0) {
+            showModal("El monto debe ser un número positivo.");
+            return;
+        }
+        const cashId = new Date().toLocaleDateString('en-CA');
+        try {
+            const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
+            await addDoc(expensesCollection, {
+                description: description,
+                amount: amount,
+                category: category,
+                timestamp: serverTimestamp(),
+                cashId: cashId
+            });
+            expenseForm.reset();
+            showModal("Gasto registrado con éxito.");
+        } catch (error) {
+            console.error("Error al registrar el gasto:", error);
+            showModal("Hubo un error al registrar el gasto. Intenta de nuevo.");
+        }
     });
-    expenseForm.reset();
-    showModal("Gasto registrado con éxito.");
-    } catch (error) {
-    console.error("Error al registrar el gasto:", error);
-    showModal("Hubo un error al registrar el gasto. Intenta de nuevo.");
-    }
-  });
 }
 
 if (closeCashBtn) {
-  closeCashBtn.addEventListener('click', async () => {
-    if (!dailyCashData || dailyCashData.cerrada) {
-    showModal("La caja no está abierta o ya ha sido cerrada.");
-    return;
-    }
+    closeCashBtn.addEventListener('click', async () => {
+        if (!dailyCashData || dailyCashData.cerrada) {
+            showModal("La caja no está abierta o ya ha sido cerrada.");
+            return;
+        }
 
-    const totalFinal = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
-    const today = new Date().toLocaleDateString('en-CA');
-    const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
+        const totalFinal = dailyCashData.abertura + dailySalesTotal - dailyExpensesTotal;
+        const today = new Date().toLocaleDateString('en-CA');
+        const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
 
-    try {
-    await setDoc(cashDocRef, {
-    cierre: totalFinal,
-    cerrada: true,
-    ventasTotales: dailySalesTotal,
-    gastosTotales: dailyExpensesTotal
-    }, { merge: true });
+        try {
+            await setDoc(cashDocRef, {
+                cierre: totalFinal,
+                cerrada: true,
+                ventasTotales: dailySalesTotal,
+                gastosTotales: dailyExpensesTotal
+            }, { merge: true });
 
-    const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
-    await addDoc(cashHistoryCollection, {
-    abertura: dailyCashData.abertura,
-    cierre: totalFinal,
-    ventasTotales: dailySalesTotal,
-    gastosTotales: dailyExpensesTotal,
-    fecha: dailyCashData.fecha,
-    cierreTimestamp: serverTimestamp()
+            const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
+            await addDoc(cashHistoryCollection, {
+                abertura: dailyCashData.abertura,
+                cierre: totalFinal,
+                ventasTotales: dailySalesTotal,
+                gastosTotales: dailyExpensesTotal,
+                fecha: dailyCashData.fecha,
+                cierreTimestamp: serverTimestamp()
+            });
+
+            showModal(`Caja cerrada. El saldo final es $${totalFinal.toFixed(2)}.`);
+        } catch (error) {
+            console.error("Error al cerrar la caja:", error);
+            showModal("Hubo un error al cerrar la caja. Intenta de nuevo.");
+        }
     });
-
-    showModal(`Caja cerrada. El saldo final es $${totalFinal.toFixed(2)}.`);
-    } catch (error) {
-    console.error("Error al cerrar la caja:", error);
-    showModal("Hubo un error al cerrar la caja. Intenta de nuevo.");
-    }
-  });
 }
 
 function addProductToCart(product) {
-if (product.stock !== undefined && product.stock <= 0) {
-showModal(`No hay stock disponible para ${product.name}.`);
-return;
-}
-const existingItem = cart.find(item => item.id === product.id);
-if (existingItem) {
-if (product.stock !== undefined && existingItem.quantity >= product.stock) {
-showModal(`El stock de ${product.name} es de ${product.stock} unidades.`);
-return;
-}
-existingItem.quantity += 1;
-} else {
-cart.push({ ...product, quantity: 1, stock: product.stock });
-}
-renderCart();
+    if (product.stock !== undefined && product.stock <= 0) {
+        showModal(`No hay stock disponible para ${product.name}.`);
+        return;
+    }
+    const existingItem = cart.find(item => item.id === product.id);
+    if (existingItem) {
+        if (product.stock !== undefined && existingItem.quantity >= product.stock) {
+            showModal(`El stock de ${product.name} es de ${product.stock} unidades.`);
+            return;
+        }
+        existingItem.quantity += 1;
+    } else {
+        cart.push({ ...product, quantity: 1, stock: product.stock });
+    }
+    renderCart();
 }
 
 function removeProductFromCart(productId) {
-cart = cart.filter(item => item.id !== productId);
-renderCart();
+    cart = cart.filter(item => item.id !== productId);
+    renderCart();
 }
 
 function renderCart() {
-if (!cartContainer) return;
-cartContainer.innerHTML = '';
-let total = 0;
-cart.forEach(item => {
-const itemDiv = document.createElement('div');
-itemDiv.className = "bg-gray-200 p-3 rounded-lg flex justify-between items-center";
-total += item.price * item.quantity;
-itemDiv.innerHTML = `
-<div class="flex items-center space-x-2">
-<span class="font-semibold">${item.name}</span>
-<span>x${item.quantity}</span>
-</div>
-<div class="flex items-center space-x-2">
-<span>$${(item.price * item.quantity).toFixed(2)}</span>
-<button data-id="${item.id}" class="text-red-500 hover:text-red-700 font-bold">
-<i class="fas fa-times-circle"></i>
-</button>
-</div>
-`;
-cartContainer.appendChild(itemDiv);
+    if (!cartContainer) return;
+    cartContainer.innerHTML = '';
+    let total = 0;
+    cart.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-200 p-3 rounded-lg flex justify-between items-center";
+        total += item.price * item.quantity;
+        itemDiv.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <span class="font-semibold">${item.name}</span>
+            <span>x${item.quantity}</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span>$${(item.price * item.quantity).toFixed(2)}</span>
+            <button data-id="${item.id}" class="text-red-500 hover:text-red-700 font-bold">
+                <i class="fas fa-times-circle"></i>
+            </button>
+        </div>
+        `;
+        cartContainer.appendChild(itemDiv);
 
-itemDiv.querySelector('button').addEventListener('click', (e) => {
-const button = e.target.closest('button[data-id]');
-if (button) {
-const idToRemove = button.dataset.id;
-removeProductFromCart(idToRemove);
-}
-});
-});
-if (cartTotalSpan) cartTotalSpan.textContent = `$${total.toFixed(2)}`;
+        itemDiv.querySelector('button').addEventListener('click', (e) => {
+            const button = e.target.closest('button[data-id]');
+            if (button) {
+                const idToRemove = button.dataset.id;
+                removeProductFromCart(idToRemove);
+            }
+        });
+    });
+    if (cartTotalSpan) cartTotalSpan.textContent = `$${total.toFixed(2)}`;
 }
 
 if (productForm) {
-  productForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('product-id')?.value;
-    const name = document.getElementById('product-name-input')?.value;
-    const price = parseFloat(document.getElementById('product-price-input')?.value);
-    const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
+    productForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('product-id')?.value;
+        const name = document.getElementById('product-name-input')?.value;
+        const price = parseFloat(document.getElementById('product-price-input')?.value);
+        const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
 
-    if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
-    showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
-    return;
-    }
+        if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
+            showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
+            return;
+        }
 
-    try {
-    if (id) {
-    const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
-    await setDoc(productRef, { name, price, stock }, { merge: true });
-    showModal("Producto editado con éxito.");
-    } else {
-    const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-    await addDoc(productsCollection, { name, price, stock });
-    showModal("Producto añadido con éxito.");
-    }
-    if (productForm) productForm.reset();
-    const productIdInput = document.getElementById('product-id');
-    if (productIdInput) productIdInput.value = '';
-    } catch (error) {
-    console.error("Error al guardar el producto:", error);
-    showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
-    }
-  });
+        try {
+            if (id) {
+                const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
+                await setDoc(productRef, { name, price, stock }, { merge: true });
+                showModal("Producto editado con éxito.");
+            } else {
+                const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
+                await addDoc(productsCollection, { name, price, stock });
+                showModal("Producto añadido con éxito.");
+            }
+            if (productForm) productForm.reset();
+            const productIdInput = document.getElementById('product-id');
+            if (productIdInput) productIdInput.value = '';
+        } catch (error) {
+            console.error("Error al guardar el producto:", error);
+            showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
+        }
+    });
 }
 
 if (checkoutBtn) {
-  checkoutBtn.addEventListener('click', () => {
-    if (cart.length === 0) {
-    showModal("El carrito está vacío. Añade productos para finalizar la venta.");
-    return;
-    }
-    if (!dailyCashData || dailyCashData.cerrada) {
-    showModal("La caja no está abierta. Por favor, abre la caja para registrar ventas.");
-    return;
-    }
+    checkoutBtn.addEventListener('click', () => {
+        if (cart.length === 0) {
+            showModal("El carrito está vacío. Añade productos para finalizar la venta.");
+            return;
+        }
+        if (!dailyCashData || dailyCashData.cerrada) {
+            showModal("La caja no está abierta. Por favor, abre la caja para registrar ventas.");
+            return;
+        }
 
-    const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-    if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
-    if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
+        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+        if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
+        if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
-    if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
-    addPaymentInput(total);
+        if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
+        addPaymentInput(total);
 
-    if (splitPaymentModal) splitPaymentModal.classList.remove('hidden');
-  });
+        if (splitPaymentModal) splitPaymentModal.classList.remove('hidden');
+    });
 }
 
 if (addPaymentMethodBtn) {
-  addPaymentMethodBtn.addEventListener('click', () => {
-    if (paymentModal) paymentModal.classList.remove('hidden');
-  });
+    addPaymentMethodBtn.addEventListener('click', () => {
+        if (paymentModal) paymentModal.classList.remove('hidden');
+    });
 }
 
 if (cancelPaymentBtn) {
-  cancelPaymentBtn.addEventListener('click', () => {
-    if (paymentModal) paymentModal.classList.add('hidden');
-  });
+    cancelPaymentBtn.addEventListener('click', () => {
+        if (paymentModal) paymentModal.classList.add('hidden');
+    });
 }
 
 if (addPaymentForm) {
-  addPaymentForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newPaymentNameInput = document.getElementById('new-payment-name');
-    const newMethodName = newPaymentNameInput?.value.trim();
+    addPaymentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newPaymentNameInput = document.getElementById('new-payment-name');
+        const newMethodName = newPaymentNameInput?.value.trim();
 
-    if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
-    try {
-    const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
-    await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethodName });
-    if(addPaymentForm) addPaymentForm.reset();
-    if(paymentModal) paymentModal.classList.add('hidden');
-    showModal("Forma de pago añadida con éxito.");
-    } catch (error) {
-    console.error("Error al añadir la forma de pago:", error);
-    showModal("Error al añadir la forma de pago.");
-    }
-    } else {
-    showModal("Esa forma de pago ya existe o no es válida.");
-    }
-  });
+        if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
+            try {
+                const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
+                await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethodName });
+                if(addPaymentForm) addPaymentForm.reset();
+                if(paymentModal) paymentModal.classList.add('hidden');
+                showModal("Forma de pago añadida con éxito.");
+            } catch (error) {
+                console.error("Error al añadir la forma de pago:", error);
+                showModal("Error al añadir la forma de pago.");
+            }
+        } else {
+            showModal("Esa forma de pago ya existe o no es válida.");
+        }
+    });
 }
 
 function addPaymentInput(amount = 0) {
-if (!paymentInputsContainer) return;
-const row = document.createElement('div');
-row.className = "flex space-x-2";
+    if (!paymentInputsContainer) return;
+    const row = document.createElement('div');
+    row.className = "flex space-x-2";
 
-const select = document.createElement('select');
-select.className = "flex-grow px-4 py-2 border border-gray-300 rounded-lg";
-const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
-allMethods.forEach(method => {
-const option = document.createElement('option');
-option.value = method;
-option.textContent = method;
-select.appendChild(option);
-});
+    const select = document.createElement('select');
+    select.className = "flex-grow px-4 py-2 border border-gray-300 rounded-lg";
+    const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
+    allMethods.forEach(method => {
+        const option = document.createElement('option');
+        option.value = method;
+        option.textContent = method;
+        select.appendChild(option);
+    });
 
-const input = document.createElement('input');
-input.type = "number";
-input.placeholder = "Monto";
-input.step = "0.01";
-input.className = "w-full px-4 py-2 border border-gray-300 rounded-lg";
+    const input = document.createElement('input');
+    input.type = "number";
+    input.placeholder = "Monto";
+    input.step = "0.01";
+    input.className = "w-full px-4 py-2 border border-gray-300 rounded-lg";
 
-if (cartTotalSpan) {
-  if (paymentInputsContainer.children.length === 0) {
-    input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
-  } else {
-    input.value = amount.toFixed(2);
-  }
-}
-
-if (input && select) {
-    input.addEventListener('input', updateRemainingAmount);
-    select.addEventListener('change', () => {
-        if (cartTotalSpan && paymentInputsContainer.children.length === 1) {
+    if (cartTotalSpan) {
+        if (paymentInputsContainer.children.length === 0) {
             input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
+        } else {
+            input.value = amount.toFixed(2);
+        }
+    }
+
+    if (input && select) {
+        input.addEventListener('input', updateRemainingAmount);
+        select.addEventListener('change', () => {
+            if (cartTotalSpan && paymentInputsContainer.children.length === 1) {
+                input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
+            }
+            updateRemainingAmount();
+        });
+    }
+
+    const removeBtn = document.createElement('button');
+    removeBtn.innerHTML = `<i class="fas fa-times-circle"></i>`;
+    removeBtn.className = "px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600";
+    removeBtn.addEventListener('click', () => {
+        row.remove();
+        if (cartTotalSpan && paymentInputsContainer.children.length === 0) {
+            addPaymentInput(parseFloat(cartTotalSpan.textContent.replace('$', '')));
         }
         updateRemainingAmount();
     });
-}
 
-const removeBtn = document.createElement('button');
-removeBtn.innerHTML = `<i class="fas fa-times-circle"></i>`;
-removeBtn.className = "px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600";
-removeBtn.addEventListener('click', () => {
-row.remove();
-if (cartTotalSpan && paymentInputsContainer.children.length === 0) {
-addPaymentInput(parseFloat(cartTotalSpan.textContent.replace('$', '')));
-}
-updateRemainingAmount();
-});
+    row.appendChild(select);
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    paymentInputsContainer.appendChild(row);
 
-row.appendChild(select);
-row.appendChild(input);
-row.appendChild(removeBtn);
-paymentInputsContainer.appendChild(row);
-
-if (paymentInputsContainer.children.length >= 1) {
-if (addPaymentInputBtn) addPaymentInputBtn.classList.remove('hidden');
-} else {
-if (addPaymentInputBtn) addPaymentInputBtn.classList.add('hidden');
-}
-updateRemainingAmount();
+    if (paymentInputsContainer.children.length >= 1) {
+        if (addPaymentInputBtn) addPaymentInputBtn.classList.remove('hidden');
+    } else {
+        if (addPaymentInputBtn) addPaymentInputBtn.classList.add('hidden');
+    }
+    updateRemainingAmount();
 }
 
 if (addPaymentInputBtn) {
-  addPaymentInputBtn.addEventListener('click', () => {
-    addPaymentInput(0);
-  });
+    addPaymentInputBtn.addEventListener('click', () => {
+        addPaymentInput(0);
+    });
 }
 
 if (cancelSplitBtn) {
-  cancelSplitBtn.addEventListener('click', () => {
-    if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-  });
+    cancelSplitBtn.addEventListener('click', () => {
+        if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+    });
 }
 
 function updateRemainingAmount() {
-if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
-const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-let sum = 0;
-paymentInputs.forEach(input => {
-sum += parseFloat(input.value) || 0;
-});
-const remaining = total - sum;
-paymentRemainingDisplay.textContent = `$${remaining.toFixed(2)}`;
-paymentRemainingDisplay.style.color = remaining < 0 ? '#ef4444' : '#f59e0b';
-if (remaining === 0) {
-paymentRemainingDisplay.style.color = '#10b981';
-}
+    if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
+    const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+    const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+    let sum = 0;
+    paymentInputs.forEach(input => {
+        sum += parseFloat(input.value) || 0;
+    });
+    const remaining = total - sum;
+    paymentRemainingDisplay.textContent = `$${remaining.toFixed(2)}`;
+    paymentRemainingDisplay.style.color = remaining < 0 ? '#ef4444' : '#f59e0b';
+    if (remaining === 0) {
+        paymentRemainingDisplay.style.color = '#10b981';
+    }
 }
 
 if (processPaymentBtn) {
-  processPaymentBtn.addEventListener('click', async () => {
-    if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
-    console.error("Faltan elementos del DOM para procesar el pago.");
-    return;
-    }
-    const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-    const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-    const paymentSelects = paymentInputsContainer.querySelectorAll('select');
+    processPaymentBtn.addEventListener('click', async () => {
+        if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+            console.error("Faltan elementos del DOM para procesar el pago.");
+            return;
+        }
+        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+        const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+        const paymentSelects = paymentInputsContainer.querySelectorAll('select');
 
-    let sum = 0;
-    const payments = [];
+        let sum = 0;
+        const payments = [];
 
-    for (let i = 0; i < paymentInputs.length; i++) {
-    const amount = parseFloat(paymentInputs[i].value);
-    const method = paymentSelects[i].value;
-    if (isNaN(amount) || amount <= 0) {
-    showModal("Todos los montos deben ser números positivos.");
-    return;
-    }
-    sum += amount;
-    payments.push({ method: method, amount: amount });
-    }
+        for (let i = 0; i < paymentInputs.length; i++) {
+            const amount = parseFloat(paymentInputs[i].value);
+            const method = paymentSelects[i].value;
+            if (isNaN(amount) || amount <= 0) {
+                showModal("Todos los montos deben ser números positivos.");
+                return;
+            }
+            sum += amount;
+            payments.push({ method: method, amount: amount });
+        }
 
-    if (Math.abs(sum - total) > 0.01) {
-    showModal("La suma de los pagos no coincide con el total.");
-    return;
-    }
-    const cashId = new Date().toLocaleDateString('en-CA');
-    try {
-    const productUpdates = cart.map(item => {
-    const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
-    return updateDoc(productDocRef, {
-    stock: item.stock - item.quantity
+        if (Math.abs(sum - total) > 0.01) {
+            showModal("La suma de los pagos no coincide con el total.");
+            return;
+        }
+        const cashId = new Date().toLocaleDateString('en-CA');
+        try {
+            const productUpdates = cart.map(item => {
+                const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                return updateDoc(productDocRef, {
+                    stock: item.stock - item.quantity
+                });
+            });
+            await Promise.all(productUpdates);
+
+            const customerId = customerSelect.value;
+            const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+
+            const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+            const newSaleRef = await addDoc(salesCollection, {
+                items: cart,
+                total: total,
+                payments: payments,
+                customerId: customerId || null,
+                customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                timestamp: serverTimestamp(),
+                cashId: cashId
+            });
+
+            showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+            
+            // Pregunta al usuario si desea imprimir el ticket
+            if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                printReceipt({
+                    id: newSaleRef.id,
+                    items: cart,
+                    total: total,
+                    payments: payments,
+                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                    timestamp: new Date()
+                });
+            }
+
+            cart = [];
+            renderCart();
+            if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+            if(customerSelect) customerSelect.value = "";
+
+        } catch (error) {
+            console.error("Error al finalizar la venta:", error);
+            showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
+        }
     });
-    });
-    await Promise.all(productUpdates);
-
-    const customerId = customerSelect.value;
-    const customerName = customerSelect.options[customerSelect.selectedIndex].text;
-
-    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-    const newSaleRef = await addDoc(salesCollection, {
-    items: cart,
-    total: total,
-    payments: payments,
-    customerId: customerId || null,
-    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-    timestamp: serverTimestamp(),
-    cashId: cashId
-    });
-
-    showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-
-// Guarda los datos de la venta para la impresión
-const saleToPrint = {
-    id: newSaleRef.id,
-    items: cart,
-    total: total,
-    payments: payments,
-    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-    timestamp: new Date()
-};
-
-// Muestra un cuadro de diálogo de confirmación para imprimir
-if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-    printReceipt(saleToPrint);
-}
-
-cart = [];
-renderCart();
-if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-if(customerSelect) customerSelect.value = "";
-
-    } catch (error) {
-    console.error("Error al finalizar la venta:", error);
-    showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
-    }
-  });
 }
 
 if (importSalesBtn) {
-  importSalesBtn.addEventListener('click', () => {
-    if (importSalesInput) importSalesInput.click();
-  });
+    importSalesBtn.addEventListener('click', () => {
+        if (importSalesInput) importSalesInput.click();
+    });
 }
 
 if (importSalesInput) {
-  importSalesInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-    const csvData = event.target.result;
-    await processImportedSales(csvData);
-    };
-    reader.readAsText(file);
-    }
-  });
+    importSalesInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const csvData = event.target.result;
+                await processImportedSales(csvData);
+            };
+            reader.readAsText(file);
+        }
+    });
 }
 
 if (exportSalesBtn) {
-  exportSalesBtn.addEventListener('click', () => {
-    exportSalesToCsv(allSales);
-  });
+    exportSalesBtn.addEventListener('click', () => {
+        exportSalesToCsv(allSales);
+    });
 }
 
 function exportSalesToCsv(sales) {
-const headers = ["ID", "Fecha", "Total", "Pagos", "Cliente", "Items"];
-const rows = sales.map(sale => {
-const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000).toLocaleString('es-ES') : '';
-const payments = JSON.stringify(sale.payments);
-const items = JSON.stringify(sale.items);
-const customer = sale.customerName || '';
-return `"${sale.id}","${date}",${sale.total.toFixed(2)},"${payments}","${customer}","${items}"`;
-});
+    const headers = ["ID", "Fecha", "Total", "Pagos", "Cliente", "Items"];
+    const rows = sales.map(sale => {
+        const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000).toLocaleString('es-ES') : '';
+        const payments = JSON.stringify(sale.payments);
+        const items = JSON.stringify(sale.items);
+        const customer = sale.customerName || '';
+        return `"${sale.id}","${date}",${sale.total.toFixed(2)},"${payments}","${customer}","${items}"`;
+    });
 
-const csvContent = [headers.join(","), ...rows].join("\n");
-const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-const link = document.createElement("a");
-link.href = URL.createObjectURL(blob);
-link.setAttribute('download', 'ventas.csv');
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'ventas.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 async function processImportedSales(csvData) {
-const rows = csvData.split('\n').filter(row => row.trim() !== '');
-if (rows.length < 2) {
-showModal("El archivo CSV debe contener al menos una fila de datos después del encabezado.");
-return;
-}
+    const rows = csvData.split('\n').filter(row => row.trim() !== '');
+    if (rows.length < 2) {
+        showModal("El archivo CSV debe contener al menos una fila de datos después del encabezado.");
+        return;
+    }
 
-const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-let importedCount = 0;
-const errors = [];
+    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+    let importedCount = 0;
+    const errors = [];
 
-const headers = rows[0].split(',').map(header => header.trim());
+    const headers = rows[0].split(',').map(header => header.trim());
 
-for (let i = 1; i < rows.length; i++) {
-const row = rows[i].split(',').map(cell => cell.trim());
-if (row.length !== 3) {
-errors.push(`Fila ${i + 1}: Formato de fila incorrecto.`);
-continue;
-}
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i].split(',').map(cell => cell.trim());
+        if (row.length !== 3) {
+            errors.push(`Fila ${i + 1}: Formato de fila incorrecto.`);
+            continue;
+        }
 
-const dateString = row[0];
-const total = parseFloat(row[1]);
-const paymentMethod = row[2];
+        const dateString = row[0];
+        const total = parseFloat(row[1]);
+        const paymentMethod = row[2];
 
-if (isNaN(total) || total <= 0) {
-errors.push(`Fila ${i + 1}: El total no es un número válido.`);
-continue;
-}
+        if (isNaN(total) || total <= 0) {
+            errors.push(`Fila ${i + 1}: El total no es un número válido.`);
+            continue;
+        }
 
-try {
-await addDoc(salesCollection, {
-items: [],
-total: total,
-payments: [{ method: paymentMethod, amount: total }],
-timestamp: new Date(dateString)
-});
-importedCount++;
-} catch (error) {
-console.error(`Error al importar la fila ${i + 1}:`, error);
-errors.push(`Fila ${i + 1}: Error al guardar en la base de datos.`);
-}
-}
+        try {
+            await addDoc(salesCollection, {
+                items: [],
+                total: total,
+                payments: [{ method: paymentMethod, amount: total }],
+                timestamp: new Date(dateString)
+            });
+            importedCount++;
+        } catch (error) {
+            console.error(`Error al importar la fila ${i + 1}:`, error);
+            errors.push(`Fila ${i + 1}: Error al guardar en la base de datos.`);
+        }
+    }
 
-let message = `Importación completada. Se importaron ${importedCount} ventas.`;
-if (errors.length > 0) {
-message += ` Hubo ${errors.length} errores:\n${errors.join('\n')}`;
-}
-showModal(message);
+    let message = `Importación completada. Se importaron ${importedCount} ventas.`;
+    if (errors.length > 0) {
+        message += ` Hubo ${errors.length} errores:\n${errors.join('\n')}`;
+    }
+    showModal(message);
 }
 
 // Lógica de clientes
 if (addCustomerForm) {
-  addCustomerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('customer-name-input')?.value.trim();
-    if (!name) {
-    showModal("El nombre del cliente no puede estar vacío.");
-    return;
-    }
-    try {
-    const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
-    await addDoc(customersCollection, { name });
-    if(addCustomerForm) addCustomerForm.reset();
-    showModal(`Cliente '${name}' añadido con éxito.`);
-    } catch (error) {
-    console.error("Error al añadir cliente:", error);
-    showModal("Error al añadir cliente. Intenta de nuevo.");
-    }
-  });
+    addCustomerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('customer-name-input')?.value.trim();
+        if (!name) {
+            showModal("El nombre del cliente no puede estar vacío.");
+            return;
+        }
+        try {
+            const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
+            await addDoc(customersCollection, { name });
+            if(addCustomerForm) addCustomerForm.reset();
+            showModal(`Cliente '${name}' añadido con éxito.`);
+        } catch (error) {
+            console.error("Error al añadir cliente:", error);
+            showModal("Error al añadir cliente. Intenta de nuevo.");
+        }
+    });
 }
 
 function renderCustomersList(customers) {
@@ -1407,168 +1404,185 @@ function renderCustomersList(customers) {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
         itemDiv.innerHTML = `
-            <span>${customer.name}</span>
-            <div class="flex space-x-2">
-                <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
+        <span>${customer.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
         `;
         customersListContainer.appendChild(itemDiv);
 
         const editButton = itemDiv.querySelector('.edit-customer-btn');
         if(editButton) {
-          editButton.addEventListener('click', () => {
-              const newName = prompt(`Editar nombre de cliente:`, customer.name);
-              if (newName && newName.trim()) {
-                  const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-                  setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
-              }
-          });
+            editButton.addEventListener('click', () => {
+                const newName = prompt(`Editar nombre de cliente:`, customer.name);
+                if (newName && newName.trim()) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
+                }
+            });
         }
-        
+
         const deleteButton = itemDiv.querySelector('.delete-customer-btn');
         if(deleteButton) {
-          deleteButton.addEventListener('click', async () => {
-            if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
-            const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-            await deleteDoc(customerDocRef);
-            showModal("Cliente eliminado.");
-            }
-          });
+            deleteButton.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
+                    const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                    await deleteDoc(customerDocRef);
+                    showModal("Cliente eliminado.");
+                }
+            });
         }
     });
 }
 
 function renderCustomerSelect(customers) {
-  if (!customerSelect) return;
-  customerSelect.innerHTML = '<option value="">Seleccionar Cliente</option>';
-  customers.forEach(customer => {
-  const option = document.createElement('option');
-  option.value = customer.id;
-  option.textContent = customer.name;
-  customerSelect.appendChild(option);
-  });
+    if (!customerSelect) return;
+    customerSelect.innerHTML = '<option value="">Seleccionar Cliente</option>';
+    customers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.id;
+        option.textContent = customer.name;
+        customerSelect.appendChild(option);
+    });
 }
 
 // Lógica de gráficos de ventas
 function renderSalesChart(sales) {
-  if (!salesChartCtx) return;
-  const salesByDay = sales.reduce((acc, sale) => {
-    if (sale.timestamp && sale.timestamp.seconds) {
-      const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
-      acc[date] = (acc[date] || 0) + sale.total;
-    }
-    return acc;
-  }, {});
-
-  const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
-  const salesData = sortedDates.map(date => salesByDay[date]);
-
-  if (salesChart) {
-    salesChart.destroy();
-  }
-
-  salesChart = new Chart(salesChartCtx, {
-    type: 'bar',
-    data: {
-      labels: sortedDates,
-      datasets: [{
-        label: 'Ventas Diarias',
-        data: salesData,
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Ventas Totales ($)'
-          }
-        },
-        x: {
-          title: {
-            display: true,
-            text: 'Fecha'
-          }
+    if (!salesChartCtx) return;
+    const salesByDay = sales.reduce((acc, sale) => {
+        if (sale.timestamp && sale.timestamp.seconds) {
+            const date = new Date(sale.timestamp.seconds * 1000).toLocaleDateString('es-ES');
+            acc[date] = (acc[date] || 0) + sale.total;
         }
-      }
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(a) - new Date(b));
+    const salesData = sortedDates.map(date => salesByDay[date]);
+
+    if (salesChart) {
+        salesChart.destroy();
     }
-  });
+
+    salesChart = new Chart(salesChartCtx, {
+        type: 'bar',
+        data: {
+            labels: sortedDates,
+            datasets: [{
+                label: 'Ventas Diarias',
+                data: salesData,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Ventas Totales ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Fecha'
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Impresión de recibos
 function printReceipt(sale) {
-const printWindow = window.open('', '_blank');
-const paymentsHtml = sale.payments.map(p => `
-<p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
-`).join('');
-const content = `
-<!DOCTYPE html>
-<html>
-<head>
-<title>Recibo de Venta</title>
-<style>
-body { font-family: 'Inter', sans-serif; padding: 20px; }
-.receipt-header { text-align: center; margin-bottom: 20px; }
-.receipt-body { margin-bottom: 20px; }
-.receipt-footer { text-align: center; border-top: 1px dashed black; padding-top: 10px; }
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 5px 0; border-bottom: 1px solid #ccc; }
-.total-row td { font-weight: bold; font-size: 1.2em; border-top: 2px solid black; }
-.payment-row { margin-top: 10px; }
-</style>
-</head>
-<body>
-<div class="receipt-header">
-<h2>Recibo de Venta</h2>
-<p>Fecha: ${new Date().toLocaleString()}</p>
-${sale.customerName ? `<p>Cliente: ${sale.customerName}</p>` : ''}
-</div>
-<div class="receipt-body">
-<table>
-<thead>
-<tr>
-<th>Producto</th>
-<th>Cant.</th>
-<th>Precio Unit.</th>
-<th>Total</th>
-</tr>
-</thead>
-<tbody>
-${sale.items.map(item => `
-<tr>
-<td>${item.name}</td>
-<td>${item.quantity}</td>
-<td>$${item.price.toFixed(2)}</td>
-<td>$${(item.price * item.quantity).toFixed(2)}</td>
-</tr>
-`).join('')}
-</tbody>
-</table>
-<div style="text-align: right; margin-top: 20px;">
-<p><strong>Total: $${sale.total.toFixed(2)}</strong></p>
-${paymentsHtml}
-</div>
-</div>
-<div class="receipt-footer">
-<p>¡Gracias por tu compra!</p>
-</div>
-</body>
-</html>
-`;
-printWindow.document.write(content);
-printWindow.document.close();
-printWindow.focus();
-printWindow.print();
+    const paymentsHtml = sale.payments.map(p => `
+        <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
+    `).join('');
+
+    const content = `
+    <div id="print-area">
+        <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; }
+            .receipt-header { text-align: center; margin-bottom: 20px; }
+            .receipt-body { margin-bottom: 20px; }
+            .receipt-footer { text-align: center; border-top: 1px dashed black; padding-top: 10px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 5px 0; border-bottom: 1px solid #ccc; }
+            .total-row td { font-weight: bold; font-size: 1.2em; border-top: 2px solid black; }
+            .payment-row { margin-top: 10px; }
+            @media print {
+                body > *:not(#print-area) {
+                    display: none;
+                }
+                #print-area {
+                    display: block !important;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: white;
+                    z-index: 9999;
+                }
+            }
+        </style>
+        <div class="receipt-header">
+            <h2>Recibo de Venta</h2>
+            <p>Fecha: ${new Date().toLocaleString()}</p>
+            ${sale.customerName ? `<p>Cliente: ${sale.customerName}</p>` : ''}
+        </div>
+        <div class="receipt-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio Unit.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sale.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${item.price.toFixed(2)}</td>
+                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div style="text-align: right; margin-top: 20px;">
+                <p><strong>Total: $${sale.total.toFixed(2)}</strong></p>
+                ${paymentsHtml}
+            </div>
+        </div>
+        <div class="receipt-footer">
+            <p>¡Gracias por tu compra!</p>
+        </div>
+    </div>
+    `;
+
+    // 1. Crea un contenedor temporal
+    const printArea = document.createElement('div');
+    printArea.innerHTML = content;
+    document.body.appendChild(printArea);
+
+    // 2. Espera a que el DOM se actualice y luego imprime
+    setTimeout(() => {
+        window.print();
+        // 3. Elimina el contenedor temporal después de la impresión
+        document.body.removeChild(printArea);
+    }, 500);
 }
 
 // Lógica de autenticación
@@ -1622,9 +1636,9 @@ if (logoutBtn) {
 }
 
 function toggleFilters() {
-  if (filtersContainer) {
-    filtersContainer.classList.toggle('hidden');
-  }
+    if (filtersContainer) {
+        filtersContainer.classList.toggle('hidden');
+    }
 }
 
 if (toggleFiltersBtn) {
@@ -1648,10 +1662,10 @@ window.toggleSection = function(sectionId) {
 document.addEventListener('DOMContentLoaded', () => {
     // Configurar la navegación principal del menú
     setupNavigation();
-    
+
     // Configurar la navegación de pestañas
     setupTabNavigation();
-    
+
     // Configurar la navegación de pestañas de Caja y Gastos
     setupCashTabNavigation();
 
@@ -1675,7 +1689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setupRealtimeListeners();
             if (authModal) authModal.classList.add('hidden');
             // Al iniciar sesión, mostrar el POS y activar su pestaña
-            showPage('pos-page'); 
+            showPage('pos-page');
             const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
             if(posTab) {
                 posTab.classList.add('active');
@@ -1687,287 +1701,290 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (addCustomerForm) {
-      addCustomerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('customer-name-input')?.value.trim();
-        if (!name) {
-          showModal("El nombre del cliente no puede estar vacío.");
-          return;
-        }
-        try {
-          const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
-          await addDoc(customersCollection, { name });
-          if(addCustomerForm) addCustomerForm.reset();
-          showModal(`Cliente '${name}' añadido con éxito.`);
-        } catch (error) {
-          console.error("Error al añadir cliente:", error);
-          showModal("Error al añadir cliente. Intenta de nuevo.");
-        }
-      });
+        addCustomerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('customer-name-input')?.value.trim();
+            if (!name) {
+                showModal("El nombre del cliente no puede estar vacío.");
+                return;
+            }
+            try {
+                const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
+                await addDoc(customersCollection, { name });
+                if(addCustomerForm) addCustomerForm.reset();
+                showModal(`Cliente '${name}' añadido con éxito.`);
+            } catch (error) {
+                console.error("Error al añadir cliente:", error);
+                showModal("Error al añadir cliente. Intenta de nuevo.");
+            }
+        });
     }
 
     if (productForm) {
-      productForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('product-id')?.value;
-        const name = document.getElementById('product-name-input')?.value;
-        const price = parseFloat(document.getElementById('product-price-input')?.value);
-        const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
-    
-        if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
-          showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
-          return;
-        }
-    
-        try {
-          if (id) {
-            const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
-            await setDoc(productRef, { name, price, stock }, { merge: true });
-            showModal("Producto editado con éxito.");
-          } else {
-            const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-            await addDoc(productsCollection, { name, price, stock });
-            showModal("Producto añadido con éxito.");
-          }
-          if (productForm) productForm.reset();
-          const productIdInput = document.getElementById('product-id');
-          if (productIdInput) productIdInput.value = '';
-        } catch (error) {
-          console.error("Error al guardar el producto:", error);
-          showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
-        }
-      });
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('product-id')?.value;
+            const name = document.getElementById('product-name-input')?.value;
+            const price = parseFloat(document.getElementById('product-price-input')?.value);
+            const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
+
+            if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
+                showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
+                return;
+            }
+
+            try {
+                if (id) {
+                    const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
+                    await setDoc(productRef, { name, price, stock }, { merge: true });
+                    showModal("Producto editado con éxito.");
+                } else {
+                    const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
+                    await addDoc(productsCollection, { name, price, stock });
+                    showModal("Producto añadido con éxito.");
+                }
+                if (productForm) productForm.reset();
+                const productIdInput = document.getElementById('product-id');
+                if (productIdInput) productIdInput.value = '';
+            } catch (error) {
+                console.error("Error al guardar el producto:", error);
+                showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
+            }
+        });
     }
 
     if (checkoutBtn) {
-      checkoutBtn.addEventListener('click', () => {
-        if (cart.length === 0) {
-          showModal("El carrito está vacío. Añade productos para finalizar la venta.");
-          return;
-        }
-        if (!dailyCashData || dailyCashData.cerrada) {
-          showModal("La caja no está abierta. Por favor, abre la caja para registrar ventas.");
-          return;
-        }
-    
-        if (!cartTotalSpan || !paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal) {
-            console.error("Faltan elementos del DOM para el checkout.");
-            return;
-        }
+        checkoutBtn.addEventListener('click', () => {
+            if (cart.length === 0) {
+                showModal("El carrito está vacío. Añade productos para finalizar la venta.");
+                return;
+            }
+            if (!dailyCashData || dailyCashData.cerrada) {
+                showModal("La caja no está abierta. Por favor, abre la caja para registrar ventas.");
+                return;
+            }
 
-        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-        paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
-        paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
+            if (!cartTotalSpan || !paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal) {
+                console.error("Faltan elementos del DOM para el checkout.");
+                return;
+            }
 
-        paymentInputsContainer.innerHTML = '';
-        addPaymentInput(total);
+            const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+            paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
+            paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
-        splitPaymentModal.classList.remove('hidden');
-      });
+            paymentInputsContainer.innerHTML = '';
+            addPaymentInput(total);
+
+            splitPaymentModal.classList.remove('hidden');
+        });
     }
-    
+
     if (addPaymentMethodBtn) {
-      addPaymentMethodBtn.addEventListener('click', () => {
-        if (paymentModal) paymentModal.classList.remove('hidden');
-      });
+        addPaymentMethodBtn.addEventListener('click', () => {
+            if (paymentModal) paymentModal.classList.remove('hidden');
+        });
     }
-    
+
     if (cancelPaymentBtn) {
-      cancelPaymentBtn.addEventListener('click', () => {
-        if (paymentModal) paymentModal.classList.add('hidden');
-      });
+        cancelPaymentBtn.addEventListener('click', () => {
+            if (paymentModal) paymentModal.classList.add('hidden');
+        });
     }
 
     if (addPaymentForm) {
-      addPaymentForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const newPaymentNameInput = document.getElementById('new-payment-name');
-        const newMethodName = newPaymentNameInput?.value.trim();
-    
-        if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
-          try {
-            const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
-            await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethodName });
-            if(addPaymentForm) addPaymentForm.reset();
-            if(paymentModal) paymentModal.classList.add('hidden');
-            showModal("Forma de pago añadida con éxito.");
-          } catch (error) {
-            console.error("Error al añadir la forma de pago:", error);
-            showModal("Error al añadir la forma de pago.");
-          }
-        } else {
-          showModal("Esa forma de pago ya existe o no es válida.");
-        }
-      });
+        addPaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPaymentNameInput = document.getElementById('new-payment-name');
+            const newMethodName = newPaymentNameInput?.value.trim();
+
+            if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
+                try {
+                    const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
+                    await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethodName });
+                    if(addPaymentForm) addPaymentForm.reset();
+                    if(paymentModal) paymentModal.classList.add('hidden');
+                    showModal("Forma de pago añadida con éxito.");
+                } catch (error) {
+                    console.error("Error al añadir la forma de pago:", error);
+                    showModal("Error al añadir la forma de pago.");
+                }
+            } else {
+                showModal("Esa forma de pago ya existe o no es válida.");
+            }
+        });
     }
-    
+
     if (addPaymentInputBtn) {
-      addPaymentInputBtn.addEventListener('click', () => {
-        addPaymentInput(0);
-      });
+        addPaymentInputBtn.addEventListener('click', () => {
+            addPaymentInput(0);
+        });
     }
-    
+
     if (cancelSplitBtn) {
-      cancelSplitBtn.addEventListener('click', () => {
-        if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-      });
+        cancelSplitBtn.addEventListener('click', () => {
+            if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+        });
     }
 
     if (processPaymentBtn) {
-      processPaymentBtn.addEventListener('click', async () => {
-        if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
-            console.error("Faltan elementos del DOM para procesar el pago.");
-            return;
-        }
-        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-        const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-        const paymentSelects = paymentInputsContainer.querySelectorAll('select');
-    
-        let sum = 0;
-        const payments = [];
-    
-        for (let i = 0; i < paymentInputs.length; i++) {
-          const amount = parseFloat(paymentInputs[i].value);
-          const method = paymentSelects[i].value;
-          if (isNaN(amount) || amount <= 0) {
-            showModal("Todos los montos deben ser números positivos.");
-            return;
-          }
-          sum += amount;
-          payments.push({ method: method, amount: amount });
-        }
-    
-        if (Math.abs(sum - total) > 0.01) {
-          showModal("La suma de los pagos no coincide con el total.");
-          return;
-        }
-        const cashId = new Date().toLocaleDateString('en-CA');
-        try {
-          const productUpdates = cart.map(item => {
-            const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
-            return updateDoc(productDocRef, {
-              stock: item.stock - item.quantity
-            });
-          });
-          await Promise.all(productUpdates);
-    
-          const customerId = customerSelect.value;
-          const customerName = customerSelect.options[customerSelect.selectedIndex].text;
-    
-          const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-          const newSaleRef = await addDoc(salesCollection, {
-            items: cart,
-            total: total,
-            payments: payments,
-            customerId: customerId || null,
-            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-            timestamp: serverTimestamp(),
-            cashId: cashId
-          });
-    
-          showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+        processPaymentBtn.addEventListener('click', async () => {
+            if (!cartTotalSpan || !paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+                console.error("Faltan elementos del DOM para procesar el pago.");
+                return;
+            }
+            const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+            const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+            const paymentSelects = paymentInputsContainer.querySelectorAll('select');
 
-          printReceipt({
-            id: newSaleRef.id,
-            items: cart,
-            total: total,
-            payments: payments,
-            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-            timestamp: new Date()
-          });
-    
-          cart = [];
-          renderCart();
-          if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-          if(customerSelect) customerSelect.value = "";
-    
-        } catch (error) {
-          console.error("Error al finalizar la venta:", error);
-          showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
-        }
-      });
+            let sum = 0;
+            const payments = [];
+
+            for (let i = 0; i < paymentInputs.length; i++) {
+                const amount = parseFloat(paymentInputs[i].value);
+                const method = paymentSelects[i].value;
+                if (isNaN(amount) || amount <= 0) {
+                    showModal("Todos los montos deben ser números positivos.");
+                    return;
+                }
+                sum += amount;
+                payments.push({ method: method, amount: amount });
+            }
+
+            if (Math.abs(sum - total) > 0.01) {
+                showModal("La suma de los pagos no coincide con el total.");
+                return;
+            }
+            const cashId = new Date().toLocaleDateString('en-CA');
+            try {
+                const productUpdates = cart.map(item => {
+                    const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                    return updateDoc(productDocRef, {
+                        stock: item.stock - item.quantity
+                    });
+                });
+                await Promise.all(productUpdates);
+
+                const customerId = customerSelect.value;
+                const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+
+                const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+                const newSaleRef = await addDoc(salesCollection, {
+                    items: cart,
+                    total: total,
+                    payments: payments,
+                    customerId: customerId || null,
+                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                    timestamp: serverTimestamp(),
+                    cashId: cashId
+                });
+
+                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+
+                // Pregunta al usuario si desea imprimir el ticket
+                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                    printReceipt({
+                        id: newSaleRef.id,
+                        items: cart,
+                        total: total,
+                        payments: payments,
+                        customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                        timestamp: new Date()
+                    });
+                }
+
+                cart = [];
+                renderCart();
+                if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+                if(customerSelect) customerSelect.value = "";
+
+            } catch (error) {
+                console.error("Error al finalizar la venta:", error);
+                showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
+            }
+        });
     }
 
     if (importSalesBtn) {
-      importSalesBtn.addEventListener('click', () => {
-        if (importSalesInput) importSalesInput.click();
-      });
+        importSalesBtn.addEventListener('click', () => {
+            if (importSalesInput) importSalesInput.click();
+        });
     }
 
     if (importSalesInput) {
-      importSalesInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            const csvData = event.target.result;
-            await processImportedSales(csvData);
-          };
-          reader.readAsText(file);
-        }
-      });
+        importSalesInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const csvData = event.target.result;
+                    await processImportedSales(csvData);
+                };
+                reader.readAsText(file);
+            }
+        });
     }
 
     if (exportSalesBtn) {
-      exportSalesBtn.addEventListener('click', () => {
-        exportSalesToCsv(allSales);
-      });
+        exportSalesBtn.addEventListener('click', () => {
+            exportSalesToCsv(allSales);
+        });
     }
 
     if (applyFiltersBtn) {
-      applyFiltersBtn.addEventListener('click', () => {
-        renderSalesHistory(allSales);
-      });
+        applyFiltersBtn.addEventListener('click', () => {
+            renderSalesHistory(allSales);
+        });
     }
 
     if (clearFiltersBtn) {
-      clearFiltersBtn.addEventListener('click', () => {
-        if (filterStartDate) filterStartDate.value = '';
-        if (filterEndDate) filterEndDate.value = '';
-        if (filterProduct) filterProduct.value = '';
-        if (filterPaymentMethod) filterPaymentMethod.value = '';
-        renderSalesHistory(allSales);
-      });
+        clearFiltersBtn.addEventListener('click', () => {
+            if (filterStartDate) filterStartDate.value = '';
+            if (filterEndDate) filterEndDate.value = '';
+            if (filterProduct) filterProduct.value = '';
+            if (filterPaymentMethod) filterPaymentMethod.value = '';
+            renderSalesHistory(allSales);
+        });
     }
 
     if (addPaymentMethodForm) {
-      addPaymentMethodForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const newPaymentNameInput = document.getElementById('new-payment-method-name');
-        const newMethod = newPaymentNameInput?.value.trim();
-        if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
-            try {
-                await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
-                if(newPaymentNameInput) newPaymentNameInput.value = '';
-                showModal("Forma de pago añadida con éxito.");
-            } catch (error) {
-                console.error("Error al añadir forma de pago:", error);
-                showModal("Error al añadir forma de pago.");
+        addPaymentMethodForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPaymentNameInput = document.getElementById('new-payment-method-name');
+            const newMethod = newPaymentNameInput?.value.trim();
+            if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
+                try {
+                    await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
+                    if(newPaymentNameInput) newPaymentNameInput.value = '';
+                    showModal("Forma de pago añadida con éxito.");
+                } catch (error) {
+                    console.error("Error al añadir forma de pago:", error);
+                    showModal("Error al añadir forma de pago.");
+                }
+            } else {
+                showModal("Esa forma de pago ya existe o no es válida.");
             }
-        } else {
-            showModal("Esa forma de pago ya existe o no es válida.");
-        }
-      });
+        });
     }
 
     if (addExpenseCategoryForm) {
-      addExpenseCategoryForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const newExpenseNameInput = document.getElementById('new-expense-category-name');
-        const newCategory = newExpenseNameInput?.value.trim();
-        if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
-            try {
-                await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
-                if(newExpenseNameInput) newExpenseNameInput.value = '';
-                showModal("Categoría de gasto añadida con éxito.");
-            } catch (error) {
-                console.error("Error al añadir categoría de gasto:", error);
-                showModal("Error al añadir categoría de gasto.");
+        addExpenseCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newExpenseNameInput = document.getElementById('new-expense-category-name');
+            const newCategory = newExpenseNameInput?.value.trim();
+            if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
+                try {
+                    await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
+                    if(newExpenseNameInput) newExpenseNameInput.value = '';
+                    showModal("Categoría de gasto añadida con éxito.");
+                } catch (error) {
+                    console.error("Error al añadir categoría de gasto:", error);
+                    showModal("Error al añadir categoría de gasto.");
+                }
+            } else {
+                showModal("Esa categoría de gasto ya existe o no es válida.");
             }
-        } else {
-            showModal("Esa categoría de gasto ya existe o no es válida.");
-        }
-      });
+        });
     }
 
     const topSettingsButton = document.querySelector('button[data-page="settings-page"]');
