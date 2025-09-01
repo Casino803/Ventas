@@ -598,19 +598,18 @@ function renderSalesHistory(sales) {
                 acc[date] = { total: 0, sales: [] };
             }
 
-            // Sumar solo el monto del método de pago filtrado
+            let amountToAdd = 0;
             if (paymentMethodFilter && paymentMethodFilter !== 'Todas') {
                 const filteredPayment = sale.payments.find(p => p.method === paymentMethodFilter);
                 if (filteredPayment) {
-                    acc[date].total += filteredPayment.amount;
-                    filteredTotal += filteredPayment.amount;
+                    amountToAdd = filteredPayment.amount;
                 }
             } else {
-                // Si no hay filtro de pago, sumar el total de la venta
-                acc[date].total += sale.total;
-                filteredTotal += sale.total;
+                amountToAdd = sale.total;
             }
 
+            acc[date].total += amountToAdd;
+            filteredTotal += amountToAdd;
             acc[date].sales.push(sale);
         }
         return acc;
@@ -666,11 +665,17 @@ function renderSalesHistory(sales) {
 
             let customerHtml = sale.customerId ? `<p class="mt-2 text-sm text-gray-600">Cliente: <span class="font-semibold">${sale.customerName}</span></p>` : '';
 
-
+            // Lógica para mostrar solo el monto del pago filtrado
+            let displayAmount = sale.total;
+            if (paymentMethodFilter && paymentMethodFilter !== 'Todas') {
+                const filteredPayment = sale.payments.find(p => p.method === paymentMethodFilter);
+                displayAmount = filteredPayment ? filteredPayment.amount : 0;
+            }
+            
             saleDiv.innerHTML = `
             <div class="flex justify-between items-center mb-2">
                 <h4 class="font-semibold text-gray-800">Venta a las ${formattedTime}</h4>
-                <span class="font-bold text-gray-800">$${sale.total.toFixed(2)}</span>
+                <span class="font-bold text-gray-800">$${displayAmount.toFixed(2)}</span>
             </div>
             <ul class="space-y-1">
                 ${itemsHtml}
