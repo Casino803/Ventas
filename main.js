@@ -309,11 +309,14 @@ const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
 onSnapshot(cashHistoryCollection, (snapshot) => {
 const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderCashHistory(history);
+}, (error) => {
+console.error("Error al escuchar el historial de cajas:", error);
 });
 }
 
 // Funciones de renderizado de configuración
 function renderPaymentMethodsList() {
+    if (!paymentMethodsList) return; // Validación agregada
     paymentMethodsList.innerHTML = '';
     const allMethods = [...defaultPaymentMethods.map(name => ({name: name, id: null})), ...userPaymentMethods];
     allMethods.forEach(method => {
@@ -351,6 +354,7 @@ function renderPaymentMethodsList() {
 }
 
 function renderExpenseCategoriesList() {
+    if (!expenseCategoriesList) return; // Validación agregada
     expenseCategoriesList.innerHTML = '';
     const allCategories = [...defaultExpenseCategories.map(name => ({name: name, id: null})), ...userExpenseCategories];
     allCategories.forEach(category => {
@@ -387,40 +391,43 @@ function renderExpenseCategoriesList() {
     });
 }
 
-addPaymentMethodForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newMethod = newPaymentMethodName.value.trim();
-    if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
-        try {
-            await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
-            newPaymentMethodName.value = '';
-            showModal("Forma de pago añadida con éxito.");
-        } catch (error) {
-            console.error("Error al añadir forma de pago:", error);
-            showModal("Error al añadir forma de pago.");
+if(addPaymentMethodForm) {
+    addPaymentMethodForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newMethod = newPaymentMethodName.value.trim();
+        if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
+            try {
+                await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
+                newPaymentMethodName.value = '';
+                showModal("Forma de pago añadida con éxito.");
+            } catch (error) {
+                console.error("Error al añadir forma de pago:", error);
+                showModal("Error al añadir forma de pago.");
+            }
+        } else {
+            showModal("Esa forma de pago ya existe o no es válida.");
         }
-    } else {
-        showModal("Esa forma de pago ya existe o no es válida.");
-    }
-});
+    });
+}
 
-addExpenseCategoryForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newCategory = newExpenseCategoryName.value.trim();
-    if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
-        try {
-            await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
-            newExpenseCategoryName.value = '';
-            showModal("Categoría de gasto añadida con éxito.");
-        } catch (error) {
-            console.error("Error al añadir categoría de gasto:", error);
-            showModal("Error al añadir categoría de gasto.");
+if(addExpenseCategoryForm) {
+    addExpenseCategoryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newCategory = newExpenseCategoryName.value.trim();
+        if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
+            try {
+                await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
+                newExpenseCategoryName.value = '';
+                showModal("Categoría de gasto añadida con éxito.");
+            } catch (error) {
+                console.error("Error al añadir categoría de gasto:", error);
+                showModal("Error al añadir categoría de gasto.");
+            }
+        } else {
+            showModal("Esa categoría de gasto ya existe o no es válida.");
         }
-    } else {
-        showModal("Esa categoría de gasto ya existe o no es válida.");
-    }
-});
-
+    });
+}
 
 function renderPaymentMethodFilters() {
 const selectFilter = document.getElementById('filter-payment-method');
@@ -1254,38 +1261,40 @@ showModal("Error al añadir cliente. Intenta de nuevo.");
 });
 
 function renderCustomersList(customers) {
-customersListContainer.innerHTML = '';
-customers.forEach(customer => {
-const item = document.createElement('div');
-item.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
-item.innerHTML = `
-<span>${customer.name}</span>
-<div class="flex space-x-2">
-<button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
-<i class="fas fa-edit"></i>
-</button>
-<button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
-<i class="fas fa-trash-alt"></i>
-</button>
-</div>
-`;
-customersListContainer.appendChild(item);
+    if (!customersListContainer) return;
+    customersListContainer.innerHTML = '';
+    customers.forEach(customer => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+            <span>${customer.name}</span>
+            <div class="flex space-x-2">
+                <button data-id="${customer.id}" class="edit-customer-btn px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button data-id="${customer.id}" class="delete-customer-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        customersListContainer.appendChild(itemDiv);
 
-item.querySelector('.edit-customer-btn').addEventListener('click', () => {
-const newName = prompt(`Editar nombre de cliente:`, customer.name);
-if (newName && newName.trim()) {
-const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
-}
-});
-item.querySelector('.delete-customer-btn').addEventListener('click', async () => {
-if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
-const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-await deleteDoc(customerDocRef);
-showModal("Cliente eliminado.");
-}
-});
-});
+        // Corregido: Usar itemDiv para buscar los botones y asignar eventos
+        itemDiv.querySelector('.edit-customer-btn').addEventListener('click', () => {
+            const newName = prompt(`Editar nombre de cliente:`, customer.name);
+            if (newName && newName.trim()) {
+                const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
+            }
+        });
+        itemDiv.querySelector('.delete-customer-btn').addEventListener('click', async () => {
+            if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
+                const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
+                await deleteDoc(customerDocRef);
+                showModal("Cliente eliminado.");
+            }
+        });
+    });
 }
 
 function renderCustomerSelect(customers) {
@@ -1415,92 +1424,42 @@ printWindow.print();
 }
 
 // Lógica de autenticación
-loginBtn.addEventListener('click', async (e) => {
-e.preventDefault();
-const email = authEmail.value;
-const password = authPassword.value;
-try {
-await signInWithEmailAndPassword(auth, email, password);
-showModal("Inicio de sesión exitoso.");
-authModal.classList.add('hidden');
-} catch (error) {
-console.error("Error al iniciar sesión:", error);
-showModal("Error al iniciar sesión. Verifica tus credenciales.");
-}
-});
-
-registerBtn.addEventListener('click', async (e) => {
-e.preventDefault();
-const email = authEmail.value;
-const password = authPassword.value;
-try {
-await createUserWithEmailAndPassword(auth, email, password);
-showModal("Registro exitoso. Ahora puedes iniciar sesión.");
-} catch (error) {
-console.error("Error al registrar:", error);
-if (error.code === 'auth/email-already-in-use') {
-showModal("El correo electrónico ya está en uso.");
-} else {
-showModal("Error al registrarse. Intenta de nuevo.");
-}
-}
-});
-
-logoutBtn.addEventListener('click', async () => {
-try {
-await signOut(auth);
-showModal("Sesión cerrada correctamente.");
-cart = [];
-renderCart();
-} catch (error) {
-console.error("Error al cerrar sesión:", error);
-showModal("Hubo un error al cerrar la sesión.");
-}
-});
-
-function toggleFilters() {
-  filtersContainer.classList.toggle('hidden');
-}
-
-toggleFiltersBtn.addEventListener('click', toggleFilters);
-
-function toggleSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.classList.toggle('hidden');
-        // Opcional: cambiar el icono de la flecha
-        const icon = section.previousElementSibling.querySelector('i');
-        if (icon) {
-            icon.classList.toggle('fa-chevron-down');
-            icon.classList.toggle('fa-chevron-up');
+if (loginBtn) {
+    loginBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail.value;
+        const password = authPassword.value;
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            showModal("Inicio de sesión exitoso.");
+            authModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Error al iniciar sesión:", error);
+            showModal("Error al iniciar sesión. Verifica tus credenciales.");
         }
-    }
+    });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Manejar la navegación de pestañas
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelector('.tab-btn.active')?.classList.remove('active');
-            btn.classList.add('active');
-            showPage(btn.dataset.page);
-        });
-    });
-
-    // Manejar la navegación de botones principales
-    menuButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetPageId = btn.dataset.page;
-            showPage(targetPageId);
-            // Si no estamos en el menú principal, desactivar la pestaña activa
-            if(targetPageId !== 'home-menu') {
-                document.querySelector('.tab-btn.active')?.classList.remove('active');
+if (registerBtn) {
+    registerBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = authEmail.value;
+        const password = authPassword.value;
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            showModal("Registro exitoso. Ahora puedes iniciar sesión.");
+        } catch (error) {
+            console.error("Error al registrar:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                showModal("El correo electrónico ya está en uso.");
+            } else {
+                showModal("Error al registrarse. Intenta de nuevo.");
             }
-        });
+        }
     });
-    
-    // Asignar el evento al botón de logout en el menú superior
+}
+
+if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
         try {
             await signOut(auth);
@@ -1512,28 +1471,67 @@ document.addEventListener('DOMContentLoaded', () => {
             showModal("Hubo un error al cerrar la sesión.");
         }
     });
+}
 
-    // Asignar el evento de clic a las cabeceras de las secciones colapsables
-    document.querySelectorAll('[onclick^="toggleSection"]').forEach(header => {
-        header.addEventListener('click', () => {
-            const sectionId = header.getAttribute('onclick').split("'")[1];
-            toggleSection(sectionId);
+function toggleFilters() {
+  if (filtersContainer) {
+    filtersContainer.classList.toggle('hidden');
+  }
+}
+
+if (toggleFiltersBtn) {
+    toggleFiltersBtn.addEventListener('click', toggleFilters);
+}
+
+// Se hace global para poder llamarla desde el HTML con onclick
+window.toggleSection = function(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.toggle('hidden');
+        const icon = section.previousElementSibling?.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+    }
+}
+
+// Inicializar la aplicación
+document.addEventListener('DOMContentLoaded', () => {
+    // Configurar la navegación principal del menú
+    setupNavigation();
+    
+    // Configurar la navegación de pestañas
+    setupTabNavigation();
+
+    // Reasignar el evento de clic a los botones de navegación superior
+    const topNavButtons = document.querySelectorAll('.fixed button[data-page]');
+    topNavButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetPageId = btn.dataset.page;
+            showPage(targetPageId);
+            // Si el menú principal está oculto, deseleccionar cualquier pestaña
+            if(targetPageId !== 'home-menu') {
+                document.querySelector('.tab-btn.active')?.classList.remove('active');
+            }
         });
     });
 
-    // Inicializar la página en el POS al cargar si el usuario está autenticado
+    // Manejar el estado de autenticación al cargar la página
     onAuthStateChanged(auth, user => {
         if (user) {
             userId = user.uid;
             setupRealtimeListeners();
             authModal.classList.add('hidden');
-            showPage('pos-page');
-            document.querySelector('.tab-btn[data-page="pos-page"]').classList.add('active');
+            // Al iniciar sesión, mostrar el POS y activar su pestaña
+            showPage('pos-page'); 
+            const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
+            if(posTab) {
+                posTab.classList.add('active');
+            }
         } else {
             authModal.classList.remove('hidden');
             pages.forEach(page => page.classList.remove('active'));
         }
     });
-
-    setupTabNavigation(); // Asocia eventos a los botones de pestañas
 });
