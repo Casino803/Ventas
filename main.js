@@ -575,7 +575,7 @@ function renderManageProduct(product) {
             const productPriceInput = document.getElementById('product-price-input');
             const productStockInput = document.getElementById('product-stock-input');
 
-            if (productIdInput) productId.value = product.id;
+            if (productIdInput) productIdInput.value = product.id;
             if (productNameInput) productNameInput.value = product.name;
             if (productPriceInput) productPriceInput.value = product.price;
             if (productStockInput) productStockInput.value = product.stock;
@@ -1507,8 +1507,8 @@ function mapArticulosToFirebase(headers, values) {
     });
     return {
         name: data.NOMBRE,
-        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0,
-        stock: parseInt(data.CANTIDAD) || 0
+        price: data.PRECIO ? parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0 : 0,
+        stock: data.CANTIDAD ? parseInt(data.CANTIDAD) || 0 : 0
     };
 }
 
