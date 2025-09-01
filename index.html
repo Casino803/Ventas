@@ -10,7 +10,17 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 p-4 min-h-screen">
-<div class="max-w-4xl mx-auto">
+
+<div class="fixed top-0 left-0 right-0 p-4 flex justify-between z-50">
+  <button data-page="settings-page" class="menu-btn bg-blue-600 text-white font-bold p-3 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+    <i class="fas fa-cog"></i>
+  </button>
+  <button id="logout-btn" class="menu-btn bg-red-600 text-white font-bold p-3 rounded-lg shadow-md hover:bg-red-700 transition-colors">
+    <i class="fas fa-sign-out-alt"></i>
+  </button>
+</div>
+
+<div class="max-w-4xl mx-auto mt-16">
 <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Punto de Venta</h1>
 
 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -32,12 +42,6 @@
 </button>
 <button data-page="customers-page" class="menu-btn bg-blue-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
 <i class="fas fa-users mr-2"></i> Clientes
-</button>
-<button data-page="settings-page" class="menu-btn bg-blue-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
-<i class="fas fa-cog mr-2"></i> Configuración
-</button>
-<button id="logout-btn" class="menu-btn bg-red-600 text-white font-bold p-6 rounded-lg shadow-md hover:bg-red-700 transition-colors">
-<i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
 </button>
 </div>
 </div>
