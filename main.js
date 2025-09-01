@@ -1255,7 +1255,7 @@ if (processPaymentBtn) {
             });
 
             showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-            
+
             // Pregunta al usuario si desea imprimir el ticket
             if (confirm("¿Deseas imprimir el recibo de la venta?")) {
                 printReceipt({
@@ -1301,10 +1301,10 @@ if (importSalesInput) {
 }
 
 if (exportSalesBtn) {
-    exportSalesBtn.addEventListener('click', () => {
-        exportSalesToCsv(allSales);
-    });
-}
+        exportSalesBtn.addEventListener('click', () => {
+            exportSalesToCsv(allSales);
+        });
+    }
 
 function exportSalesToCsv(sales) {
     const headers = ["ID", "Fecha", "Total", "Pagos", "Cliente", "Items"];
