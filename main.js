@@ -468,12 +468,29 @@ function renderPaymentMethodFilters() {
     if(!filterPaymentMethod) return;
     const selectFilter = document.getElementById('filter-payment-method');
     selectFilter.innerHTML = '<option value="">Todas</option>';
+    
+    // Agregar la opción "Efectivo"
+    const efectivoOption = document.createElement('option');
+    efectivoOption.value = 'Efectivo';
+    efectivoOption.textContent = 'Efectivo';
+    selectFilter.appendChild(efectivoOption);
+    
+    // Agregar la opción "Otras Formas de Pago"
+    const otrasOption = document.createElement('option');
+    otrasOption.value = 'otras';
+    otrasOption.textContent = 'Otras Formas de Pago';
+    selectFilter.appendChild(otrasOption);
+    
+    // Agregar el resto de los métodos de pago personalizados
     const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
     allMethods.forEach(method => {
-        const option = document.createElement('option');
-        option.value = method;
-        option.textContent = method;
-        selectFilter.appendChild(option);
+        // Evitar duplicar "Efectivo" si ya está en la lista personalizada
+        if (method !== 'Efectivo') {
+            const option = document.createElement('option');
+            option.value = method;
+            option.textContent = method;
+            selectFilter.appendChild(option);
+        }
     });
 }
 
@@ -688,8 +705,15 @@ function applyFilters(sales) {
             return false;
         }
 
-        if (paymentMethod && !sale.payments.some(p => p.method === paymentMethod)) {
-            return false;
+        if (paymentMethod) {
+            // Lógica de filtro para "Efectivo" y "Otras Formas de Pago"
+            if (paymentMethod === 'Efectivo') {
+                return sale.payments.some(p => p.method === 'Efectivo');
+            } else if (paymentMethod === 'otras') {
+                return sale.payments.some(p => p.method !== 'Efectivo');
+            } else {
+                return sale.payments.some(p => p.method === paymentMethod);
+            }
         }
 
         return true;
