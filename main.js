@@ -575,7 +575,7 @@ function renderManageProduct(product) {
             const productPriceInput = document.getElementById('product-price-input');
             const productStockInput = document.getElementById('product-stock-input');
 
-            if (productIdInput) productId.value = product.id;
+            if (productIdInput) productIdInput.value = product.id;
             if (productNameInput) productNameInput.value = product.name;
             if (productPriceInput) productPriceInput.value = product.price;
             if (productStockInput) productStockInput.value = product.stock;
@@ -1220,15 +1220,9 @@ if (checkoutBtn) {
             return;
         }
 
-        if (!paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal) {
-            console.error("Faltan elementos del DOM para el checkout.");
-            return;
-        }
-        
         const { total } = calculateTotal();
-
-        paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
-        paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
+        if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
+        if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
         if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
         addPaymentInput(total);
@@ -1358,35 +1352,18 @@ function updateRemainingAmount() {
 
 if (importSalesBtn) {
     importSalesBtn.addEventListener('click', () => {
-        importSalesInput.click();
+        if (importSalesInput) importSalesInput.click();
     });
 }
 
 if (importSalesInput) {
-    importSalesInput.addEventListener('change', async (e) => {
+    importSalesInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const csvData = event.target.result;
-
-                let results;
-                if (file.name.includes('VENTAS.csv')) {
-                    results = await importDataFromCsv(csvData, 'sales', mapVentasToFirebase);
-                } else if (file.name.includes('ARTICULOS.csv')) {
-                    results = await importDataFromCsv(csvData, 'products', mapArticulosToFirebase);
-                } else if (file.name.includes('CLIENTES.csv')) {
-                    results = await importDataFromCsv(csvData, 'customers', mapClientesToFirebase);
-                } else {
-                    showModal('Tipo de archivo no reconocido.');
-                    return;
-                }
-
-                let message = `Importación de ${file.name} completada. Se importaron ${results.importedCount} registros.`;
-                if (results.errors.length > 0) {
-                    message += ` Hubo ${results.errors.length} errores:\n${results.errors.join('\n')}`;
-                }
-                showModal(message);
+                await processImportedSales(csvData);
             };
             reader.readAsText(file);
         }
@@ -1421,104 +1398,54 @@ function exportSalesToCsv(sales) {
     document.body.removeChild(link);
 }
 
-// Lógica de importación de CSV
-async function importDataFromCsv(csvContent, collectionName, mappingFunction) {
-    const rows = csvContent.split(/\r?\n/).filter(row => row.trim() !== '');
+async function processImportedSales(csvData) {
+    const rows = csvData.split('\n').filter(row => row.trim() !== '');
     if (rows.length < 2) {
-        showModal(`El archivo CSV para ${collectionName} no contiene datos.`);
-        return { importedCount: 0, errors: [`Archivo para ${collectionName} no contiene datos.`] };
+        showModal("El archivo CSV debe contener al menos una fila de datos después del encabezado.");
+        return;
     }
 
-    const headers = rows[0].split(',').map(h => h.trim().replace(/\ufeff/g, ''));
-    const dataRows = rows.slice(1);
+    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
     let importedCount = 0;
-    let errors = [];
+    const errors = [];
 
-    // Regex mejorada para manejar comas dentro de comillas
-    const csvRegex = /(?:^|,)(?:"([^"]*(?:"")?)*"|([^,]*))(?:,|$)/g;
+    const headers = rows[0].split(',').map(header => header.trim());
 
-    for (const row of dataRows) {
-        const values = [];
-        let match;
-        while ((match = csvRegex.exec(row)) !== null) {
-            let value = match[1] || match[2] || '';
-            value = value.replace(/""/g, '"').trim();
-            values.push(value);
-        }
-
-        if (values.length !== headers.length) {
-            errors.push(`Fila con formato incorrecto. Esperado ${headers.length} campos, encontrado ${values.length}: ${row}`);
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i].split(',').map(cell => cell.trim());
+        if (row.length !== 3) {
+            errors.push(`Fila ${i + 1}: Formato de fila incorrecto.`);
             continue;
         }
 
-        const item = mappingFunction(headers, values);
-        if (item) {
-            try {
-                await addDoc(collection(db, collectionName), item);
-                importedCount++;
-            } catch (error) {
-                errors.push(`Error al guardar en Firebase para la fila: ${row}. Error: ${error}`);
-            }
+        const dateString = row[0];
+        const total = parseFloat(row[1]);
+        const paymentMethod = row[2];
+
+        if (isNaN(total) || total <= 0) {
+            errors.push(`Fila ${i + 1}: El total no es un número válido.`);
+            continue;
+        }
+
+        try {
+            await addDoc(salesCollection, {
+                items: [],
+                total: total,
+                payments: [{ method: paymentMethod, amount: total }],
+                timestamp: new Date(dateString)
+            });
+            importedCount++;
+        } catch (error) {
+            console.error(`Error al importar la fila ${i + 1}:`, error);
+            errors.push(`Fila ${i + 1}: Error al guardar en la base de datos.`);
         }
     }
 
-    return { importedCount, errors };
-}
-
-
-function mapVentasToFirebase(headers, values) {
-    const data = {};
-    headers.forEach((header, index) => {
-        data[header] = values[index];
-    });
-
-    const items = [{ 
-        name: data.ITEM, 
-        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0, 
-        quantity: parseInt(data.UNIDADES) || 0 
-    }];
-
-    // 'FECHA' ya está en formato YYYY-MM-DD, se puede crear la fecha directamente
-    const date = new Date(data['FECHA']);
-
-    // La forma de pago no está en este archivo, se establece por defecto a 'EFECTIVO'
-    const payments = [{ 
-        method: 'EFECTIVO', 
-        amount: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0 
-    }];
-
-    return {
-        items: items,
-        subtotal: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0,
-        total: parseFloat(data.TOTAL.replace(/[^0-9.-]+/g,"")) || 0,
-        payments: payments,
-        timestamp: date,
-        customerId: null,
-        customerName: null,
-        cashId: data.ID_Caja_FK || null
-    };
-}
-
-function mapArticulosToFirebase(headers, values) {
-    const data = {};
-    headers.forEach((header, index) => {
-        data[header] = values[index];
-    });
-    return {
-        name: data.NOMBRE,
-        price: parseFloat(data.PRECIO.replace(/[^0-9.-]+/g,"")) || 0,
-        stock: parseInt(data.CANTIDAD) || 0
-    };
-}
-
-function mapClientesToFirebase(headers, values) {
-    const data = {};
-    headers.forEach((header, index) => {
-        data[header] = values[index];
-    });
-    return {
-        name: data.CLIENTES
-    };
+    let message = `Importación completada. Se importaron ${importedCount} ventas.`;
+    if (errors.length > 0) {
+        message += ` Hubo ${errors.length} errores:\n${errors.join('\n')}`;
+    }
+    showModal(message);
 }
 
 // Lógica de clientes
@@ -1925,10 +1852,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const targetPageId = btn.dataset.page;
             showPage(targetPageId);
-            // Al iniciar sesión, mostrar el POS y activar su pestaña
-            const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
-            if(posTab) {
-                posTab.classList.add('active');
+            // Si el menú principal está oculto, deseleccionar cualquier pestaña
+            if(targetPageId !== 'home-menu') {
+                document.querySelector('.tab-btn.active')?.classList.remove('active');
             }
         });
     });
@@ -2025,7 +1951,7 @@ document.addEventListener('DOMContentLoaded', () => {
             paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
             paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
 
-            if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
+            paymentInputsContainer.innerHTML = '';
             addPaymentInput(total);
 
             splitPaymentModal.classList.remove('hidden');
@@ -2070,55 +1996,126 @@ document.addEventListener('DOMContentLoaded', () => {
             if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
         });
     }
+    
+    // Mover este bloque fuera de setupRealtimeListeners
+    if (processPaymentBtn) {
+        processPaymentBtn.addEventListener('click', async () => {
+            if (isProcessingPayment) {
+                return;
+            }
+            isProcessingPayment = true;
+            processPaymentBtn.disabled = true;
 
-    function updateRemainingAmount() {
-        if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
-        const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
-        const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-        let sum = 0;
-        paymentInputs.forEach(input => {
-            sum += parseFloat(input.value) || 0;
+            if (!paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+                console.error("Faltan elementos del DOM para procesar el pago.");
+                processPaymentBtn.disabled = false;
+                isProcessingPayment = false;
+                return;
+            }
+            
+            const { subtotal, total, adjustmentAmount } = calculateTotal();
+            const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+            const paymentSelects = paymentInputsContainer.querySelectorAll('select');
+
+            let sum = 0;
+            const payments = [];
+
+            for (let i = 0; i < paymentInputs.length; i++) {
+                const amount = parseFloat(paymentInputs[i].value);
+                const method = paymentSelects[i].value;
+                if (isNaN(amount) || amount <= 0) {
+                    showModal("Todos los montos deben ser números positivos.");
+                    processPaymentBtn.disabled = false;
+                    isProcessingPayment = false;
+                    return;
+                }
+                sum += amount;
+                payments.push({ method: method, amount: amount });
+            }
+
+            if (Math.abs(sum - total) > 0.01) {
+                showModal("La suma de los pagos no coincide con el total.");
+                processPaymentBtn.disabled = false;
+                isProcessingPayment = false;
+                return;
+            }
+            const cashId = new Date().toLocaleDateString('en-CA');
+            try {
+                const productUpdates = cart.map(item => {
+                    const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                    return updateDoc(productDocRef, {
+                        stock: item.stock - item.quantity
+                    });
+                });
+                await Promise.all(productUpdates);
+
+                const customerId = customerSelect.value;
+                const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+
+                const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+                const newSaleRef = await addDoc(salesCollection, {
+                    items: cart,
+                    subtotal: subtotal,
+                    adjustment: {
+                        amount: adjustmentAmount,
+                        type: currentDiscountSurcharge.type
+                    },
+                    total: total,
+                    payments: payments,
+                    customerId: customerId || null,
+                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                    timestamp: serverTimestamp(),
+                    cashId: cashId
+                });
+
+                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+
+                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                    printReceipt({
+                        id: newSaleRef.id,
+                        items: cart,
+                        subtotal: subtotal,
+                        adjustment: {
+                            amount: adjustmentAmount,
+                            type: currentDiscountSurcharge.type
+                        },
+                        total: total,
+                        payments: payments,
+                        customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                        timestamp: new Date()
+                    });
+                }
+
+                cart = [];
+                currentDiscountSurcharge = { value: 0, type: null };
+                renderCart();
+                if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+                if(customerSelect) customerSelect.value = "";
+
+            } catch (error) {
+                console.error("Error al finalizar la venta:", error);
+                showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
+            } finally {
+                isProcessingPayment = false;
+                processPaymentBtn.disabled = false;
+            }
         });
-        const remaining = total - sum;
-        paymentRemainingDisplay.textContent = `$${remaining.toFixed(2)}`;
-        paymentRemainingDisplay.style.color = remaining < 0 ? '#ef4444' : '#f59e0b';
-        if (remaining === 0) {
-            paymentRemainingDisplay.style.color = '#10b981';
-        }
     }
-
 
     if (importSalesBtn) {
         importSalesBtn.addEventListener('click', () => {
-            importSalesInput.click();
+            if (importSalesInput) importSalesInput.click();
         });
     }
 
     if (importSalesInput) {
-        importSalesInput.addEventListener('change', async (e) => {
+        importSalesInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const csvData = event.target.result;
-
-                    let results;
-                    if (file.name.includes('VENTAS.csv')) {
-                        results = await importDataFromCsv(csvData, 'sales', mapVentasToFirebase);
-                    } else if (file.name.includes('ARTICULOS.csv')) {
-                        results = await importDataFromCsv(csvData, 'products', mapArticulosToFirebase);
-                    } else if (file.name.includes('CLIENTES.csv')) {
-                        results = await importDataFromCsv(csvData, 'customers', mapClientesToFirebase);
-                    } else {
-                        showModal('Tipo de archivo no reconocido.');
-                        return;
-                    }
-
-                    let message = `Importación de ${file.name} completada. Se importaron ${results.importedCount} registros.`;
-                    if (results.errors.length > 0) {
-                        message += ` Hubo ${results.errors.length} errores:\n${results.errors.join('\n')}`;
-                    }
-                    showModal(message);
+                    await processImportedSales(csvData);
                 };
                 reader.readAsText(file);
             }
@@ -2131,25 +2128,124 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function exportSalesToCsv(sales) {
-        const headers = ["ID", "Fecha", "Subtotal", "Ajuste", "Total", "Pagos", "Cliente", "Items"];
-        const rows = sales.map(sale => {
-            const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000).toLocaleString('es-ES') : '';
-            const subtotal = sale.subtotal ? sale.subtotal.toFixed(2) : '';
-            const adjustment = sale.adjustment ? `${sale.adjustment.amount.toFixed(2)} (${sale.adjustment.type})` : '';
-            const payments = JSON.stringify(sale.payments);
-            const items = JSON.stringify(sale.items);
-            const customer = sale.customerName || '';
-            return `"${sale.id}","${date}","${subtotal}","${adjustment}",${sale.total.toFixed(2)},"${payments}","${customer}","${items}"`;
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', () => {
+            renderSalesHistory(allSales);
         });
+    }
 
-        const csvContent = [headers.join(","), ...rows].join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute('download', 'ventas.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            if (filterStartDate) filterStartDate.value = '';
+            if (filterEndDate) filterEndDate.value = '';
+            if (filterProduct) filterProduct.value = '';
+            if (filterPaymentMethod) filterPaymentMethod.value = '';
+            renderSalesHistory(allSales);
+        });
+    }
+
+    if (addPaymentMethodForm) {
+        addPaymentMethodForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPaymentNameInput = document.getElementById('new-payment-method-name');
+            const newMethod = newPaymentNameInput?.value.trim();
+            if (newMethod && !userPaymentMethods.map(m => m.name).includes(newMethod) && !defaultPaymentMethods.includes(newMethod)) {
+                try {
+                    await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethod });
+                    if(newPaymentNameInput) newPaymentNameInput.value = '';
+                    showModal("Forma de pago añadida con éxito.");
+                } catch (error) {
+                    console.error("Error al añadir forma de pago:", error);
+                    showModal("Error al añadir forma de pago.");
+                }
+            } else {
+                showModal("Esa forma de pago ya existe o no es válida.");
+            }
+        });
+    }
+
+    if (addExpenseCategoryForm) {
+        addExpenseCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newExpenseNameInput = document.getElementById('new-expense-category-name');
+            const newCategory = newExpenseNameInput?.value.trim();
+            if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
+                try {
+                    await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
+                    if(newExpenseNameInput) newExpenseNameInput.value = '';
+                    showModal("Categoría de gasto añadida con éxito.");
+                } catch (error) {
+                    console.error("Error al añadir categoría de gasto:", error);
+                    showModal("Error al añadir categoría de gasto.");
+                }
+            } else {
+                showModal("Esa categoría de gasto ya existe o no es válida.");
+            }
+        });
+    }
+
+    const topSettingsButton = document.querySelector('button[data-page="settings-page"]');
+    if (topSettingsButton) {
+        topSettingsButton.addEventListener('click', () => {
+            showPage('settings-page');
+            document.querySelector('.tab-btn.active')?.classList.remove('active');
+        });
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                showModal("Sesión cerrada correctamente.");
+                cart = [];
+                renderCart();
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+                showModal("Hubo un error al cerrar la sesión.");
+            }
+        });
+    }
+    
+    // Toggle forms visibility
+    if (toggleProductFormBtn) {
+        toggleProductFormBtn.addEventListener('click', () => {
+            if (productFormContainer) {
+                productFormContainer.classList.toggle('hidden');
+                if (expenseFormContainer && !expenseFormContainer.classList.contains('hidden')) {
+                    expenseFormContainer.classList.add('hidden');
+                }
+                if (customerFormContainer && !customerFormContainer.classList.contains('hidden')) {
+                    customerFormContainer.classList.add('hidden');
+                }
+            }
+        });
+    }
+    
+    if (toggleExpenseFormBtn) {
+        toggleExpenseFormBtn.addEventListener('click', () => {
+            if (expenseFormContainer) {
+                expenseFormContainer.classList.toggle('hidden');
+                if (productFormContainer && !productFormContainer.classList.contains('hidden')) {
+                    productFormContainer.classList.add('hidden');
+                }
+                if (customerFormContainer && !customerFormContainer.classList.contains('hidden')) {
+                    customerFormContainer.classList.add('hidden');
+                }
+            }
+        });
+    }
+    
+    if (toggleCustomerFormBtn) {
+        toggleCustomerFormBtn.addEventListener('click', () => {
+            if (customerFormContainer) {
+                customerFormContainer.classList.toggle('hidden');
+                if (productFormContainer && !productFormContainer.classList.contains('hidden')) {
+                    productFormContainer.classList.add('hidden');
+                }
+                if (expenseFormContainer && !expenseFormContainer.classList.contains('hidden')) {
+                    expenseFormContainer.classList.add('hidden');
+                }
+            }
+        });
     }
 });
