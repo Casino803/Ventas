@@ -36,10 +36,6 @@ const salesHistoryContainer = document.getElementById('sales-history-container')
 const modal = document.getElementById('modal');
 const modalMessage = document.getElementById('modal-message');
 const modalCloseBtn = document.getElementById('modal-close-btn');
-const addPaymentMethodBtn = document.getElementById('add-payment-method-btn');
-const paymentModal = document.getElementById('payment-modal');
-const addPaymentForm = document.getElementById('add-payment-form');
-const cancelPaymentBtn = document.getElementById('cancel-payment-btn');
 const filterStartDate = document.getElementById('filter-start-date');
 const filterEndDate = document.getElementById('filter-end-date');
 const filterProduct = document.getElementById('filter-product');
@@ -1134,40 +1130,6 @@ if (checkoutBtn) {
     });
 }
 
-if (addPaymentMethodBtn) {
-    addPaymentMethodBtn.addEventListener('click', () => {
-        if (paymentModal) paymentModal.classList.remove('hidden');
-    });
-}
-
-if (cancelPaymentBtn) {
-    cancelPaymentBtn.addEventListener('click', () => {
-        if (paymentModal) paymentModal.classList.add('hidden');
-    });
-}
-
-if (addPaymentForm) {
-    addPaymentForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const newPaymentNameInput = document.getElementById('new-payment-name');
-        const newMethodName = newPaymentNameInput?.value.trim();
-
-        if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
-            try {
-                const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
-                await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethodName });
-                if(addPaymentForm) addPaymentForm.reset();
-                if(paymentModal) paymentModal.classList.add('hidden');
-                showModal("Forma de pago añadida con éxito.");
-            } catch (error) {
-                console.error("Error al añadir la forma de pago:", error);
-                showModal("Error al añadir la forma de pago.");
-            }
-        } else {
-            showModal("Esa forma de pago ya existe o no es válida.");
-        }
-    });
-}
 
 function addPaymentInput(amount = 0) {
     if (!paymentInputsContainer) return;
@@ -1766,40 +1728,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (addPaymentMethodBtn) {
-        addPaymentMethodBtn.addEventListener('click', () => {
-            if (paymentModal) paymentModal.classList.remove('hidden');
-        });
-    }
-
-    if (cancelPaymentBtn) {
-        cancelPaymentBtn.addEventListener('click', () => {
-            if (paymentModal) paymentModal.classList.add('hidden');
-        });
-    }
-
-    if (addPaymentForm) {
-        addPaymentForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newPaymentNameInput = document.getElementById('new-payment-name');
-            const newMethodName = newPaymentNameInput?.value.trim();
-
-            if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
-                try {
-                    const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
-                    await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethodName });
-                    if(addPaymentForm) addPaymentForm.reset();
-                    if(paymentModal) paymentModal.classList.add('hidden');
-                    showModal("Forma de pago añadida con éxito.");
-                } catch (error) {
-                    console.error("Error al añadir la forma de pago:", error);
-                    showModal("Error al añadir la forma de pago.");
-                }
-            } else {
-                showModal("Esa forma de pago ya existe o no es válida.");
-            }
-        });
-    }
 
     if (addPaymentInputBtn) {
         addPaymentInputBtn.addEventListener('click', () => {
