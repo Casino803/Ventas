@@ -20,7 +20,7 @@
   </button>
 </div>
 
-<div class="max-w-4xl mx-auto mt-16">
+<div class="max-w-6xl mx-auto mt-16">
 <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Punto de Venta</h1>
 
 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -55,7 +55,7 @@ class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none 
 </div>
 <div id="product-list" class="mb-6">
 <h2 class="text-xl font-semibold text-gray-700 mb-4">Productos Disponibles</h2>
-<div id="products-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-scroll max-h-64">
+<div id="products-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 overflow-y-scroll max-h-64">
 </div>
 </div>
 </div>
@@ -247,6 +247,21 @@ class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md
 <h2 class="text-xl font-semibold text-gray-700 mb-4">Historial de Cajas</h2>
 <div id="cash-history-container" class="space-y-4 overflow-y-scroll max-h-64">
 </div>
+</div>
+</div>
+
+<div id="customers-page" class="page-content hidden">
+<button data-page="home-menu" class="back-to-menu-btn mb-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">
+<i class="fas fa-arrow-left"></i> Volver al Menú
+</button>
+<h2 class="text-xl font-semibold text-gray-700 mb-4">Gestión de Clientes</h2>
+<form id="add-customer-form" class="flex space-x-2 mb-4">
+<input type="text" id="customer-name-input" placeholder="Nombre del cliente" required class="flex-grow px-4 py-2 border rounded-lg">
+<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+<i class="fas fa-user-plus"></i> Añadir
+</button>
+</form>
+<div id="customers-list-container" class="space-y-2 overflow-y-scroll max-h-64">
 </div>
 </div>
 
