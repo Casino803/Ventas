@@ -1399,10 +1399,15 @@ function renderCustomersList(customers) {
         if(editButton) {
           editButton.addEventListener('click', () => {
               const newName = prompt(`Editar nombre de cliente:`, customer.name);
-              if (newName && newName.trim()) {
-                  const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
-                  setDoc(customerDocRef, { name: newName.trim() }, { merge: true });
-              }
+              const productIdInput = document.getElementById('product-id');
+              const productNameInput = document.getElementById('product-name-input');
+              const productPriceInput = document.getElementById('product-price-input');
+              const productStockInput = document.getElementById('product-stock-input');
+
+              if (productIdInput) productIdInput.value = product.id;
+              if (productNameInput) productNameInput.value = product.name;
+              if (productPriceInput) productPriceInput.value = product.price;
+              if (productStockInput) productStockInput.value = product.stock;
           });
         }
         
@@ -1763,7 +1768,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newMethodName && !userPaymentMethods.map(m => m.name).includes(newMethodName) && !defaultPaymentMethods.includes(newMethodName)) {
           try {
             const paymentMethodsCollection = collection(db, SHARED_PAYMENT_METHODS_COLLECTION);
-            await addDoc(paymentMethodsCollection, { name: newMethodName });
+            await addDoc(collection(db, SHARED_PAYMENT_METHODS_COLLECTION), { name: newMethodName });
             if(addPaymentForm) addPaymentForm.reset();
             if(paymentModal) paymentModal.classList.add('hidden');
             showModal("Forma de pago añadida con éxito.");
