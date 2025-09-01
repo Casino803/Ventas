@@ -575,7 +575,7 @@ function renderManageProduct(product) {
             const productPriceInput = document.getElementById('product-price-input');
             const productStockInput = document.getElementById('product-stock-input');
 
-            if (productIdInput) productIdInput.value = product.id;
+            if (productIdInput) productId.value = product.id;
             if (productNameInput) productNameInput.value = product.name;
             if (productPriceInput) productPriceInput.value = product.price;
             if (productStockInput) productStockInput.value = product.stock;
