@@ -67,9 +67,34 @@ class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none 
 <div id="cart-container" class="space-y-2 mb-4 flex-grow overflow-y-scroll">
 </div>
 <div class="mt-auto">
-<div class="flex justify-between items-center text-lg font-bold text-gray-800 border-t-2 border-gray-300 pt-4 mt-4">
+<div class="flex justify-between items-center text-sm text-gray-600 border-t-2 border-gray-300 pt-4 mt-4">
+    <span>Subtotal:</span>
+    <span id="cart-subtotal">$0.00</span>
+</div>
+<div id="discount-surcharge-display" class="flex justify-between items-center text-sm text-gray-600">
+    <span>Descuento/Recargo:</span>
+    <span id="discount-surcharge-amount">$0.00</span>
+</div>
+<div class="flex justify-between items-center text-lg font-bold text-gray-800">
 <span>Total:</span>
 <span id="cart-total">$0.00</span>
+</div>
+
+<div class="mt-4 p-3 bg-white rounded-lg shadow">
+    <h3 class="font-semibold text-gray-700 mb-2">Aplicar Descuento/Recargo</h3>
+    <div class="flex space-x-2 mb-2">
+        <input type="number" id="discount-surcharge-value" placeholder="Valor" step="0.01" class="w-2/5 px-2 py-1 border rounded-lg text-sm">
+        <select id="discount-surcharge-type" class="w-3/5 px-2 py-1 border rounded-lg text-sm">
+            <option value="percentage_discount">% Descuento</option>
+            <option value="fixed_discount">Monto Descuento</option>
+            <option value="percentage_surcharge">% Recargo</option>
+            <option value="fixed_surcharge">Monto Recargo</option>
+        </select>
+    </div>
+    <div class="flex space-x-2">
+        <button id="apply-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm">Aplicar</button>
+        <button id="clear-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm">Limpiar</button>
+    </div>
 </div>
 
 <button id="checkout-btn"
