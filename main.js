@@ -102,6 +102,14 @@ const newExpenseCategoryName = document.getElementById('new-expense-category-nam
 const expenseCategoriesList = document.getElementById('expense-categories-list');
 const tabButtons = document.querySelectorAll('.tab-btn');
 
+// Nuevas referencias para los botones y contenedores de formularios
+const toggleProductFormBtn = document.getElementById('toggle-product-form-btn');
+const productFormContainer = document.getElementById('product-form-container');
+const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
+const expenseFormContainer = document.getElementById('expense-form-container');
+const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
+const customerFormContainer = document.getElementById('customer-form-container');
+
 
 let salesChart;
 let userId = '';
@@ -921,6 +929,7 @@ if (expenseForm) {
             });
             expenseForm.reset();
             showModal("Gasto registrado con éxito.");
+            if (expenseFormContainer) expenseFormContainer.classList.add('hidden');
         } catch (error) {
             console.error("Error al registrar el gasto:", error);
             showModal("Hubo un error al registrar el gasto. Intenta de nuevo.");
@@ -1047,6 +1056,7 @@ if (productForm) {
             if (productForm) productForm.reset();
             const productIdInput = document.getElementById('product-id');
             if (productIdInput) productIdInput.value = '';
+            if (productFormContainer) productFormContainer.classList.add('hidden');
         } catch (error) {
             console.error("Error al guardar el producto:", error);
             showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
@@ -1390,6 +1400,7 @@ if (addCustomerForm) {
             await addDoc(customersCollection, { name });
             if(addCustomerForm) addCustomerForm.reset();
             showModal(`Cliente '${name}' añadido con éxito.`);
+            if (customerFormContainer) customerFormContainer.classList.add('hidden');
         } catch (error) {
             console.error("Error al añadir cliente:", error);
             showModal("Error al añadir cliente. Intenta de nuevo.");
@@ -2005,6 +2016,49 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error al cerrar sesión:", error);
                 showModal("Hubo un error al cerrar la sesión.");
+            }
+        });
+    }
+
+    // Toggle forms visibility
+    if (toggleProductFormBtn) {
+        toggleProductFormBtn.addEventListener('click', () => {
+            if (productFormContainer) {
+                productFormContainer.classList.toggle('hidden');
+                if (expenseFormContainer && !expenseFormContainer.classList.contains('hidden')) {
+                    expenseFormContainer.classList.add('hidden');
+                }
+                if (customerFormContainer && !customerFormContainer.classList.contains('hidden')) {
+                    customerFormContainer.classList.add('hidden');
+                }
+            }
+        });
+    }
+    
+    if (toggleExpenseFormBtn) {
+        toggleExpenseFormBtn.addEventListener('click', () => {
+            if (expenseFormContainer) {
+                expenseFormContainer.classList.toggle('hidden');
+                if (productFormContainer && !productFormContainer.classList.contains('hidden')) {
+                    productFormContainer.classList.add('hidden');
+                }
+                if (customerFormContainer && !customerFormContainer.classList.contains('hidden')) {
+                    customerFormContainer.classList.add('hidden');
+                }
+            }
+        });
+    }
+    
+    if (toggleCustomerFormBtn) {
+        toggleCustomerFormBtn.addEventListener('click', () => {
+            if (customerFormContainer) {
+                customerFormContainer.classList.toggle('hidden');
+                if (productFormContainer && !productFormContainer.classList.contains('hidden')) {
+                    productFormContainer.classList.add('hidden');
+                }
+                if (expenseFormContainer && !expenseFormContainer.classList.contains('hidden')) {
+                    expenseFormContainer.classList.add('hidden');
+                }
             }
         });
     }
