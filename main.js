@@ -564,7 +564,7 @@ function renderManageProduct(product) {
         <button data-product-id="${product.id}"
             class="delete-product-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
             <i class="fas fa-trash-alt"></i>
-            </button>
+        </button>
     </div>
     `;
     manageProductsContainer.appendChild(itemDiv);
@@ -581,7 +581,7 @@ function renderManageProduct(product) {
             if (productIdInput) productIdInput.value = product.id;
             if (productNameInput) productNameInput.value = product.name;
             if (productPriceInput) productPriceInput.value = product.price;
-            if (productStockInput) productStockInput.value = product.stock;
+            if (productStockInput) productStockInput.value = product.stock !== undefined ? product.stock : '';
         });
     }
 
@@ -1181,21 +1181,28 @@ if (productForm) {
         const id = document.getElementById('product-id')?.value;
         const name = document.getElementById('product-name-input')?.value;
         const price = parseFloat(document.getElementById('product-price-input')?.value);
-        const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
+        const stockInput = document.getElementById('product-stock-input')?.value;
+        const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
+        
 
-        if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
+        if (isNaN(price) || price <= 0 || (stock !== undefined && isNaN(stock) || stock < 0)) {
             showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
             return;
+        }
+        
+        const productData = { name, price };
+        if (stock !== undefined) {
+            productData.stock = stock;
         }
 
         try {
             if (id) {
                 const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
-                await setDoc(productRef, { name, price, stock }, { merge: true });
+                await setDoc(productRef, productData, { merge: true });
                 showModal("Producto editado con éxito.");
             } else {
                 const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-                await addDoc(productsCollection, { name, price, stock });
+                await addDoc(productsCollection, productData);
                 showModal("Producto añadido con éxito.");
             }
             if (productForm) productForm.reset();
@@ -1906,21 +1913,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = document.getElementById('product-id')?.value;
             const name = document.getElementById('product-name-input')?.value;
             const price = parseFloat(document.getElementById('product-price-input')?.value);
-            const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
+            const stockInput = document.getElementById('product-stock-input')?.value;
+            const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
+            
 
-            if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
+            if (isNaN(price) || price <= 0 || (stock !== undefined && isNaN(stock) || stock < 0)) {
                 showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
                 return;
+            }
+            
+            const productData = { name, price };
+            if (stock !== undefined) {
+                productData.stock = stock;
             }
 
             try {
                 if (id) {
                     const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
-                    await setDoc(productRef, { name, price, stock }, { merge: true });
+                    await setDoc(productRef, productData, { merge: true });
                     showModal("Producto editado con éxito.");
                 } else {
                     const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-                    await addDoc(productsCollection, { name, price, stock });
+                    await addDoc(productsCollection, productData);
                     showModal("Producto añadido con éxito.");
                 }
                 if (productForm) productForm.reset();
@@ -2045,11 +2059,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const cashId = new Date().toLocaleDateString('en-CA');
             try {
                 const productUpdates = cart.map(item => {
-                    const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
-                    return updateDoc(productDocRef, {
-                        stock: item.stock - item.quantity
-                    });
-                });
+                    if(item.stock !== undefined) {
+                        const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                        return updateDoc(productDocRef, {
+                            stock: item.stock - item.quantity
+                        });
+                    }
+                }).filter(Boolean); // Filter out undefined promises
+
                 await Promise.all(productUpdates);
 
                 const customerId = customerSelect.value;
