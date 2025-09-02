@@ -128,6 +128,17 @@ const confirmationMessage = document.getElementById('confirmation-message');
 const confirmYesBtn = document.getElementById('confirm-yes-btn');
 const confirmNoBtn = document.getElementById('confirm-no-btn');
 
+// NUEVAS REFERENCIAS PARA PROMOCIONES
+const addPromotionForm = document.getElementById('add-promotion-form');
+const promotionNameInput = document.getElementById('promotion-name-input');
+const promotionTypeSelect = document.getElementById('promotion-type-select');
+const promotionValueInput = document.getElementById('promotion-value-input');
+const promotionsList = document.getElementById('promotions-list');
+const promotionSelect = document.getElementById('promotion-select');
+const clearPromotionBtn = document.getElementById('clear-promotion-btn');
+const promotionDisplay = document.getElementById('promotion-display');
+const promotionAmountSpan = document.getElementById('promotion-amount');
+
 
 let salesChart;
 let topProductsChart;
@@ -146,6 +157,11 @@ let currentDiscountSurcharge = {
     type: null // 'percentage_discount', 'fixed_discount', 'percentage_surcharge', 'fixed_surcharge'
 };
 
+// NUEVAS VARIABLES PARA PROMOCIONES
+let allPromotions = [];
+let currentPromotion = null;
+
+
 // Ahora estas colecciones son globales
 const SHARED_PRODUCTS_COLLECTION = 'products';
 const SHARED_SALES_COLLECTION = 'sales';
@@ -157,6 +173,7 @@ const SHARED_EXPENSES_COLLECTION = 'expenses';
 const SHARED_CASH_COLLECTION = 'cajas';
 const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
 const SHARED_PRODUCT_CATEGORIES_COLLECTION = 'productCategories';
+const SHARED_PROMOTIONS_COLLECTION = 'promotions';
 
 
 const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
@@ -290,6 +307,7 @@ function renderProducts(products) {
     products.forEach(product => {
         renderProductCard(product);
     });
+    renderPromotionSelect();
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -376,6 +394,17 @@ function setupRealtimeListeners() {
     }, (error) => {
         console.error("Error al escuchar categorías de productos:", error);
         showModal("Error al cargar las categorías de productos.");
+    });
+
+    // NUEVO: Listener para las promociones
+    const promotionsCollection = collection(db, SHARED_PROMOTIONS_COLLECTION);
+    onSnapshot(promotionsCollection, (snapshot) => {
+      allPromotions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if(promotionsList) renderPromotionsList();
+      renderPromotionSelect();
+    }, (error) => {
+      console.error("Error al escuchar promociones:", error);
+      showModal("Error al cargar las promociones.");
     });
 
 
@@ -1231,17 +1260,45 @@ if (closeCashBtn) {
 function calculateTotal() {
     let subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     let total = subtotal;
-    let adjustmentAmount = 0;
 
+    // APLICAR PROMOCIÓN PRIMERO
+    let promotionAmount = 0;
+    if (currentPromotion) {
+      if (currentPromotion.type === 'fixed_discount') {
+        promotionAmount = currentPromotion.value;
+      } else if (currentPromotion.type === 'percentage_discount') {
+        promotionAmount = subtotal * (currentPromotion.value / 100);
+      } else if (currentPromotion.type === 'buy_one_get_one') {
+        const sortedCart = [...cart].sort((a, b) => b.price - a.price);
+        sortedCart.forEach(item => {
+          if (item.quantity >= 2) {
+            const freeItems = Math.floor(item.quantity / 2);
+            promotionAmount += freeItems * item.price;
+          }
+        });
+      } else if (currentPromotion.type === 'buy_one_get_second_half') {
+        const sortedCart = [...cart].sort((a, b) => a.price - b.price);
+        sortedCart.forEach(item => {
+          if (item.quantity >= 2) {
+            const pairs = Math.floor(item.quantity / 2);
+            promotionAmount += pairs * (item.price / 2);
+          }
+        });
+      }
+    }
+    total -= promotionAmount;
+
+    // LUEGO APLICAR DESCUENTO/RECARGO MANUAL
+    let adjustmentAmount = 0;
     if (currentDiscountSurcharge.value > 0) {
         if (currentDiscountSurcharge.type === 'percentage_discount') {
-            adjustmentAmount = subtotal * (currentDiscountSurcharge.value / 100);
+            adjustmentAmount = total * (currentDiscountSurcharge.value / 100);
             total -= adjustmentAmount;
         } else if (currentDiscountSurcharge.type === 'fixed_discount') {
             adjustmentAmount = currentDiscountSurcharge.value;
             total -= adjustmentAmount;
         } else if (currentDiscountSurcharge.type === 'percentage_surcharge') {
-            adjustmentAmount = subtotal * (currentDiscountSurcharge.value / 100);
+            adjustmentAmount = total * (currentDiscountSurcharge.value / 100);
             total += adjustmentAmount;
         } else if (currentDiscountSurcharge.type === 'fixed_surcharge') {
             adjustmentAmount = currentDiscountSurcharge.value;
@@ -1252,7 +1309,8 @@ function calculateTotal() {
     return {
         subtotal: subtotal,
         total: total,
-        adjustmentAmount: adjustmentAmount
+        adjustmentAmount: adjustmentAmount,
+        promotionAmount: promotionAmount
     };
 }
 
@@ -1260,7 +1318,7 @@ function renderCart() {
     if (!cartContainer || !cartSubtotalSpan || !cartTotalSpan || !discountSurchargeDisplay) return;
 
     cartContainer.innerHTML = '';
-    const { subtotal, total, adjustmentAmount } = calculateTotal();
+    const { subtotal, total, adjustmentAmount, promotionAmount } = calculateTotal();
 
     cart.forEach(item => {
         const itemDiv = document.createElement('div');
@@ -1299,6 +1357,14 @@ function renderCart() {
         discountSurchargeDisplay.classList.remove('hidden');
     } else {
         discountSurchargeDisplay.classList.add('hidden');
+    }
+
+    // NUEVO: Mostrar la promoción aplicada
+    if (promotionAmount > 0) {
+        promotionAmountSpan.textContent = `-$${promotionAmount.toFixed(2)}`;
+        promotionDisplay.classList.remove('hidden');
+    } else {
+        promotionDisplay.classList.add('hidden');
     }
 }
 
@@ -1406,6 +1472,10 @@ if (applyDiscountSurchargeBtn) {
 
         currentDiscountSurcharge.value = value;
         currentDiscountSurcharge.type = type;
+        
+        // Limpiar la promoción si hay un descuento/recargo manual
+        currentPromotion = null;
+        if(promotionSelect) promotionSelect.value = "";
 
         renderCart();
     });
@@ -1687,6 +1757,107 @@ function renderCustomerSelect(customers) {
         option.value = customer.id;
         option.textContent = customer.name;
         customerSelect.appendChild(option);
+    });
+}
+
+// NUEVAS FUNCIONES PARA PROMOCIONES
+
+// Función para renderizar la lista de promociones en la página de configuración
+function renderPromotionsList() {
+    if (!promotionsList) return;
+    promotionsList.innerHTML = '';
+    allPromotions.forEach(promo => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+            <span>${promo.name} (${promo.type}): ${promo.value}</span>
+            <div class="flex space-x-2">
+                <button data-id="${promo.id}" class="delete-promotion-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        promotionsList.appendChild(itemDiv);
+
+        const deleteButton = itemDiv.querySelector('.delete-promotion-btn');
+        deleteButton.addEventListener('click', async () => {
+            showConfirmationModal(`¿Estás seguro de que quieres eliminar la promoción '${promo.name}'?`, async () => {
+                try {
+                    const promoDocRef = doc(db, SHARED_PROMOTIONS_COLLECTION, promo.id);
+                    await deleteDoc(promoDocRef);
+                    showModal("Promoción eliminada con éxito.");
+                } catch (error) {
+                    console.error("Error al eliminar la promoción:", error);
+                    showModal("Error al eliminar la promoción.");
+                }
+            }, () => {});
+        });
+    });
+}
+
+// Función para renderizar el selector de promociones en el POS
+function renderPromotionSelect() {
+    if (!promotionSelect) return;
+    promotionSelect.innerHTML = '<option value="">Sin Promoción</option>';
+    allPromotions.forEach(promo => {
+        const option = document.createElement('option');
+        option.value = promo.id;
+        option.textContent = promo.name;
+        promotionSelect.appendChild(option);
+    });
+}
+
+// Evento para añadir una nueva promoción
+if (addPromotionForm) {
+    addPromotionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = promotionNameInput?.value.trim();
+        const type = promotionTypeSelect?.value;
+        const value = parseFloat(promotionValueInput?.value);
+
+        if (!name || isNaN(value) || value <= 0) {
+            showModal("Por favor, rellena todos los campos con valores válidos.");
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, SHARED_PROMOTIONS_COLLECTION), {
+                name: name,
+                type: type,
+                value: value
+            });
+            addPromotionForm.reset();
+            showModal("Promoción añadida con éxito.");
+        } catch (error) {
+            console.error("Error al añadir promoción:", error);
+            showModal("Hubo un error al añadir la promoción. Intenta de nuevo.");
+        }
+    });
+}
+
+// Evento para aplicar una promoción seleccionada en el POS
+if (promotionSelect) {
+    promotionSelect.addEventListener('change', () => {
+        const selectedPromotionId = promotionSelect.value;
+        if (selectedPromotionId) {
+            currentPromotion = allPromotions.find(p => p.id === selectedPromotionId);
+            // Limpiar el descuento/recargo manual
+            currentDiscountSurcharge.value = 0;
+            currentDiscountSurcharge.type = null;
+            if(discountSurchargeValueInput) discountSurchargeValueInput.value = '';
+        } else {
+            currentPromotion = null;
+        }
+        renderCart();
+    });
+}
+
+// Evento para limpiar la promoción aplicada
+if (clearPromotionBtn) {
+    clearPromotionBtn.addEventListener('click', () => {
+        currentPromotion = null;
+        if(promotionSelect) promotionSelect.value = "";
+        renderCart();
     });
 }
 
@@ -2170,7 +2341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            const { subtotal, total, adjustmentAmount } = calculateTotal();
+            const { subtotal, total, adjustmentAmount, promotionAmount } = calculateTotal();
             const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
             const paymentSelects = paymentInputsContainer.querySelectorAll('select');
 
@@ -2220,6 +2391,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         amount: adjustmentAmount,
                         type: currentDiscountSurcharge.type
                     },
+                    promotion: currentPromotion ? { id: currentPromotion.id, name: currentPromotion.name, amount: promotionAmount } : null,
                     total: total,
                     payments: payments,
                     customerId: customerId || null,
@@ -2248,6 +2420,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 cart = [];
                 currentDiscountSurcharge = { value: 0, type: null };
+                currentPromotion = null;
+                if(promotionSelect) promotionSelect.value = "";
                 renderCart();
                 if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
                 if(customerSelect) customerSelect.value = "";
