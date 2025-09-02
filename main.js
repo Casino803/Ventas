@@ -3,7 +3,13 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, on
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, onSnapshot, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  // Aquí va tu configuración de Firebase
+  apiKey: "AIzaSyDaeiHDKjK_DkdYNF9FvL8aMGINPGvU9uc",
+  authDomain: "ventas-casino.firebaseapp.com",
+  projectId: "ventas-casino",
+  storageBucket: "ventas-casino.firebasestorage.app",
+  messagingSenderId: "683247450522",
+  appId: "1:683247450522:web:87a57e190d2c252d0a6223",
+  measurementId: "G-XYG0ZNEQ61"
 };
 
 const app = initializeApp(firebaseConfig);
