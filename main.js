@@ -574,7 +574,7 @@ function renderProductCategoriesList() {
                     console.error("Error al eliminar la categoría de producto:", error);
                     showModal("Error al eliminar la categoría de producto.");
                 }
-            } () => {});
+            }, () => {});
         });
     });
 }
@@ -1324,19 +1324,15 @@ if (closeCashBtn) {
     });
 }
 
-// Lógica de cálculo de precios corregida
 function calculateTotal() {
     let subtotal = 0;
     let total = 0;
     let promotionAmount = 0;
     
     cart.forEach(item => {
-        // CORRECCIÓN: Si el artículo es un combo, usa su precio y su precio base.
         if (item.isCombo) {
             subtotal += item.basePrice * item.quantity;
             total += item.price * item.quantity;
-            // La cantidad de la promoción es la diferencia entre el precio base y el precio de venta del combo
-            promotionAmount += (item.basePrice - item.price) * item.quantity;
         } else {
             const itemPrice = item.price * item.quantity;
             subtotal += itemPrice;
@@ -1367,9 +1363,8 @@ function calculateTotal() {
                 }
             });
         }
+        total -= promotionAmount;
     }
-    // CORRECCIÓN: Aplicar el descuento de la promoción al total
-    total -= promotionAmount;
 
     // LUEGO APLICAR DESCUENTO/RECARGO MANUAL
     let adjustmentAmount = 0;
@@ -1393,7 +1388,7 @@ function calculateTotal() {
         subtotal: subtotal,
         total: total,
         adjustmentAmount: adjustmentAmount,
-        promotionAmount: promotionAmount
+        promotionAmount: subtotal - total
     };
 }
 
@@ -2603,7 +2598,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            const { subtotal, total, adjustmentAmount, promotionAmount } = calculateTotal();
+            const { subtotal, total, adjustmentAmount } = calculateTotal();
             const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
             const paymentSelects = paymentInputsContainer.querySelectorAll('select');
 
@@ -2632,20 +2627,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const cashId = new Date().toLocaleDateString('en-CA');
             try {
                 const productUpdates = cart.map(item => {
-                    if (item.isCombo) {
-                        return item.items.map(comboItem => {
-                            const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, comboItem.productId);
-                            return updateDoc(productRef, {
-                                stock: increment(-comboItem.quantity * item.quantity)
-                            });
-                        }).filter(Boolean);
-                    } else if (item.stock !== undefined) {
+                    if(item.stock !== undefined) {
                         const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
                         return updateDoc(productDocRef, {
-                            stock: increment(-item.quantity)
+                            stock: item.stock - item.quantity
                         });
                     }
-                }).flat().filter(Boolean); // Filter out undefined promises and flatten the array
+                }).filter(Boolean); // Filter out undefined promises
 
                 await Promise.all(productUpdates);
 
@@ -2660,7 +2648,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         amount: adjustmentAmount,
                         type: currentDiscountSurcharge.type
                     },
-                    promotion: currentPromotion ? { id: currentPromotion.id, name: currentPromotion.name, amount: promotionAmount } : null,
                     total: total,
                     payments: payments,
                     customerId: customerId || null,
@@ -2689,8 +2676,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 cart = [];
                 currentDiscountSurcharge = { value: 0, type: null };
-                currentPromotion = null;
-                if(promotionSelect) promotionSelect.value = "";
                 renderCart();
                 if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
                 if(customerSelect) customerSelect.value = "";
