@@ -574,7 +574,7 @@ function renderProductCategoriesList() {
                     console.error("Error al eliminar la categoría de producto:", error);
                     showModal("Error al eliminar la categoría de producto.");
                 }
-            }
+            }, () => {});
         });
     });
 }
@@ -1324,16 +1324,19 @@ if (closeCashBtn) {
     });
 }
 
+// Lógica de cálculo de precios corregida
 function calculateTotal() {
     let subtotal = 0;
     let total = 0;
     let promotionAmount = 0;
     
     cart.forEach(item => {
+        // CORRECCIÓN: Si el artículo es un combo, usa su precio y su precio base.
         if (item.isCombo) {
-            subtotal += item.basePrice;
-            total += item.price;
-            promotionAmount += item.basePrice - item.price;
+            subtotal += item.basePrice * item.quantity;
+            total += item.price * item.quantity;
+            // La cantidad de la promoción es la diferencia entre el precio base y el precio de venta del combo
+            promotionAmount += (item.basePrice - item.price) * item.quantity;
         } else {
             const itemPrice = item.price * item.quantity;
             subtotal += itemPrice;
@@ -1343,28 +1346,29 @@ function calculateTotal() {
 
     // APLICAR PROMOCIÓN SIMPLE (SI HAY UNA ACTIVA)
     if (currentPromotion) {
-      if (currentPromotion.type === 'fixed_discount') {
-        promotionAmount += currentPromotion.value;
-      } else if (currentPromotion.type === 'percentage_discount') {
-        promotionAmount += total * (currentPromotion.value / 100);
-      } else if (currentPromotion.type === 'buy_one_get_one') {
-        const sortedCart = [...cart].sort((a, b) => b.price - a.price);
-        sortedCart.forEach(item => {
-          if (item.quantity >= 2) {
-            const freeItems = Math.floor(item.quantity / 2);
-            promotionAmount += freeItems * item.price;
-          }
-        });
-      } else if (currentPromotion.type === 'buy_one_get_second_half') {
-        const sortedCart = [...cart].sort((a, b) => a.price - b.price);
-        sortedCart.forEach(item => {
-          if (item.quantity >= 2) {
-            const pairs = Math.floor(item.quantity / 2);
-            promotionAmount += pairs * (item.price / 2);
-          }
-        });
-      }
+        if (currentPromotion.type === 'fixed_discount') {
+            promotionAmount += currentPromotion.value;
+        } else if (currentPromotion.type === 'percentage_discount') {
+            promotionAmount += total * (currentPromotion.value / 100);
+        } else if (currentPromotion.type === 'buy_one_get_one') {
+            const sortedCart = [...cart].sort((a, b) => b.price - a.price);
+            sortedCart.forEach(item => {
+                if (item.quantity >= 2) {
+                    const freeItems = Math.floor(item.quantity / 2);
+                    promotionAmount += freeItems * item.price;
+                }
+            });
+        } else if (currentPromotion.type === 'buy_one_get_second_half') {
+            const sortedCart = [...cart].sort((a, b) => a.price - b.price);
+            sortedCart.forEach(item => {
+                if (item.quantity >= 2) {
+                    const pairs = Math.floor(item.quantity / 2);
+                    promotionAmount += pairs * (item.price / 2);
+                }
+            });
+        }
     }
+    // CORRECCIÓN: Aplicar el descuento de la promoción al total
     total -= promotionAmount;
 
     // LUEGO APLICAR DESCUENTO/RECARGO MANUAL
@@ -1392,6 +1396,7 @@ function calculateTotal() {
         promotionAmount: promotionAmount
     };
 }
+
 
 function renderCart() {
     if (!cartContainer || !cartSubtotalSpan || !cartTotalSpan || !discountSurchargeDisplay) return;
