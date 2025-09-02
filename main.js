@@ -356,6 +356,7 @@ function setupRealtimeListeners() {
     onSnapshot(expensesCollection, (snapshot) => {
         const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if(dailyExpensesContainer) renderDailyExpenses(expenses);
+        updateDailyTotals();
     }, (error) => {
         console.error("Error al escuchar gastos:", error);
         showModal("Error al cargar los gastos.");
@@ -373,14 +374,6 @@ function setupRealtimeListeners() {
         }
     }, (error) => {
         console.error("Error al escuchar la caja diaria:", error);
-    });
-    
-    const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
-    onSnapshot(cashHistoryCollection, (snapshot) => {
-        const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (cashHistoryContainer) renderCashHistory(history);
-    }, (error) => {
-        console.error("Error al escuchar el historial de cajas:", error);
     });
 }
 
