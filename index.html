@@ -75,7 +75,11 @@ class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none 
     <span>Subtotal:</span>
     <span id="cart-subtotal">$0.00</span>
 </div>
-<div id="discount-surcharge-display" class="flex justify-between items-center text-sm text-gray-600">
+<div id="promotion-display" class="hidden flex justify-between items-center text-sm text-gray-600">
+    <span>Promoción:</span>
+    <span id="promotion-amount">$0.00</span>
+</div>
+<div id="discount-surcharge-display" class="hidden flex justify-between items-center text-sm text-gray-600">
     <span>Descuento/Recargo:</span>
     <span id="discount-surcharge-amount">$0.00</span>
 </div>
@@ -99,6 +103,14 @@ class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none 
         <button id="apply-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm">Aplicar</button>
         <button id="clear-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm">Limpiar</button>
     </div>
+</div>
+
+<div class="mt-4 p-3 bg-white rounded-lg shadow">
+  <h3 class="font-semibold text-gray-700 mb-2">Aplicar Promoción</h3>
+  <select id="promotion-select" class="w-full px-2 py-1 border rounded-lg text-sm">
+    <option value="">Seleccionar Promoción</option>
+  </select>
+  <button id="clear-promotion-btn" class="w-full mt-2 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm">Limpiar Promoción</button>
 </div>
 
 <button id="checkout-btn"
@@ -365,6 +377,29 @@ class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-
 </div>
 </div>
 </div>
+
+<div class="mb-8 p-4 bg-gray-100 rounded-lg">
+  <h3 class="flex justify-between items-center text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleSection('promotions-content')">
+    <span>Gestión de Promociones</span>
+    <i class="fas fa-chevron-down text-gray-500"></i>
+  </h3>
+  <div id="promotions-content" class="mt-4 hidden">
+    <form id="add-promotion-form" class="space-y-4 mb-4">
+      <input type="text" id="promotion-name-input" placeholder="Nombre de la promoción" required class="w-full px-4 py-2 border rounded-lg">
+      <select id="promotion-type-select" class="w-full px-4 py-2 border rounded-lg">
+        <option value="fixed_discount">Descuento fijo</option>
+        <option value="percentage_discount">Descuento porcentual</option>
+        <option value="buy_one_get_one">2x1</option>
+        <option value="buy_one_get_second_half">2da unidad a mitad de precio</option>
+      </select>
+      <input type="number" id="promotion-value-input" placeholder="Valor (ej. 10 para $10 o 10%)" required class="w-full px-4 py-2 border rounded-lg">
+      <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir Promoción</button>
+    </form>
+    <div id="promotions-list" class="space-y-2 overflow-y-scroll max-h-48">
+      </div>
+  </div>
+</div>
+
 </div>
 
 <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
