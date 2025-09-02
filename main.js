@@ -356,7 +356,6 @@ function setupRealtimeListeners() {
     onSnapshot(expensesCollection, (snapshot) => {
         const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if(dailyExpensesContainer) renderDailyExpenses(expenses);
-        updateDailyTotals();
     }, (error) => {
         console.error("Error al escuchar gastos:", error);
         showModal("Error al cargar los gastos.");
