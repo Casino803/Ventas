@@ -2835,4 +2835,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Configuración de los botones de promoción
+    if (showSimplePromoFormBtn && showComboFormBtn && addSimplePromotionForm && addComboForm) {
+        showSimplePromoFormBtn.addEventListener('click', () => {
+            addSimplePromotionForm.classList.remove('hidden');
+            addComboForm.classList.add('hidden');
+            showSimplePromoFormBtn.classList.add('bg-blue-500', 'text-white');
+            showSimplePromoFormBtn.classList.remove('bg-gray-300', 'text-gray-800');
+            showComboFormBtn.classList.remove('bg-blue-500', 'text-white');
+            showComboFormBtn.classList.add('bg-gray-300', 'text-gray-800');
+        });
+
+        showComboFormBtn.addEventListener('click', () => {
+            addComboForm.classList.remove('hidden');
+            addSimplePromotionForm.classList.add('hidden');
+            showComboFormBtn.classList.add('bg-blue-500', 'text-white');
+            showComboFormBtn.classList.remove('bg-gray-300', 'text-gray-800');
+            showSimplePromoFormBtn.classList.remove('bg-blue-500', 'text-white');
+            showSimplePromoFormBtn.classList.add('bg-gray-300', 'text-gray-800');
+            // Asegurarse de que al menos un selector de producto esté presente
+            if(comboProductsContainer.children.length === 0) {
+              renderComboProductSelector();
+            }
+        });
+        
+        // Mostrar el formulario de combo por defecto al cargar la página de settings
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('page') === 'settings-page') {
+             // Solo si es la primera vez que se carga
+            if (showComboFormBtn.classList.contains('bg-gray-300')) {
+                 showComboFormBtn.click();
+            }
+        }
+    }
 });
