@@ -368,7 +368,6 @@ function setupRealtimeListeners() {
         if (doc.exists()) {
             dailyCashData = doc.data();
             renderCashStatus();
-            updateDailyTotals();
         } else {
             dailyCashData = null;
             renderCashStatus();
@@ -508,7 +507,7 @@ function renderProductCategoriesInput() {
 
 if(addProductCategoryForm) {
     addProductCategoryForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // <-- Se ha añadido esta línea
         const newCategoryNameInput = document.getElementById('new-product-category-name');
         const newCategory = newCategoryNameInput?.value.trim();
         if (newCategory && !productCategories.map(c => c.name).includes(newCategory)) {
