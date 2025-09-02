@@ -129,10 +129,17 @@ const confirmYesBtn = document.getElementById('confirm-yes-btn');
 const confirmNoBtn = document.getElementById('confirm-no-btn');
 
 // NUEVAS REFERENCIAS PARA PROMOCIONES
-const addPromotionForm = document.getElementById('add-promotion-form');
-const promotionNameInput = document.getElementById('promotion-name-input');
-const promotionTypeSelect = document.getElementById('promotion-type-select');
-const promotionValueInput = document.getElementById('promotion-value-input');
+const showSimplePromoFormBtn = document.getElementById('show-simple-promo-form-btn');
+const showComboFormBtn = document.getElementById('show-combo-form-btn');
+const addSimplePromotionForm = document.getElementById('add-simple-promotion-form');
+const simplePromoNameInput = document.getElementById('simple-promo-name-input');
+const simplePromoTypeSelect = document.getElementById('simple-promo-type-select');
+const simplePromoValueInput = document.getElementById('simple-promo-value-input');
+const addComboForm = document.getElementById('add-combo-form');
+const comboNameInput = document.getElementById('combo-name-input');
+const comboPriceInput = document.getElementById('combo-price-input');
+const comboProductsContainer = document.getElementById('combo-products-container');
+const addComboProductBtn = document.getElementById('add-combo-product-btn');
 const promotionsList = document.getElementById('promotions-list');
 const promotionSelect = document.getElementById('promotion-select');
 const clearPromotionBtn = document.getElementById('clear-promotion-btn');
@@ -159,6 +166,7 @@ let currentDiscountSurcharge = {
 
 // NUEVAS VARIABLES PARA PROMOCIONES
 let allPromotions = [];
+let allCombos = [];
 let currentPromotion = null;
 
 
@@ -174,6 +182,7 @@ const SHARED_CASH_COLLECTION = 'cajas';
 const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
 const SHARED_PRODUCT_CATEGORIES_COLLECTION = 'productCategories';
 const SHARED_PROMOTIONS_COLLECTION = 'promotions';
+const SHARED_COMBOS_COLLECTION = 'combos';
 
 
 const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
@@ -304,9 +313,17 @@ if (posSearchInput) {
 function renderProducts(products) {
     if (!productsContainer) return;
     productsContainer.innerHTML = '';
+    
+    // Renderizar productos
     products.forEach(product => {
         renderProductCard(product);
     });
+    
+    // Renderizar combos
+    allCombos.forEach(combo => {
+        renderComboCard(combo);
+    });
+    
     renderPromotionSelect();
 }
 
@@ -405,6 +422,17 @@ function setupRealtimeListeners() {
     }, (error) => {
       console.error("Error al escuchar promociones:", error);
       showModal("Error al cargar las promociones.");
+    });
+    
+    // NUEVO: Listener para los combos
+    const combosCollection = collection(db, SHARED_COMBOS_COLLECTION);
+    onSnapshot(combosCollection, (snapshot) => {
+      allCombos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderPromotionsList();
+      renderProducts(allProducts); // Para refrescar la vista de productos y combos
+    }, (error) => {
+      console.error("Error al escuchar combos:", error);
+      showModal("Error al cargar los combos.");
     });
 
 
@@ -554,10 +582,10 @@ function renderProductCategoriesList() {
 function renderProductCategoriesInput() {
     if (!productCategoryInput) return;
     productCategoryInput.innerHTML = '<option value="">Sin Categoría</option>';
-    productCategories.forEach(category => {
+    allProducts.forEach(product => {
         const option = document.createElement('option');
-        option.value = category.id;
-        option.textContent = category.name;
+        option.value = product.id;
+        option.textContent = product.name;
         productCategoryInput.appendChild(option);
     });
 }
@@ -702,6 +730,35 @@ function renderProductCard(product) {
     });
 }
 
+function renderComboCard(combo) {
+    if (!productsContainer) return;
+    const card = document.createElement('div');
+    card.className = "bg-yellow-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300 border-2 border-yellow-400";
+    
+    let comboItemsHtml = combo.items.map(item => {
+        const product = allProducts.find(p => p.id === item.productId);
+        return product ? `<li>${product.name} x${item.quantity}</li>` : '';
+    }).join('');
+
+    card.innerHTML = `
+    <h3 class="font-bold text-gray-800 text-lg mb-2"><i class="fas fa-box-open mr-2"></i>${combo.name}</h3>
+    <p class="text-xl font-bold text-orange-600">$${combo.price.toFixed(2)}</p>
+    <ul class="text-sm text-gray-600 list-disc list-inside mt-2 mb-4 text-left">
+      ${comboItemsHtml}
+    </ul>
+    <button data-combo-id="${combo.id}"
+        class="mt-auto w-full px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+        <i class="fas fa-plus-circle"></i> Añadir Combo
+    </button>
+    `;
+    productsContainer.appendChild(card);
+
+    card.querySelector('button').addEventListener('click', () => {
+        addComboToCart(combo);
+    });
+}
+
+
 function renderManageProduct(product) {
     if (!manageProductsContainer) return;
     const itemDiv = document.createElement('div');
@@ -842,12 +899,22 @@ function renderSalesHistory(sales) {
             saleDiv.className = "bg-white p-3 rounded-lg shadow-sm my-2";
             const formattedTime = new Date(sale.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
 
-            let itemsHtml = sale.items.map(item => `
-            <li class="flex justify-between text-sm">
-                <span class="text-gray-700">${item.name} x${item.quantity}</span>
-                <span class="text-gray-700">$${(item.price * item.quantity).toFixed(2)}</span>
-            </li>
-            `).join('');
+            let itemsHtml = sale.items.map(item => {
+                let comboInfo = '';
+                if(item.isCombo) {
+                    const comboProducts = item.items.map(comboItem => {
+                        const product = allProducts.find(p => p.id === comboItem.productId);
+                        return product ? `${product.name} x${comboItem.quantity}` : '';
+                    }).join(', ');
+                    comboInfo = `(${comboProducts})`;
+                }
+                return `
+                <li class="flex justify-between text-sm">
+                    <span class="text-gray-700">${item.name} x${item.quantity} ${comboInfo}</span>
+                    <span class="text-gray-700">$${(item.price * item.quantity).toFixed(2)}</span>
+                </li>
+                `;
+            }).join('');
 
             let paymentsHtml = '';
             if (sale.payments && sale.payments.length > 0) {
@@ -1258,16 +1325,28 @@ if (closeCashBtn) {
 }
 
 function calculateTotal() {
-    let subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    let total = subtotal;
-
-    // APLICAR PROMOCIÓN PRIMERO
+    let subtotal = 0;
+    let total = 0;
     let promotionAmount = 0;
+    
+    cart.forEach(item => {
+        if (item.isCombo) {
+            subtotal += item.basePrice;
+            total += item.price;
+            promotionAmount += item.basePrice - item.price;
+        } else {
+            const itemPrice = item.price * item.quantity;
+            subtotal += itemPrice;
+            total += itemPrice;
+        }
+    });
+
+    // APLICAR PROMOCIÓN SIMPLE (SI HAY UNA ACTIVA)
     if (currentPromotion) {
       if (currentPromotion.type === 'fixed_discount') {
-        promotionAmount = currentPromotion.value;
+        promotionAmount += currentPromotion.value;
       } else if (currentPromotion.type === 'percentage_discount') {
-        promotionAmount = subtotal * (currentPromotion.value / 100);
+        promotionAmount += total * (currentPromotion.value / 100);
       } else if (currentPromotion.type === 'buy_one_get_one') {
         const sortedCart = [...cart].sort((a, b) => b.price - a.price);
         sortedCart.forEach(item => {
@@ -1323,9 +1402,15 @@ function renderCart() {
     cart.forEach(item => {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-200 p-3 rounded-lg flex justify-between items-center";
+        
+        let itemName = item.name;
+        if(item.isCombo) {
+            itemName = `${item.name} (Combo)`;
+        }
+
         itemDiv.innerHTML = `
         <div class="flex items-center space-x-2">
-            <span class="font-semibold">${item.name}</span>
+            <span class="font-semibold">${itemName}</span>
             <span>x${item.quantity}</span>
         </div>
         <div class="flex items-center space-x-2">
@@ -1382,6 +1467,29 @@ function addProductToCart(product) {
         existingItem.quantity += 1;
     } else {
         cart.push({ ...product, quantity: 1, stock: product.stock });
+    }
+    renderCart();
+}
+
+function addComboToCart(combo) {
+    const existingCombo = cart.find(item => item.isCombo && item.comboId === combo.id);
+    if (existingCombo) {
+        existingCombo.quantity += 1;
+    } else {
+        const comboItem = {
+            id: `combo-${combo.id}`,
+            name: combo.name,
+            price: combo.price,
+            quantity: 1,
+            isCombo: true,
+            comboId: combo.id,
+            items: combo.items,
+            basePrice: combo.items.reduce((sum, item) => {
+                const product = allProducts.find(p => p.id === item.productId);
+                return sum + (product ? product.price * item.quantity : 0);
+            }, 0)
+        };
+        cart.push(comboItem);
     }
     renderCart();
 }
@@ -1766,13 +1874,15 @@ function renderCustomerSelect(customers) {
 function renderPromotionsList() {
     if (!promotionsList) return;
     promotionsList.innerHTML = '';
+    
+    // Renderizar promociones simples
     allPromotions.forEach(promo => {
         const itemDiv = document.createElement('div');
         itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
         itemDiv.innerHTML = `
             <span>${promo.name} (${promo.type}): ${promo.value}</span>
             <div class="flex space-x-2">
-                <button data-id="${promo.id}" class="delete-promotion-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                <button data-id="${promo.id}" data-type="simple" class="delete-promotion-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
@@ -1793,6 +1903,40 @@ function renderPromotionsList() {
             }, () => {});
         });
     });
+
+    // Renderizar combos
+    allCombos.forEach(combo => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-yellow-100 p-3 rounded-lg flex justify-between items-center";
+        const comboItems = combo.items.map(item => {
+            const product = allProducts.find(p => p.id === item.productId);
+            return product ? `${product.name} x${item.quantity}` : '';
+        }).join(', ');
+
+        itemDiv.innerHTML = `
+            <span>Combo: ${combo.name} ($${combo.price.toFixed(2)}) - ${comboItems}</span>
+            <div class="flex space-x-2">
+                <button data-id="${combo.id}" data-type="combo" class="delete-combo-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        promotionsList.appendChild(itemDiv);
+        
+        const deleteButton = itemDiv.querySelector('.delete-combo-btn');
+        deleteButton.addEventListener('click', async () => {
+            showConfirmationModal(`¿Estás seguro de que quieres eliminar el combo '${combo.name}'?`, async () => {
+                try {
+                    const comboDocRef = doc(db, SHARED_COMBOS_COLLECTION, combo.id);
+                    await deleteDoc(comboDocRef);
+                    showModal("Combo eliminado con éxito.");
+                } catch (error) {
+                    console.error("Error al eliminar el combo:", error);
+                    showModal("Error al eliminar el combo.");
+                }
+            }, () => {});
+        });
+    });
 }
 
 // Función para renderizar el selector de promociones en el POS
@@ -1808,12 +1952,12 @@ function renderPromotionSelect() {
 }
 
 // Evento para añadir una nueva promoción
-if (addPromotionForm) {
-    addPromotionForm.addEventListener('submit', async (e) => {
+if (addSimplePromotionForm) {
+    addSimplePromotionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = promotionNameInput?.value.trim();
-        const type = promotionTypeSelect?.value;
-        const value = parseFloat(promotionValueInput?.value);
+        const name = simplePromoNameInput?.value.trim();
+        const type = simplePromoTypeSelect?.value;
+        const value = parseFloat(simplePromoValueInput?.value);
 
         if (!name || isNaN(value) || value <= 0) {
             showModal("Por favor, rellena todos los campos con valores válidos.");
@@ -1826,7 +1970,7 @@ if (addPromotionForm) {
                 type: type,
                 value: value
             });
-            addPromotionForm.reset();
+            addSimplePromotionForm.reset();
             showModal("Promoción añadida con éxito.");
         } catch (error) {
             console.error("Error al añadir promoción:", error);
@@ -1834,6 +1978,88 @@ if (addPromotionForm) {
         }
     });
 }
+
+// Evento para mostrar los formularios correctos
+if(showSimplePromoFormBtn) {
+    showSimplePromoFormBtn.addEventListener('click', () => {
+        addSimplePromotionForm.classList.remove('hidden');
+        addComboForm.classList.add('hidden');
+    });
+}
+
+if(showComboFormBtn) {
+    showComboFormBtn.addEventListener('click', () => {
+        addComboForm.classList.remove('hidden');
+        addSimplePromotionForm.classList.add('hidden');
+        renderComboProductSelector(); // Llenar el primer selector al abrir el formulario
+    });
+}
+
+function renderComboProductSelector() {
+    const newProductDiv = document.createElement('div');
+    newProductDiv.className = "flex space-x-2 items-center";
+    newProductDiv.innerHTML = `
+      <select class="combo-product-select w-full px-4 py-2 border rounded-lg">
+        <option value="">Seleccionar Producto</option>
+        ${allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <input type="number" value="1" min="1" class="combo-product-quantity w-1/4 px-4 py-2 border rounded-lg">
+      <button type="button" class="remove-combo-product-btn px-3 py-1 bg-red-500 text-white rounded-lg"><i class="fas fa-trash-alt"></i></button>
+    `;
+    comboProductsContainer.appendChild(newProductDiv);
+    
+    newProductDiv.querySelector('.remove-combo-product-btn').addEventListener('click', () => {
+        newProductDiv.remove();
+    });
+}
+
+if(addComboProductBtn) {
+    addComboProductBtn.addEventListener('click', () => {
+        renderComboProductSelector();
+    });
+}
+
+// Evento para guardar un combo
+if(addComboForm) {
+    addComboForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const comboName = comboNameInput?.value.trim();
+        const comboPrice = parseFloat(comboPriceInput?.value);
+        const comboItems = [];
+        
+        const productSelectors = comboProductsContainer.querySelectorAll('.combo-product-select');
+        const quantityInputs = comboProductsContainer.querySelectorAll('.combo-product-quantity');
+        
+        for (let i = 0; i < productSelectors.length; i++) {
+            const productId = productSelectors[i].value;
+            const quantity = parseInt(quantityInputs[i].value, 10);
+            
+            if (productId && quantity > 0) {
+                comboItems.push({ productId, quantity });
+            }
+        }
+        
+        if (!comboName || isNaN(comboPrice) || comboPrice <= 0 || comboItems.length === 0) {
+            showModal("Por favor, rellena todos los campos del combo con valores válidos.");
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, SHARED_COMBOS_COLLECTION), {
+                name: comboName,
+                price: comboPrice,
+                items: comboItems
+            });
+            addComboForm.reset();
+            comboProductsContainer.innerHTML = '';
+            showModal("Combo añadido con éxito.");
+        } catch (error) {
+            console.error("Error al añadir combo:", error);
+            showModal("Hubo un error al añadir el combo. Intenta de nuevo.");
+        }
+    });
+}
+
 
 // Evento para aplicar una promoción seleccionada en el POS
 if (promotionSelect) {
@@ -2017,6 +2243,33 @@ function printReceipt(sale) {
     const paymentsHtml = sale.payments.map(p => `
         <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
     `).join('');
+    
+    const itemsHtml = sale.items.map(item => {
+        if (item.isCombo) {
+            const comboProducts = item.items.map(comboItem => {
+                const product = allProducts.find(p => p.id === comboItem.productId);
+                return product ? `<p class="ml-4 text-sm text-gray-700">- ${product.name} x${comboItem.quantity}</p>` : '';
+            }).join('');
+            return `
+                <tr>
+                    <td>${item.name} (Combo)</td>
+                    <td>${item.quantity}</td>
+                    <td>$${(item.price / item.quantity).toFixed(2)}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                </tr>
+                ${comboProducts}
+            `;
+        } else {
+            return `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+            `;
+        }
+    }).join('');
 
     const content = `
     <div id="print-area">
@@ -2061,14 +2314,7 @@ function printReceipt(sale) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${sale.items.map(item => `
-                        <tr>
-                            <td>${item.name}</td>
-                            <td>${item.quantity}</td>
-                            <td>$${item.price.toFixed(2)}</td>
-                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
+                    ${itemsHtml}
                 </tbody>
             </table>
             <div style="text-align: right; margin-top: 20px;">
@@ -2370,13 +2616,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const cashId = new Date().toLocaleDateString('en-CA');
             try {
                 const productUpdates = cart.map(item => {
-                    if(item.stock !== undefined) {
+                    if (item.isCombo) {
+                        return item.items.map(comboItem => {
+                            const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, comboItem.productId);
+                            return updateDoc(productRef, {
+                                stock: increment(-comboItem.quantity * item.quantity)
+                            });
+                        }).filter(Boolean);
+                    } else if (item.stock !== undefined) {
                         const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
                         return updateDoc(productDocRef, {
-                            stock: item.stock - item.quantity
+                            stock: increment(-item.quantity)
                         });
                     }
-                }).filter(Boolean); // Filter out undefined promises
+                }).flat().filter(Boolean); // Filter out undefined promises and flatten the array
 
                 await Promise.all(productUpdates);
 
