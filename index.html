@@ -384,17 +384,35 @@ class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-
     <i class="fas fa-chevron-down text-gray-500"></i>
   </h3>
   <div id="promotions-content" class="mt-4 hidden">
-    <form id="add-promotion-form" class="space-y-4 mb-4">
-      <input type="text" id="promotion-name-input" placeholder="Nombre de la promoción" required class="w-full px-4 py-2 border rounded-lg">
-      <select id="promotion-type-select" class="w-full px-4 py-2 border rounded-lg">
+    <div class="flex space-x-4 mb-4">
+      <button id="show-simple-promo-form-btn" class="px-4 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg">Promoción Simple</button>
+      <button id="show-combo-form-btn" class="px-4 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg">Crear Combo</button>
+    </div>
+    
+    <form id="add-simple-promotion-form" class="space-y-4 mb-4 hidden">
+      <input type="text" id="simple-promo-name-input" placeholder="Nombre de la promoción" required class="w-full px-4 py-2 border rounded-lg">
+      <select id="simple-promo-type-select" class="w-full px-4 py-2 border rounded-lg">
         <option value="fixed_discount">Descuento fijo</option>
         <option value="percentage_discount">Descuento porcentual</option>
         <option value="buy_one_get_one">2x1</option>
         <option value="buy_one_get_second_half">2da unidad a mitad de precio</option>
       </select>
-      <input type="number" id="promotion-value-input" placeholder="Valor (ej. 10 para $10 o 10%)" required class="w-full px-4 py-2 border rounded-lg">
-      <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir Promoción</button>
+      <input type="number" id="simple-promo-value-input" placeholder="Valor (ej. 10 para $10 o 10%)" required class="w-full px-4 py-2 border rounded-lg">
+      <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir Promoción Simple</button>
     </form>
+    
+    <form id="add-combo-form" class="space-y-4 mb-4 hidden">
+      <input type="text" id="combo-name-input" placeholder="Nombre del Combo (ej. 'Menú del Día')" required class="w-full px-4 py-2 border rounded-lg">
+      <input type="number" id="combo-price-input" placeholder="Precio del Combo" step="0.01" required class="w-full px-4 py-2 border rounded-lg">
+      
+      <div id="combo-products-container" class="space-y-2 p-3 bg-white border rounded-lg">
+        <h4 class="font-semibold text-gray-700">Productos del Combo</h4>
+        </div>
+      <button type="button" id="add-combo-product-btn" class="px-4 py-2 bg-gray-500 text-white rounded-lg"><i class="fas fa-plus"></i> Añadir Producto al Combo</button>
+      
+      <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Guardar Combo</button>
+    </form>
+    
     <div id="promotions-list" class="space-y-2 overflow-y-scroll max-h-48">
       </div>
   </div>
