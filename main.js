@@ -88,6 +88,10 @@ const addPaymentInputBtn = document.getElementById('add-payment-input-btn');
 const paymentRemainingDisplay = document.getElementById('payment-remaining-display');
 const cancelSplitBtn = document.getElementById('cancel-split-btn');
 const processPaymentBtn = document.getElementById('process-payment-btn');
+const confirmationModal = document.getElementById('confirmation-modal');
+const confirmationMessage = document.getElementById('confirmation-message');
+const confirmYesBtn = document.getElementById('confirm-yes-btn');
+const confirmNoBtn = document.getElementById('confirm-no-btn');
 
 // Referencias del importador y exportador
 const importSalesBtn = document.getElementById('import-sales-btn');
@@ -175,6 +179,30 @@ if (modalCloseBtn) {
     modalCloseBtn.addEventListener('click', () => {
         if (modal) modal.classList.add('hidden');
     });
+}
+
+function showConfirmationModal(message, onConfirm, onCancel) {
+    if (confirmationModal && confirmationMessage && confirmYesBtn && confirmNoBtn) {
+        confirmationMessage.textContent = message;
+        confirmationModal.classList.remove('hidden');
+
+        const handleYes = () => {
+            onConfirm();
+            confirmationModal.classList.add('hidden');
+            confirmYesBtn.removeEventListener('click', handleYes);
+            confirmNoBtn.removeEventListener('click', handleNo);
+        };
+
+        const handleNo = () => {
+            onCancel();
+            confirmationModal.classList.add('hidden');
+            confirmYesBtn.removeEventListener('click', handleYes);
+            confirmNoBtn.removeEventListener('click', handleNo);
+        };
+
+        confirmYesBtn.addEventListener('click', handleYes);
+        confirmNoBtn.addEventListener('click', handleNo);
+    }
 }
 
 // Hacemos que la función showPage sea global para que pueda ser llamada desde cualquier lugar
@@ -398,7 +426,7 @@ function renderPaymentMethodsList() {
         const deleteButton = itemDiv.querySelector('.delete-payment-method-btn');
         if (method.id) {
             deleteButton.addEventListener('click', async () => {
-                if (confirm(`¿Estás seguro de que quieres eliminar la forma de pago '${method.name}'?`)) {
+                showConfirmationModal(`¿Estás seguro de que quieres eliminar la forma de pago '${method.name}'?`, async () => {
                     try {
                         const methodDocRef = doc(db, SHARED_PAYMENT_METHODS_COLLECTION, method.id);
                         await deleteDoc(methodDocRef);
@@ -407,7 +435,7 @@ function renderPaymentMethodsList() {
                         console.error("Error al eliminar la forma de pago:", error);
                         showModal("Error al eliminar la forma de pago.");
                     }
-                }
+                }, () => {});
             });
         } else {
             deleteButton.disabled = true;
@@ -436,7 +464,7 @@ function renderExpenseCategoriesList() {
         const deleteButton = itemDiv.querySelector('.delete-expense-category-btn');
         if (category.id) {
             deleteButton.addEventListener('click', async () => {
-                if (confirm(`¿Estás seguro de que quieres eliminar la categoría de gasto '${category.name}'?`)) {
+                showConfirmationModal(`¿Estás seguro de que quieres eliminar la categoría de gasto '${category.name}'?`, async () => {
                     try {
                         const categoryDocRef = doc(db, SHARED_EXPENSE_CATEGORIES_COLLECTION, category.id);
                         await deleteDoc(categoryDocRef);
@@ -445,7 +473,7 @@ function renderExpenseCategoriesList() {
                         console.error("Error al eliminar la categoría de gasto:", error);
                         showModal("Error al eliminar la categoría de gasto.");
                     }
-                }
+                }, () => {});
             });
         } else {
             deleteButton.disabled = true;
@@ -472,7 +500,7 @@ function renderProductCategoriesList() {
 
         const deleteButton = itemDiv.querySelector('.delete-product-category-btn');
         deleteButton.addEventListener('click', async () => {
-            if (confirm(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`)) {
+            showConfirmationModal(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`, async () => {
                 try {
                     const categoryDocRef = doc(db, SHARED_PRODUCT_CATEGORIES_COLLECTION, category.id);
                     await deleteDoc(categoryDocRef);
@@ -481,7 +509,7 @@ function renderProductCategoriesList() {
                     console.error("Error al eliminar la categoría de producto:", error);
                     showModal("Error al eliminar la categoría de producto.");
                 }
-            }
+            }, () => {});
         });
     });
 }
@@ -678,25 +706,29 @@ function renderManageProduct(product) {
     const editButton = itemDiv.querySelector('.edit-product-btn');
     if(editButton) {
         editButton.addEventListener('click', () => {
-            const newName = prompt(`Editar nombre de cliente:`, product.name);
             const productIdInput = document.getElementById('product-id');
             const productNameInput = document.getElementById('product-name-input');
             const productPriceInput = document.getElementById('product-price-input');
             const productStockInput = document.getElementById('product-stock-input');
             const productCategoryInput = document.getElementById('product-category-input');
-
+            
             if (productIdInput) productIdInput.value = product.id;
             if (productNameInput) productNameInput.value = product.name;
             if (productPriceInput) productPriceInput.value = product.price;
             if (productStockInput) productStockInput.value = product.stock !== undefined ? product.stock : '';
             if (productCategoryInput) productCategoryInput.value = product.categoryId || '';
+            
+            // Muestra el formulario oculto en lugar del prompt del navegador
+            if (productFormContainer) {
+                productFormContainer.classList.remove('hidden');
+            }
         });
     }
 
     const deleteButton = itemDiv.querySelector('.delete-product-btn');
     if(deleteButton) {
         deleteButton.addEventListener('click', async () => {
-            if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+            showConfirmationModal('¿Estás seguro de que quieres eliminar este producto?', async () => {
                 try {
                     const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, product.id);
                     await deleteDoc(productRef);
@@ -705,7 +737,7 @@ function renderManageProduct(product) {
                     console.error("Error al eliminar el producto:", error);
                     showModal("Error al eliminar el producto. Por favor, intenta de nuevo.");
                 }
-            }
+            }, () => {});
         });
     }
 }
@@ -828,7 +860,9 @@ function renderSalesHistory(sales) {
             const saleId = e.target.dataset.saleId;
             const saleToPrint = allSales.find(s => s.id === saleId);
             if (saleToPrint) {
-                printReceipt(saleToPrint);
+                showConfirmationModal('¿Deseas imprimir el recibo de la venta?', () => {
+                    printReceipt(saleToPrint);
+                }, () => {});
             }
         });
     });
@@ -1160,29 +1194,31 @@ if (closeCashBtn) {
         const today = new Date().toLocaleDateString('en-CA');
         const cashDocRef = doc(db, SHARED_CASH_COLLECTION, today);
 
-        try {
-            await setDoc(cashDocRef, {
-                cierre: totalFinal,
-                cerrada: true,
-                ventasTotales: dailySalesTotal,
-                gastosTotales: dailyExpensesTotal
-            }, { merge: true });
-
-            const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
-            await addDoc(cashHistoryCollection, {
-                abertura: dailyCashData.abertura,
-                cierre: totalFinal,
-                ventasTotales: dailySalesTotal,
-                gastosTotales: dailyExpensesTotal,
-                fecha: dailyCashData.fecha,
-                cierreTimestamp: serverTimestamp()
-            });
-
-            showModal(`Caja cerrada. El saldo final es $${totalFinal.toFixed(2)}.`);
-        } catch (error) {
-            console.error("Error al cerrar la caja:", error);
-            showModal("Hubo un error al cerrar la caja. Intenta de nuevo.");
-        }
+        showConfirmationModal('¿Estás seguro de que quieres cerrar la caja?', async () => {
+            try {
+                await setDoc(cashDocRef, {
+                    cierre: totalFinal,
+                    cerrada: true,
+                    ventasTotales: dailySalesTotal,
+                    gastosTotales: dailyExpensesTotal
+                }, { merge: true });
+    
+                const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
+                await addDoc(cashHistoryCollection, {
+                    abertura: dailyCashData.abertura,
+                    cierre: totalFinal,
+                    ventasTotales: dailySalesTotal,
+                    gastosTotales: dailyExpensesTotal,
+                    fecha: dailyCashData.fecha,
+                    cierreTimestamp: serverTimestamp()
+                });
+    
+                showModal(`Caja cerrada. El saldo final es $${totalFinal.toFixed(2)}.`);
+            } catch (error) {
+                console.error("Error al cerrar la caja:", error);
+                showModal("Hubo un error al cerrar la caja. Intenta de nuevo.");
+            }
+        }, () => {});
     });
 }
 
@@ -1627,11 +1663,11 @@ function renderCustomersList(customers) {
         const deleteButton = itemDiv.querySelector('.delete-customer-btn');
         if(deleteButton) {
             deleteButton.addEventListener('click', async () => {
-                if (confirm(`¿Estás seguro de que quieres eliminar a ${customer.name}?`)) {
+                showConfirmationModal(`¿Estás seguro de que quieres eliminar a ${customer.name}?`, async () => {
                     const customerDocRef = doc(db, SHARED_CUSTOMERS_COLLECTION, customer.id);
                     await deleteDoc(customerDocRef);
                     showModal("Cliente eliminado.");
-                }
+                }, () => {});
             });
         }
     });
@@ -2202,9 +2238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cashId: cashId
                 });
 
-                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-
-                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                showConfirmationModal("Venta finalizada con éxito. ¿Deseas imprimir el recibo?", () => {
                     printReceipt({
                         id: newSaleRef.id,
                         items: cart,
@@ -2218,7 +2252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
                         timestamp: new Date()
                     });
-                }
+                }, () => {});
 
                 cart = [];
                 currentDiscountSurcharge = { value: 0, type: null };
@@ -2314,6 +2348,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 showModal("Esa categoría de gasto ya existe o no es válida.");
+            }
+        });
+    }
+    
+    if(addProductCategoryForm) {
+        addProductCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newCategoryNameInput = document.getElementById('new-product-category-name');
+            const newCategory = newCategoryNameInput?.value.trim();
+            if (newCategory && !productCategories.map(c => c.name).includes(newCategory)) {
+                try {
+                    await addDoc(collection(db, SHARED_PRODUCT_CATEGORIES_COLLECTION), { name: newCategory });
+                    if(newCategoryNameInput) newCategoryNameInput.value = '';
+                    showModal("Categoría de producto añadida con éxito.");
+                } catch (error) {
+                    console.error("Error al añadir categoría de producto:", error);
+                    showModal("Error al añadir categoría de producto.");
+                }
+            } else {
+                showModal("Esa categoría de producto ya existe o no es válida.");
             }
         });
     }
