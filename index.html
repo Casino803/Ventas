@@ -120,11 +120,12 @@ class="w-full mt-4 px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-l
       <form id="product-form" class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <input type="hidden" id="product-id">
         <input type="text" id="product-name-input" placeholder="Nombre del Producto" required
-          class="md:col-span-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          class="md:col-span-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         <input type="number" id="product-price-input" placeholder="Precio" step="0.01" required
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         <input type="number" id="product-stock-input" placeholder="Stock"
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select id="product-category-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></select>
         <button type="submit"
           class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300">
           <i class="fas fa-save"></i> Guardar Producto
@@ -345,6 +346,21 @@ class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-
 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir</button>
 </form>
 <div id="expense-categories-list" class="space-y-2 overflow-y-scroll max-h-48">
+</div>
+</div>
+</div>
+
+<div class="mb-8 p-4 bg-gray-100 rounded-lg">
+<h3 class="flex justify-between items-center text-lg font-bold text-gray-800 cursor-pointer" onclick="toggleSection('product-categories-content')">
+<span>Gestión de Categorías de Productos</span>
+<i class="fas fa-chevron-down text-gray-500"></i>
+</h3>
+<div id="product-categories-content" class="mt-4 hidden">
+<form id="add-product-category-form" class="flex space-x-2 mb-4">
+<input type="text" id="new-product-category-name" placeholder="Nueva categoría de producto" required class="flex-grow px-4 py-2 border rounded-lg">
+<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Añadir</button>
+</form>
+<div id="product-categories-list" class="space-y-2 overflow-y-scroll max-h-48">
 </div>
 </div>
 </div>
