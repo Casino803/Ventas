@@ -347,6 +347,7 @@ function setupRealtimeListeners() {
         if (doc.exists()) {
             dailyCashData = doc.data();
             renderCashStatus();
+            updateDailyTotals();
         } else {
             dailyCashData = null;
             renderCashStatus();
@@ -362,9 +363,6 @@ function setupRealtimeListeners() {
     }, (error) => {
         console.error("Error al escuchar el historial de cajas:", error);
     });
-
-    // Llamamos a la función al final de la configuración para mostrar los datos iniciales.
-    updateDailyTotals();
 }
 
 // Funciones de renderizado de configuración
@@ -1185,7 +1183,7 @@ if (productForm) {
         const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
         
 
-        if (isNaN(price) || price <= 0 || (stock !== undefined && isNaN(stock) || stock < 0)) {
+        if (isNaN(price) || price <= 0 || (stock !== undefined && (isNaN(stock) || stock < 0))) {
             showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
             return;
         }
@@ -1390,7 +1388,7 @@ function exportSalesToCsv(sales) {
     const headers = ["ID", "Fecha", "Subtotal", "Ajuste", "Total", "Pagos", "Cliente", "Items"];
     const rows = sales.map(sale => {
         const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000).toLocaleString('es-ES') : '';
-        const subtotal = sale.subtotal ? sale.subtotal.toFixed(2) : '';
+        const subtotal = sale.subtotal ? subtotal.toFixed(2) : '';
         const adjustment = sale.adjustment ? `${sale.adjustment.amount.toFixed(2)} (${sale.adjustment.type})` : '';
         const payments = JSON.stringify(sale.payments);
         const items = JSON.stringify(sale.items);
@@ -1917,7 +1915,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
             
 
-            if (isNaN(price) || price <= 0 || (stock !== undefined && isNaN(stock) || stock < 0)) {
+            if (isNaN(price) || price <= 0 || (stock !== undefined && (isNaN(stock) || stock < 0))) {
                 showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
                 return;
             }
