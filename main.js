@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc, query, where, getDocs, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // CONFIGURACIÓN DE FIREBASE
 const firebaseConfig = {
@@ -412,23 +412,11 @@ function setupRealtimeListeners() {
         console.error("Error al escuchar categorías de productos:", error);
         showModal("Error al cargar las categorías de productos.");
     });
-
-    // NUEVO: Listener para las promociones
-    const promotionsCollection = collection(db, SHARED_PROMOTIONS_COLLECTION);
-    onSnapshot(promotionsCollection, (snapshot) => {
-      allPromotions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if(promotionsList) renderPromotionsList();
-      renderPromotionSelect();
-    }, (error) => {
-      console.error("Error al escuchar promociones:", error);
-      showModal("Error al cargar las promociones.");
-    });
     
     // NUEVO: Listener para los combos
     const combosCollection = collection(db, SHARED_COMBOS_COLLECTION);
     onSnapshot(combosCollection, (snapshot) => {
       allCombos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderPromotionsList();
       renderProducts(allProducts); // Para refrescar la vista de productos y combos
     }, (error) => {
       console.error("Error al escuchar combos:", error);
@@ -730,35 +718,6 @@ function renderProductCard(product) {
     });
 }
 
-function renderComboCard(combo) {
-    if (!productsContainer) return;
-    const card = document.createElement('div');
-    card.className = "bg-yellow-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300 border-2 border-yellow-400";
-    
-    let comboItemsHtml = combo.items.map(item => {
-        const product = allProducts.find(p => p.id === item.productId);
-        return product ? `<li>${product.name} x${item.quantity}</li>` : '';
-    }).join('');
-
-    card.innerHTML = `
-    <h3 class="font-bold text-gray-800 text-lg mb-2"><i class="fas fa-box-open mr-2"></i>${combo.name}</h3>
-    <p class="text-xl font-bold text-orange-600">$${combo.price.toFixed(2)}</p>
-    <ul class="text-sm text-gray-600 list-disc list-inside mt-2 mb-4 text-left">
-      ${comboItemsHtml}
-    </ul>
-    <button data-combo-id="${combo.id}"
-        class="mt-auto w-full px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-        <i class="fas fa-plus-circle"></i> Añadir Combo
-    </button>
-    `;
-    productsContainer.appendChild(card);
-
-    card.querySelector('button').addEventListener('click', () => {
-        addComboToCart(combo);
-    });
-}
-
-
 function renderManageProduct(product) {
     if (!manageProductsContainer) return;
     const itemDiv = document.createElement('div');
@@ -899,22 +858,12 @@ function renderSalesHistory(sales) {
             saleDiv.className = "bg-white p-3 rounded-lg shadow-sm my-2";
             const formattedTime = new Date(sale.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
 
-            let itemsHtml = sale.items.map(item => {
-                let comboInfo = '';
-                if(item.isCombo) {
-                    const comboProducts = item.items.map(comboItem => {
-                        const product = allProducts.find(p => p.id === comboItem.productId);
-                        return product ? `${product.name} x${comboItem.quantity}` : '';
-                    }).join(', ');
-                    comboInfo = `(${comboProducts})`;
-                }
-                return `
-                <li class="flex justify-between text-sm">
-                    <span class="text-gray-700">${item.name} x${item.quantity} ${comboInfo}</span>
-                    <span class="text-gray-700">$${(item.price * item.quantity).toFixed(2)}</span>
-                </li>
-                `;
-            }).join('');
+            let itemsHtml = sale.items.map(item => `
+            <li class="flex justify-between text-sm">
+                <span class="text-gray-700">${item.name} x${item.quantity}</span>
+                <span class="text-gray-700">$${(item.price * item.quantity).toFixed(2)}</span>
+            </li>
+            `).join('');
 
             let paymentsHtml = '';
             if (sale.payments && sale.payments.length > 0) {
@@ -1324,6 +1273,7 @@ if (closeCashBtn) {
     });
 }
 
+// Lógica de cálculo de precios corregida
 function calculateTotal() {
     let subtotal = 0;
     let total = 0;
@@ -1868,236 +1818,6 @@ function renderCustomerSelect(customers) {
     });
 }
 
-// NUEVAS FUNCIONES PARA PROMOCIONES
-
-// Función para renderizar la lista de promociones en la página de configuración
-function renderPromotionsList() {
-    if (!promotionsList) return;
-    promotionsList.innerHTML = '';
-    
-    // Renderizar promociones simples
-    allPromotions.forEach(promo => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
-        itemDiv.innerHTML = `
-            <span>${promo.name} (${promo.type}): ${promo.value}</span>
-            <div class="flex space-x-2">
-                <button data-id="${promo.id}" data-type="simple" class="delete-promotion-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
-        `;
-        promotionsList.appendChild(itemDiv);
-
-        const deleteButton = itemDiv.querySelector('.delete-promotion-btn');
-        deleteButton.addEventListener('click', async () => {
-            showConfirmationModal(`¿Estás seguro de que quieres eliminar la promoción '${promo.name}'?`, async () => {
-                try {
-                    const promoDocRef = doc(db, SHARED_PROMOTIONS_COLLECTION, promo.id);
-                    await deleteDoc(promoDocRef);
-                    showModal("Promoción eliminada con éxito.");
-                } catch (error) {
-                    console.error("Error al eliminar la promoción:", error);
-                    showModal("Error al eliminar la promoción.");
-                }
-            }, () => {});
-        });
-    });
-
-    // Renderizar combos
-    allCombos.forEach(combo => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = "bg-yellow-100 p-3 rounded-lg flex justify-between items-center";
-        const comboItems = combo.items.map(item => {
-            const product = allProducts.find(p => p.id === item.productId);
-            return product ? `${product.name} x${item.quantity}` : '';
-        }).join(', ');
-
-        itemDiv.innerHTML = `
-            <span>Combo: ${combo.name} ($${combo.price.toFixed(2)}) - ${comboItems}</span>
-            <div class="flex space-x-2">
-                <button data-id="${combo.id}" data-type="combo" class="delete-combo-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
-        `;
-        promotionsList.appendChild(itemDiv);
-        
-        const deleteButton = itemDiv.querySelector('.delete-combo-btn');
-        deleteButton.addEventListener('click', async () => {
-            showConfirmationModal(`¿Estás seguro de que quieres eliminar el combo '${combo.name}'?`, async () => {
-                try {
-                    const comboDocRef = doc(db, SHARED_COMBOS_COLLECTION, combo.id);
-                    await deleteDoc(comboDocRef);
-                    showModal("Combo eliminado con éxito.");
-                } catch (error) {
-                    console.error("Error al eliminar el combo:", error);
-                    showModal("Error al eliminar el combo.");
-                }
-            }, () => {});
-        });
-    });
-}
-
-// Función para renderizar el selector de promociones en el POS
-function renderPromotionSelect() {
-    if (!promotionSelect) return;
-    promotionSelect.innerHTML = '<option value="">Sin Promoción</option>';
-    allPromotions.forEach(promo => {
-        const option = document.createElement('option');
-        option.value = promo.id;
-        option.textContent = promo.name;
-        promotionSelect.appendChild(option);
-    });
-}
-
-// Evento para añadir una nueva promoción
-if (addSimplePromotionForm) {
-    addSimplePromotionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = simplePromoNameInput?.value.trim();
-        const type = simplePromoTypeSelect?.value;
-        const value = parseFloat(simplePromoValueInput?.value);
-
-        if (!name || isNaN(value) || value <= 0) {
-            showModal("Por favor, rellena todos los campos con valores válidos.");
-            return;
-        }
-
-        try {
-            await addDoc(collection(db, SHARED_PROMOTIONS_COLLECTION), {
-                name: name,
-                type: type,
-                value: value
-            });
-            addSimplePromotionForm.reset();
-            showModal("Promoción añadida con éxito.");
-        } catch (error) {
-            console.error("Error al añadir promoción:", error);
-            showModal("Hubo un error al añadir la promoción. Intenta de nuevo.");
-        }
-    });
-}
-
-// Evento para mostrar los formularios correctos
-if(showSimplePromoFormBtn) {
-    showSimplePromoFormBtn.addEventListener('click', () => {
-        addSimplePromotionForm.classList.remove('hidden');
-        addComboForm.classList.add('hidden');
-        showSimplePromoFormBtn.classList.add('bg-blue-500', 'text-white');
-        showSimplePromoFormBtn.classList.remove('bg-gray-300', 'text-gray-800');
-        showComboFormBtn.classList.remove('bg-blue-500', 'text-white');
-        showComboFormBtn.classList.add('bg-gray-300', 'text-gray-800');
-    });
-}
-
-if(showComboFormBtn) {
-    showComboFormBtn.addEventListener('click', () => {
-        addComboForm.classList.remove('hidden');
-        addSimplePromotionForm.classList.add('hidden');
-        showComboFormBtn.classList.add('bg-blue-500', 'text-white');
-        showComboFormBtn.classList.remove('bg-gray-300', 'text-gray-800');
-        showSimplePromoFormBtn.classList.remove('bg-blue-500', 'text-white');
-        showSimplePromoFormBtn.classList.add('bg-gray-300', 'text-gray-800');
-        // Asegurarse de que al menos un selector de producto esté presente
-        if(comboProductsContainer.children.length === 0) {
-          renderComboProductSelector();
-        }
-    });
-}
-
-function renderComboProductSelector() {
-    const newProductDiv = document.createElement('div');
-    newProductDiv.className = "flex space-x-2 items-center";
-    newProductDiv.innerHTML = `
-      <select class="combo-product-select w-full px-4 py-2 border rounded-lg">
-        <option value="">Seleccionar Producto</option>
-        ${allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-      </select>
-      <input type="number" value="1" min="1" class="combo-product-quantity w-1/4 px-4 py-2 border rounded-lg">
-      <button type="button" class="remove-combo-product-btn px-3 py-1 bg-red-500 text-white rounded-lg"><i class="fas fa-trash-alt"></i></button>
-    `;
-    comboProductsContainer.appendChild(newProductDiv);
-    
-    newProductDiv.querySelector('.remove-combo-product-btn').addEventListener('click', () => {
-        newProductDiv.remove();
-    });
-}
-
-if(addComboProductBtn) {
-    addComboProductBtn.addEventListener('click', () => {
-        renderComboProductSelector();
-    });
-}
-
-// Evento para guardar un combo
-if(addComboForm) {
-    addComboForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const comboName = comboNameInput?.value.trim();
-        const comboPrice = parseFloat(comboPriceInput?.value);
-        const comboItems = [];
-        
-        const productSelectors = comboProductsContainer.querySelectorAll('.combo-product-select');
-        const quantityInputs = comboProductsContainer.querySelectorAll('.combo-product-quantity');
-        
-        for (let i = 0; i < productSelectors.length; i++) {
-            const productId = productSelectors[i].value;
-            const quantity = parseInt(quantityInputs[i].value, 10);
-            
-            if (productId && quantity > 0) {
-                comboItems.push({ productId, quantity });
-            }
-        }
-        
-        if (!comboName || isNaN(comboPrice) || comboPrice <= 0 || comboItems.length === 0) {
-            showModal("Por favor, rellena todos los campos del combo con valores válidos.");
-            return;
-        }
-
-        try {
-            await addDoc(collection(db, SHARED_COMBOS_COLLECTION), {
-                name: comboName,
-                price: comboPrice,
-                items: comboItems
-            });
-            addComboForm.reset();
-            comboProductsContainer.innerHTML = '';
-            showModal("Combo añadido con éxito.");
-        } catch (error) {
-            console.error("Error al añadir combo:", error);
-            showModal("Hubo un error al añadir el combo. Intenta de nuevo.");
-        }
-    });
-}
-
-
-// Evento para aplicar una promoción seleccionada en el POS
-if (promotionSelect) {
-    promotionSelect.addEventListener('change', () => {
-        const selectedPromotionId = promotionSelect.value;
-        if (selectedPromotionId) {
-            currentPromotion = allPromotions.find(p => p.id === selectedPromotionId);
-            // Limpiar el descuento/recargo manual
-            currentDiscountSurcharge.value = 0;
-            currentDiscountSurcharge.type = null;
-            if(discountSurchargeValueInput) discountSurchargeValueInput.value = '';
-        } else {
-            currentPromotion = null;
-        }
-        renderCart();
-    });
-}
-
-// Evento para limpiar la promoción aplicada
-if (clearPromotionBtn) {
-    clearPromotionBtn.addEventListener('click', () => {
-        currentPromotion = null;
-        if(promotionSelect) promotionSelect.value = "";
-        renderCart();
-    });
-}
-
 function renderSalesChart(sales) {
     if (!salesChartCtx) return;
     const salesByDay = sales.reduce((acc, sale) => {
@@ -2254,33 +1974,6 @@ function printReceipt(sale) {
     const paymentsHtml = sale.payments.map(p => `
         <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
     `).join('');
-    
-    const itemsHtml = sale.items.map(item => {
-        if (item.isCombo) {
-            const comboProducts = item.items.map(comboItem => {
-                const product = allProducts.find(p => p.id === comboItem.productId);
-                return product ? `<p class="ml-4 text-sm text-gray-700">- ${product.name} x${comboItem.quantity}</p>` : '';
-            }).join('');
-            return `
-                <tr>
-                    <td>${item.name} (Combo)</td>
-                    <td>${item.quantity}</td>
-                    <td>$${(item.price / item.quantity).toFixed(2)}</td>
-                    <td>$${item.price.toFixed(2)}</td>
-                </tr>
-                ${comboProducts}
-            `;
-        } else {
-            return `
-                <tr>
-                    <td>${item.name}</td>
-                    <td>${item.quantity}</td>
-                    <td>$${item.price.toFixed(2)}</td>
-                    <td>$${(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
-            `;
-        }
-    }).join('');
 
     const content = `
     <div id="print-area">
@@ -2325,7 +2018,14 @@ function printReceipt(sale) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${itemsHtml}
+                    ${sale.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>$${item.price.toFixed(2)}</td>
+                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>
             <div style="text-align: right; margin-top: 20px;">
@@ -2641,7 +2341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const customerName = customerSelect.options[customerSelect.selectedIndex].text;
 
                 const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                const newSaleRef = await addDoc(salesCollection, {
+                await addDoc(salesCollection, {
                     items: cart,
                     subtotal: subtotal,
                     adjustment: {
@@ -2772,41 +2472,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Configuración de los botones de promoción
-    if (showSimplePromoFormBtn && showComboFormBtn && addSimplePromotionForm && addComboForm) {
-        showSimplePromoFormBtn.addEventListener('click', () => {
-            addSimplePromotionForm.classList.remove('hidden');
-            addComboForm.classList.add('hidden');
-            showSimplePromoFormBtn.classList.add('bg-blue-500', 'text-white');
-            showSimplePromoFormBtn.classList.remove('bg-gray-300', 'text-gray-800');
-            showComboFormBtn.classList.remove('bg-blue-500', 'text-white');
-            showComboFormBtn.classList.add('bg-gray-300', 'text-gray-800');
-        });
-
-        showComboFormBtn.addEventListener('click', () => {
-            addComboForm.classList.remove('hidden');
-            addSimplePromotionForm.classList.add('hidden');
-            showComboFormBtn.classList.add('bg-blue-500', 'text-white');
-            showComboFormBtn.classList.remove('bg-gray-300', 'text-gray-800');
-            showSimplePromoFormBtn.classList.remove('bg-blue-500', 'text-white');
-            showSimplePromoFormBtn.classList.add('bg-gray-300', 'text-gray-800');
-            // Asegurarse de que al menos un selector de producto esté presente
-            if(comboProductsContainer.children.length === 0) {
-              renderComboProductSelector();
-            }
-        });
-    }
-    
     const topSettingsButton = document.querySelector('button[data-page="settings-page"]');
     if (topSettingsButton) {
         topSettingsButton.addEventListener('click', () => {
             showPage('settings-page');
             document.querySelector('.tab-btn.active')?.classList.remove('active');
-
-            // Cargar el formulario de combos por defecto y activar el botón
-            if (showComboFormBtn && addComboForm) {
-                showComboFormBtn.click();
-            }
         });
     }
 
