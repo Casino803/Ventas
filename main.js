@@ -375,7 +375,7 @@ function setupRealtimeListeners() {
     }, (error) => {
         console.error("Error al escuchar la caja diaria:", error);
     });
-
+    
     const cashHistoryCollection = collection(db, SHARED_CASH_HISTORY_COLLECTION);
     onSnapshot(cashHistoryCollection, (snapshot) => {
         const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -507,7 +507,7 @@ function renderProductCategoriesInput() {
 
 if(addProductCategoryForm) {
     addProductCategoryForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); // <-- Se ha añadido esta línea
+        e.preventDefault(); 
         const newCategoryNameInput = document.getElementById('new-product-category-name');
         const newCategory = newCategoryNameInput?.value.trim();
         if (newCategory && !productCategories.map(c => c.name).includes(newCategory)) {
@@ -549,19 +549,33 @@ if(addPaymentMethodForm) {
 if(addExpenseCategoryForm) {
     addExpenseCategoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newExpenseNameInput = document.getElementById('new-expense-category-name');
-        const newCategory = newExpenseNameInput?.value.trim();
-        if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
-            try {
-                await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
-                if(newExpenseNameInput) newExpenseNameInput.value = '';
-                showModal("Categoría de gasto añadida con éxito.");
-            } catch (error) {
-                console.error("Error al añadir categoría de gasto:", error);
-                showModal("Error al añadir categoría de gasto.");
-            }
-        } else {
-            showModal("Esa categoría de gasto ya existe o no es válida.");
+        const description = document.getElementById('expense-description').value;
+        const amount = parseFloat(document.getElementById('expense-amount').value);
+        const category = expenseCategorySelect?.value;
+
+        if (isNaN(amount) || amount <= 0) {
+            showModal("El monto debe ser un número positivo.");
+            return;
+        }
+        const cashId = new Date().toLocaleDateString('en-CA');
+        try {
+            const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
+            await addDoc(expensesCollection, {
+                description: description,
+                amount: amount,
+                category: category,
+                timestamp: serverTimestamp(),
+                cashId: cashId
+            });
+            expenseForm.reset();
+            showModal("Gasto registrado con éxito.");
+            
+            // Ocultar el formulario después de guardar
+            if (expenseFormContainer) expenseFormContainer.classList.add('hidden');
+            
+        } catch (error) {
+            console.error("Error al registrar el gasto:", error);
+            showModal("Hubo un error al registrar el gasto. Intenta de nuevo.");
         }
     });
 }
