@@ -347,7 +347,6 @@ function setupRealtimeListeners() {
         if (doc.exists()) {
             dailyCashData = doc.data();
             renderCashStatus();
-            updateDailyTotals();
         } else {
             dailyCashData = null;
             renderCashStatus();
@@ -363,8 +362,8 @@ function setupRealtimeListeners() {
     }, (error) => {
         console.error("Error al escuchar el historial de cajas:", error);
     });
-    
-    // Agregamos esta llamada para que la caja se cargue al inicio
+
+    // Llamamos a la función al final de la configuración para mostrar los datos iniciales.
     updateDailyTotals();
 }
 
@@ -565,7 +564,7 @@ function renderManageProduct(product) {
         <button data-product-id="${product.id}"
             class="delete-product-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
             <i class="fas fa-trash-alt"></i>
-        </button>
+            </button>
     </div>
     `;
     manageProductsContainer.appendChild(itemDiv);
