@@ -2193,7 +2193,7 @@ function renderTopProductsChart(sales) {
                     }
                 }
             }
-        });
+        }
     });
 }
 
