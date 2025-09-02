@@ -347,7 +347,7 @@ function setupRealtimeListeners() {
         if (doc.exists()) {
             dailyCashData = doc.data();
             renderCashStatus();
-            updateDailyTotals(); // Añade esta línea
+            updateDailyTotals();
         } else {
             dailyCashData = null;
             renderCashStatus();
@@ -363,6 +363,9 @@ function setupRealtimeListeners() {
     }, (error) => {
         console.error("Error al escuchar el historial de cajas:", error);
     });
+    
+    // Agregamos esta llamada para que la caja se cargue al inicio
+    updateDailyTotals();
 }
 
 // Funciones de renderizado de configuración
