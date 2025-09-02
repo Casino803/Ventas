@@ -118,6 +118,12 @@ const newExpenseCategoryName = document.getElementById('new-expense-category-nam
 const expenseCategoriesList = document.getElementById('expense-categories-list');
 const tabButtons = document.querySelectorAll('.tab-btn');
 
+// Nuevas referencias para categorías de productos
+const addProductCategoryForm = document.getElementById('add-product-category-form');
+const newProductCategoryName = document.getElementById('new-product-category-name');
+const productCategoriesList = document.getElementById('product-categories-list');
+const productCategoryInput = document.getElementById('product-category-input');
+
 
 let salesChart;
 let topProductsChart;
@@ -146,6 +152,7 @@ const SHARED_EXPENSE_CATEGORIES_COLLECTION = 'expenseCategories';
 const SHARED_EXPENSES_COLLECTION = 'expenses';
 const SHARED_CASH_COLLECTION = 'cajas';
 const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
+const SHARED_PRODUCT_CATEGORIES_COLLECTION = 'productCategories';
 
 
 const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
@@ -153,6 +160,9 @@ let userPaymentMethods = [];
 
 const defaultExpenseCategories = ["General", "Suministros", "Servicios"];
 let userExpenseCategories = [];
+
+// Nuevo estado global para las categorías de productos
+let productCategories = [];
 
 function showModal(message) {
     if (modal && modalMessage) {
@@ -329,6 +339,17 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de gastos.");
     });
 
+    // Nuevo listener para las categorías de productos
+    const productCategoriesCollection = collection(db, SHARED_PRODUCT_CATEGORIES_COLLECTION);
+    onSnapshot(productCategoriesCollection, (snapshot) => {
+        productCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (productCategoriesList) renderProductCategoriesList();
+        if (productCategoryInput) renderProductCategoriesInput();
+    }, (error) => {
+        console.error("Error al escuchar categorías de productos:", error);
+        showModal("Error al cargar las categorías de productos.");
+    });
+
 
     // Colecciones ahora compartidas
     const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
@@ -442,6 +463,70 @@ function renderExpenseCategoriesList() {
     });
 }
 
+function renderProductCategoriesList() {
+    if (!productCategoriesList) return;
+    productCategoriesList.innerHTML = '';
+    productCategories.forEach(category => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-gray-100 p-3 rounded-lg flex justify-between items-center";
+        itemDiv.innerHTML = `
+        <span>${category.name}</span>
+        <div class="flex space-x-2">
+            <button data-id="${category.id}" class="delete-product-category-btn px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        `;
+        productCategoriesList.appendChild(itemDiv);
+
+        const deleteButton = itemDiv.querySelector('.delete-product-category-btn');
+        deleteButton.addEventListener('click', async () => {
+            if (confirm(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`)) {
+                try {
+                    const categoryDocRef = doc(db, SHARED_PRODUCT_CATEGORIES_COLLECTION, category.id);
+                    await deleteDoc(categoryDocRef);
+                    showModal("Categoría de producto eliminada con éxito.");
+                } catch (error) {
+                    console.error("Error al eliminar la categoría de producto:", error);
+                    showModal("Error al eliminar la categoría de producto.");
+                }
+            }
+        });
+    });
+}
+
+function renderProductCategoriesInput() {
+    if (!productCategoryInput) return;
+    productCategoryInput.innerHTML = '<option value="">Sin Categoría</option>';
+    productCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = category.name;
+        productCategoryInput.appendChild(option);
+    });
+}
+
+if(addProductCategoryForm) {
+    addProductCategoryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newCategoryNameInput = document.getElementById('new-product-category-name');
+        const newCategory = newCategoryNameInput?.value.trim();
+        if (newCategory && !productCategories.map(c => c.name).includes(newCategory)) {
+            try {
+                await addDoc(collection(db, SHARED_PRODUCT_CATEGORIES_COLLECTION), { name: newCategory });
+                if(newCategoryNameInput) newCategoryNameInput.value = '';
+                showModal("Categoría de producto añadida con éxito.");
+            } catch (error) {
+                console.error("Error al añadir categoría de producto:", error);
+                showModal("Error al añadir categoría de producto.");
+            }
+        } else {
+            showModal("Esa categoría de producto ya existe o no es válida.");
+        }
+    });
+}
+
+
 if(addPaymentMethodForm) {
     addPaymentMethodForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -521,11 +606,20 @@ function renderProductCard(product) {
             stockHtml = `<p class="text-sm font-bold text-red-500">Stock Bajo: ${product.stock}</p>`;
         }
     }
+    
+    let categoryHtml = '';
+    if (product.categoryId) {
+        const category = productCategories.find(c => c.id === product.categoryId);
+        if (category) {
+            categoryHtml = `<p class="text-xs text-gray-400 mt-1">Categoría: ${category.name}</p>`;
+        }
+    }
 
     card.innerHTML = `
     <h3 class="font-bold text-gray-800 text-lg mb-2">${product.name}</h3>
     <p class="text-xl font-bold text-green-600">$${product.price.toFixed(2)}</p>
     ${stockHtml}
+    ${categoryHtml}
     <button data-product-id="${product.id}"
         class="mt-4 w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
         <i class="fas fa-plus-circle"></i> Añadir al Carrito
@@ -548,11 +642,20 @@ function renderManageProduct(product) {
         stockDisplay = `<span class="text-sm text-gray-500"> (Stock: ${product.stock})</span>`;
     }
 
+    let categoryDisplay = '';
+    if (product.categoryId) {
+        const category = productCategories.find(c => c.id === product.categoryId);
+        if (category) {
+            categoryDisplay = `<span class="text-gray-400 text-sm"> (${category.name})</span>`;
+        }
+    }
+
     itemDiv.innerHTML = `
     <div class="flex-grow">
         <span class="font-semibold">${product.name}</span>
         <span class="text-gray-500"> - $${product.price.toFixed(2)}</span>
         ${stockDisplay}
+        ${categoryDisplay}
     </div>
     <div class="flex space-x-2">
         <button data-product-id="${product.id}"
@@ -575,11 +678,13 @@ function renderManageProduct(product) {
             const productNameInput = document.getElementById('product-name-input');
             const productPriceInput = document.getElementById('product-price-input');
             const productStockInput = document.getElementById('product-stock-input');
+            const productCategoryInput = document.getElementById('product-category-input');
 
             if (productIdInput) productIdInput.value = product.id;
             if (productNameInput) productNameInput.value = product.name;
             if (productPriceInput) productPriceInput.value = product.price;
             if (productStockInput) productStockInput.value = product.stock !== undefined ? product.stock : '';
+            if (productCategoryInput) productCategoryInput.value = product.categoryId || '';
         });
     }
 
@@ -1181,7 +1286,7 @@ if (productForm) {
         const price = parseFloat(document.getElementById('product-price-input')?.value);
         const stockInput = document.getElementById('product-stock-input')?.value;
         const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
-        
+        const categoryId = productCategoryInput?.value || null;
 
         if (isNaN(price) || price <= 0 || (stock !== undefined && (isNaN(stock) || stock < 0))) {
             showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
@@ -1191,6 +1296,9 @@ if (productForm) {
         const productData = { name, price };
         if (stock !== undefined) {
             productData.stock = stock;
+        }
+        if (categoryId) {
+            productData.categoryId = categoryId;
         }
 
         try {
@@ -1913,7 +2021,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = parseFloat(document.getElementById('product-price-input')?.value);
             const stockInput = document.getElementById('product-stock-input')?.value;
             const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
-            
+            const categoryId = productCategoryInput?.value || null;
 
             if (isNaN(price) || price <= 0 || (stock !== undefined && (isNaN(stock) || stock < 0))) {
                 showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
@@ -1923,6 +2031,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const productData = { name, price };
             if (stock !== undefined) {
                 productData.stock = stock;
+            }
+            if (categoryId) {
+                productData.categoryId = categoryId;
             }
 
             try {
