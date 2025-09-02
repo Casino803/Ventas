@@ -347,6 +347,7 @@ function setupRealtimeListeners() {
         if (doc.exists()) {
             dailyCashData = doc.data();
             renderCashStatus();
+            updateDailyTotals(); // Añade esta línea
         } else {
             dailyCashData = null;
             renderCashStatus();
