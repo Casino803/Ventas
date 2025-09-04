@@ -609,7 +609,7 @@ function renderProductCategoriesList() {
                     console.error("Error al eliminar la categoría de producto:", error);
                     showModal("Error al eliminar la categoría de producto.");
                 }
-            }
+            }, () => {});
         });
     });
 }
