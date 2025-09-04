@@ -1953,7 +1953,7 @@ function renderTopProductsChart(sales) {
 function renderPaymentMethodsChart(sales) {
     if (!paymentMethodsChartCtx) return;
 
-    const paymentTotals = sales.reduce((acc, sale => {
+    const paymentTotals = sales.reduce((acc, sale) => {
         sale.payments.forEach(payment => {
             acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
         });
