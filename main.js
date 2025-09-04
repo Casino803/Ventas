@@ -2786,8 +2786,8 @@ document.addEventListener('DOMContentLoaded', () => {
             addSimplePromotionForm.classList.add('hidden'); // Ocultar el otro formulario
             // Limpiar el formulario y el campo ID al cambiar a "Crear Combo"
             addComboForm.reset();
-            comboIdInput.value = '';
-            comboProductsContainer.innerHTML = '';
+            if (comboIdInput) comboIdInput.value = '';
+            if (comboProductsContainer) comboProductsContainer.innerHTML = '';
         });
     }
 
