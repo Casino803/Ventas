@@ -2495,9 +2495,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = document.getElementById('product-id')?.value;
             const name = document.getElementById('product-name-input')?.value;
             const price = parseFloat(document.getElementById('product-price-input')?.value);
-            const stock = parseInt(document.getElementById('product-stock-input')?.value, 10);
+            const stockInput = document.getElementById('product-stock-input')?.value;
+            const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
+            const categoryId = productCategoryInput?.value || null;
 
-            if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
+            if (isNaN(price) || price <= 0 || (stock !== undefined && (isNaN(stock) || stock < 0))) {
                 showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
                 return;
             }
@@ -2509,7 +2511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showModal("Producto editado con éxito.");
                 } else {
                     const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-                    await addDoc(productsCollection, { name, price, stock });
+                    await addDoc(productsCollection, productData);
                     showModal("Producto añadido con éxito.");
                 }
                 if (productForm) productForm.reset();
