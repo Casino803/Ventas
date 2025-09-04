@@ -595,7 +595,6 @@ function renderProductCategoriesList() {
                 <i class="fas fa-trash-alt"></i>
             </button>
         </div>
-        `;
         productCategoriesList.appendChild(itemDiv);
 
         const deleteButton = itemDiv.querySelector('.delete-product-category-btn');
