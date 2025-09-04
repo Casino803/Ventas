@@ -387,6 +387,8 @@ function setupRealtimeListeners() {
         allProducts.forEach(product => {
             renderManageProduct(product);
         });
+        // Llama a esta función para asegurar que el select de categorías de producto se actualiza
+        renderProductCategoriesInput();
     }, (error) => {
         console.error("Error al escuchar productos:", error);
         showModal("Error al cargar productos. Por favor, recarga la página.");
@@ -2251,11 +2253,17 @@ function renderManageCombos() {
             return product ? `${product.name} (x${item.quantity})` : 'Producto no encontrado';
         }).join(', ');
 
+        const totalComponentPrice = combo.items.reduce((total, item) => {
+            const product = allProducts.find(p => p.id === item.productId);
+            return total + (product ? product.price * item.quantity : 0);
+        }, 0);
+
         comboDiv.innerHTML = `
             <div class="flex-grow">
                 <span class="font-semibold">${combo.name}</span>
-                <span class="text-gray-500"> - $${combo.price.toFixed(2)}</span>
-                <p class="text-sm text-gray-400">${productsHtml}</p>
+                <span class="text-gray-500"> - Precio Combo: $${combo.price.toFixed(2)}</span>
+                <p class="text-sm text-gray-400">Precio de los componentes: $${totalComponentPrice.toFixed(2)}</p>
+                <p class="text-sm text-gray-400">Productos: ${productsHtml}</p>
             </div>
             <div class="flex space-x-2">
                 <button data-combo-id="${combo.id}" class="edit-combo-btn px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
