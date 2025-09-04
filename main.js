@@ -617,10 +617,10 @@ function renderProductCategoriesList() {
 function renderProductCategoriesInput() {
     if (!productCategoryInput) return;
     productCategoryInput.innerHTML = '<option value="">Sin Categoría</option>';
-    allProducts.forEach(product => {
+    productCategories.forEach(category => {
         const option = document.createElement('option');
-        option.value = product.id;
-        option.textContent = product.name;
+        option.value = category.id;
+        option.textContent = category.name;
         productCategoryInput.appendChild(option);
     });
 }
