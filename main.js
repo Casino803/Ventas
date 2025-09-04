@@ -146,6 +146,9 @@ const clearPromotionBtn = document.getElementById('clear-promotion-btn');
 const promotionDisplay = document.getElementById('promotion-display');
 const promotionAmountSpan = document.getElementById('promotion-amount');
 
+// NUEVA REFERENCIA PARA EL ID DEL COMBO EN EL FORMULARIO
+const comboIdInput = document.getElementById('combo-id');
+
 
 let salesChart;
 let topProductsChart;
@@ -448,6 +451,7 @@ function setupRealtimeListeners() {
     onSnapshot(combosCollection, (snapshot) => {
       allCombos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderProducts(allProducts); // Para refrescar la vista de productos y combos
+      renderManageCombos();
     }, (error) => {
       console.error("Error al escuchar combos:", error);
       showModal("Error al cargar los combos.");
@@ -2142,14 +2146,14 @@ window.toggleSection = function(sectionId) {
 }
 
 // NUEVA FUNCIÓN PARA AÑADIR UN CAMPO DE PRODUCTO AL FORMULARIO DEL COMBO
-function addComboProductInput() {
+function addComboProductInput(product = null, quantity = 1) {
     if (!comboProductsContainer) return;
 
     const div = document.createElement('div');
     div.className = "flex space-x-2 items-center mb-2";
     div.innerHTML = `
         <select class="combo-product-select w-full px-2 py-1 border rounded-lg"></select>
-        <input type="number" class="combo-product-quantity w-24 px-2 py-1 border rounded-lg text-center" value="1" min="1">
+        <input type="number" class="combo-product-quantity w-24 px-2 py-1 border rounded-lg text-center" value="${quantity}" min="1">
         <button type="button" class="remove-combo-product-btn text-red-500 hover:text-red-700">
             <i class="fas fa-times-circle"></i>
         </button>
@@ -2159,12 +2163,16 @@ function addComboProductInput() {
     const removeBtn = div.querySelector('.remove-combo-product-btn');
 
     // Poblar el select con la lista de productos
-    allProducts.forEach(product => {
+    allProducts.forEach(prod => {
         const option = document.createElement('option');
-        option.value = product.id;
-        option.textContent = product.name;
+        option.value = prod.id;
+        option.textContent = prod.name;
         select.appendChild(option);
     });
+
+    if (product) {
+        select.value = product.id;
+    }
 
     // Añadir el listener para el botón de remover
     removeBtn.addEventListener('click', () => {
@@ -2174,10 +2182,11 @@ function addComboProductInput() {
     comboProductsContainer.appendChild(div);
 }
 
-// NUEVA FUNCIÓN PARA GUARDAR EL COMBO
+// NUEVA FUNCIÓN PARA GUARDAR EL COMBO (AHORA TAMBIÉN EDITA)
 if (addComboForm) {
     addComboForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const comboId = comboIdInput?.value;
         const comboName = comboNameInput?.value;
         const comboPrice = parseFloat(comboPriceInput?.value);
 
@@ -2200,15 +2209,25 @@ if (addComboForm) {
             const quantity = parseInt(quantityInputs[i].value, 10);
             comboProducts.push({ productId, quantity });
         }
+        
+        const comboData = {
+            name: comboName,
+            price: comboPrice,
+            items: comboProducts,
+            timestamp: serverTimestamp()
+        };
 
         try {
-            await addDoc(collection(db, SHARED_COMBOS_COLLECTION), {
-                name: comboName,
-                price: comboPrice,
-                items: comboProducts,
-                timestamp: serverTimestamp()
-            });
-            showModal("Combo guardado con éxito.");
+            if (comboId) {
+                // Editar combo existente
+                const comboRef = doc(db, SHARED_COMBOS_COLLECTION, comboId);
+                await setDoc(comboRef, comboData, { merge: true });
+                showModal("Combo editado con éxito.");
+            } else {
+                // Añadir nuevo combo
+                await addDoc(collection(db, SHARED_COMBOS_COLLECTION), comboData);
+                showModal("Combo guardado con éxito.");
+            }
             addComboForm.reset();
             comboProductsContainer.innerHTML = ''; // Limpiar los inputs del combo
             addComboForm.classList.add('hidden'); // Ocultar el formulario
@@ -2218,6 +2237,71 @@ if (addComboForm) {
         }
     });
 }
+
+// NUEVA FUNCIÓN PARA RENDERIZAR LA LISTA DE COMBOS PARA GESTIÓN
+function renderManageCombos() {
+    if (!promotionsList) return;
+    promotionsList.innerHTML = ''; // Limpiar la lista existente
+    allCombos.forEach(combo => {
+        const comboDiv = document.createElement('div');
+        comboDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
+        
+        let productsHtml = combo.items.map(item => {
+            const product = allProducts.find(p => p.id === item.productId);
+            return product ? `${product.name} (x${item.quantity})` : 'Producto no encontrado';
+        }).join(', ');
+
+        comboDiv.innerHTML = `
+            <div class="flex-grow">
+                <span class="font-semibold">${combo.name}</span>
+                <span class="text-gray-500"> - $${combo.price.toFixed(2)}</span>
+                <p class="text-sm text-gray-400">${productsHtml}</p>
+            </div>
+            <div class="flex space-x-2">
+                <button data-combo-id="${combo.id}" class="edit-combo-btn px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button data-combo-id="${combo.id}" class="delete-combo-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        promotionsList.appendChild(comboDiv);
+
+        // Añadir listeners a los botones de editar y eliminar
+        comboDiv.querySelector('.edit-combo-btn').addEventListener('click', () => {
+            const selectedCombo = allCombos.find(c => c.id === combo.id);
+            if (selectedCombo) {
+                comboIdInput.value = selectedCombo.id;
+                comboNameInput.value = selectedCombo.name;
+                comboPriceInput.value = selectedCombo.price;
+                comboProductsContainer.innerHTML = '';
+                selectedCombo.items.forEach(item => {
+                    const product = allProducts.find(p => p.id === item.productId);
+                    if (product) {
+                        addComboProductInput(product, item.quantity);
+                    }
+                });
+                addComboForm.classList.remove('hidden');
+                addSimplePromotionForm.classList.add('hidden');
+            }
+        });
+
+        comboDiv.querySelector('.delete-combo-btn').addEventListener('click', () => {
+            showConfirmationModal(`¿Estás seguro de que quieres eliminar el combo '${combo.name}'?`, async () => {
+                try {
+                    const comboRef = doc(db, SHARED_COMBOS_COLLECTION, combo.id);
+                    await deleteDoc(comboRef);
+                    showModal("Combo eliminado con éxito.");
+                } catch (error) {
+                    console.error("Error al eliminar el combo:", error);
+                    showModal("Error al eliminar el combo. Por favor, intenta de nuevo.");
+                }
+            }, () => {});
+        });
+    });
+}
+
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
@@ -2577,6 +2661,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showComboFormBtn.addEventListener('click', () => {
             addComboForm.classList.remove('hidden');
             addSimplePromotionForm.classList.add('hidden'); // Ocultar el otro formulario
+            // Limpiar el formulario y el campo ID al cambiar a "Crear Combo"
+            addComboForm.reset();
+            comboIdInput.value = '';
+            comboProductsContainer.innerHTML = '';
         });
     }
 
