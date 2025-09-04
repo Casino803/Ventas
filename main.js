@@ -448,12 +448,23 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de productos.");
     });
     
+    // NUEVO: Listener para las promociones simples
+    const promotionsCollection = collection(db, SHARED_PROMOTIONS_COLLECTION);
+    onSnapshot(promotionsCollection, (snapshot) => {
+        allPromotions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if(promotionsList) renderPromotionsAndCombos();
+        renderPromotionSelect();
+    }, (error) => {
+        console.error("Error al escuchar promociones:", error);
+        showModal("Error al cargar las promociones.");
+    });
+    
     // NUEVO: Listener para los combos
     const combosCollection = collection(db, SHARED_COMBOS_COLLECTION);
     onSnapshot(combosCollection, (snapshot) => {
       allCombos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderProducts(allProducts); // Para refrescar la vista de productos y combos
-      renderManageCombos();
+      if(promotionsList) renderPromotionsAndCombos();
     }, (error) => {
       console.error("Error al escuchar combos:", error);
       showModal("Error al cargar los combos.");
@@ -2310,6 +2321,104 @@ function renderManageCombos() {
     });
 }
 
+// NUEVA FUNCIÓN PARA RENDERIZAR LAS PROMOCIONES SIMPLES PARA GESTIÓN
+function renderPromotionsAndCombos() {
+    if (!promotionsList) return;
+    promotionsList.innerHTML = '';
+
+    // Renderizar promociones simples
+    allPromotions.forEach(promo => {
+        const promoDiv = document.createElement('div');
+        promoDiv.className = "bg-green-100 p-3 rounded-lg flex items-center justify-between";
+        promoDiv.innerHTML = `
+            <div class="flex-grow">
+                <span class="font-semibold">${promo.name}</span>
+                <span class="text-gray-500"> - Tipo: ${promo.type}</span>
+                <span class="text-gray-500"> - Valor: ${promo.value}</span>
+            </div>
+            <div class="flex space-x-2">
+                <button data-promo-id="${promo.id}" class="edit-promo-btn px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button data-promo-id="${promo.id}" class="delete-promo-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        promotionsList.appendChild(promoDiv);
+
+        // Añadir listeners para editar y eliminar promociones
+        promoDiv.querySelector('.edit-promo-btn').addEventListener('click', () => {
+            const selectedPromo = allPromotions.find(p => p.id === promo.id);
+            if (selectedPromo) {
+                simplePromoNameInput.value = selectedPromo.name;
+                simplePromoTypeSelect.value = selectedPromo.type;
+                simplePromoValueInput.value = selectedPromo.value;
+                addSimplePromotionForm.dataset.promoId = selectedPromo.id; // Guarda el ID para la edición
+                addSimplePromotionForm.classList.remove('hidden');
+                addComboForm.classList.add('hidden');
+            }
+        });
+        
+        promoDiv.querySelector('.delete-promo-btn').addEventListener('click', () => {
+            showConfirmationModal(`¿Estás seguro de que quieres eliminar la promoción '${promo.name}'?`, async () => {
+                try {
+                    const promoRef = doc(db, SHARED_PROMOTIONS_COLLECTION, promo.id);
+                    await deleteDoc(promoRef);
+                    showModal("Promoción eliminada con éxito.");
+                } catch (error) {
+                    console.error("Error al eliminar la promoción:", error);
+                    showModal("Error al eliminar la promoción. Por favor, intenta de nuevo.");
+                }
+            }, () => {});
+        });
+    });
+
+    // Renderizar combos
+    renderManageCombos();
+}
+
+// NUEVO: Listener para el formulario de promoción simple
+if(addSimplePromotionForm) {
+    addSimplePromotionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const promoId = e.target.dataset.promoId;
+        const name = simplePromoNameInput.value.trim();
+        const type = simplePromoTypeSelect.value;
+        const value = parseFloat(simplePromoValueInput.value);
+
+        if (!name || isNaN(value) || value <= 0) {
+            showModal("Por favor, ingresa un nombre y un valor válido.");
+            return;
+        }
+
+        const promoData = {
+            name,
+            type,
+            value,
+            timestamp: serverTimestamp()
+        };
+
+        try {
+            if (promoId) {
+                // Editar promoción existente
+                const promoRef = doc(db, SHARED_PROMOTIONS_COLLECTION, promoId);
+                await setDoc(promoRef, promoData, { merge: true });
+                showModal("Promoción editada con éxito.");
+            } else {
+                // Añadir nueva promoción
+                await addDoc(collection(db, SHARED_PROMOTIONS_COLLECTION), promoData);
+                showModal("Promoción añadida con éxito.");
+            }
+            addSimplePromotionForm.reset();
+            delete addSimplePromotionForm.dataset.promoId;
+            addSimplePromotionForm.classList.add('hidden');
+        } catch (error) {
+            console.error("Error al guardar la promoción:", error);
+            showModal("Hubo un error al guardar la promoción. Intenta de nuevo.");
+        }
+    });
+}
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
