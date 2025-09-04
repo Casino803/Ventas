@@ -609,7 +609,7 @@ function renderProductCategoriesList() {
                     console.error("Error al eliminar la categoría de producto:", error);
                     showModal("Error al eliminar la categoría de producto.");
                 }
-            }, () => {});
+            }
         });
     });
 }
@@ -2284,12 +2284,12 @@ function renderManagePromotion(promo) {
         const selectedPromo = allPromotions.find(p => p.id === promo.id);
         if (selectedPromo) {
             // Muestra el formulario y rellena los campos
-            addSimplePromotionForm.classList.remove('hidden');
-            addComboForm.classList.add('hidden');
-            simplePromoNameInput.value = selectedPromo.name;
-            simplePromoTypeSelect.value = selectedPromo.type;
-            simplePromoValueInput.value = selectedPromo.value;
-            addSimplePromotionForm.dataset.promoId = selectedPromo.id; // Guarda el ID para la edición
+            if (addSimplePromotionForm) addSimplePromotionForm.classList.remove('hidden');
+            if (addComboForm) addComboForm.classList.add('hidden');
+            if (simplePromoNameInput) simplePromoNameInput.value = selectedPromo.name;
+            if (simplePromoTypeSelect) simplePromoTypeSelect.value = selectedPromo.type;
+            if (simplePromoValueInput) simplePromoValueInput.value = selectedPromo.value;
+            if (addSimplePromotionForm) addSimplePromotionForm.dataset.promoId = selectedPromo.id; // Guarda el ID para la edición
         }
     });
     
@@ -2354,12 +2354,12 @@ function renderPromotionsAndCombos() {
             const selectedCombo = allCombos.find(c => c.id === combo.id);
             if (selectedCombo) {
                 // Muestra el formulario y rellena los campos
-                addComboForm.classList.remove('hidden');
-                addSimplePromotionForm.classList.add('hidden');
-                comboIdInput.value = selectedCombo.id;
-                comboNameInput.value = selectedCombo.name;
-                comboPriceInput.value = selectedCombo.price;
-                comboProductsContainer.innerHTML = '';
+                if (addComboForm) addComboForm.classList.remove('hidden');
+                if (addSimplePromotionForm) addSimplePromotionForm.classList.add('hidden');
+                if (comboIdInput) comboIdInput.value = selectedCombo.id;
+                if (comboNameInput) comboNameInput.value = selectedCombo.name;
+                if (comboPriceInput) comboPriceInput.value = selectedCombo.price;
+                if (comboProductsContainer) comboProductsContainer.innerHTML = '';
                 selectedCombo.items.forEach(item => {
                     const product = allProducts.find(p => p.id === item.productId);
                     if (product) {
