@@ -327,6 +327,36 @@ function renderProducts(products) {
     renderPromotionSelect();
 }
 
+// NUEVAS FUNCIONES PARA PROMOCIONES Y COMBOS
+function renderComboCard(combo) {
+    if (!productsContainer) return;
+    const card = document.createElement('div');
+    card.className = "bg-orange-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300 border-2 border-orange-400";
+    card.innerHTML = `
+        <h3 class="font-bold text-gray-800 text-lg mb-2">${combo.name}</h3>
+        <p class="text-xl font-bold text-orange-600">$${combo.price.toFixed(2)}</p>
+        <p class="text-xs text-gray-500 mt-1">Combo de productos</p>
+        <button data-combo-id="${combo.id}" class="mt-4 w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            <i class="fas fa-plus-circle"></i> Añadir Combo
+        </button>
+    `;
+    productsContainer.appendChild(card);
+    card.querySelector('button').addEventListener('click', () => {
+        addComboToCart(combo);
+    });
+}
+
+function renderPromotionSelect() {
+    if (!promotionSelect) return;
+    promotionSelect.innerHTML = '<option value="">Seleccionar Promoción</option>';
+    allPromotions.forEach(promo => {
+        const option = document.createElement('option');
+        option.value = promo.id;
+        option.textContent = promo.name;
+        promotionSelect.appendChild(option);
+    });
+}
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         userId = user.uid;
@@ -622,33 +652,19 @@ if(addPaymentMethodForm) {
 if(addExpenseCategoryForm) {
     addExpenseCategoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const description = document.getElementById('expense-description').value;
-        const amount = parseFloat(document.getElementById('expense-amount').value);
-        const category = expenseCategorySelect?.value;
-
-        if (isNaN(amount) || amount <= 0) {
-            showModal("El monto debe ser un número positivo.");
-            return;
-        }
-        const cashId = new Date().toLocaleDateString('en-CA');
-        try {
-            const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
-            await addDoc(expensesCollection, {
-                description: description,
-                amount: amount,
-                category: category,
-                timestamp: serverTimestamp(),
-                cashId: cashId
-            });
-            expenseForm.reset();
-            showModal("Gasto registrado con éxito.");
-            
-            // Ocultar el formulario después de guardar
-            if (expenseFormContainer) expenseFormContainer.classList.add('hidden');
-            
-        } catch (error) {
-            console.error("Error al registrar el gasto:", error);
-            showModal("Hubo un error al registrar el gasto. Intenta de nuevo.");
+        const newExpenseNameInput = document.getElementById('new-expense-category-name');
+        const newCategory = newExpenseNameInput?.value.trim();
+        if (newCategory && !userExpenseCategories.map(c => c.name).includes(newCategory) && !defaultExpenseCategories.includes(newCategory)) {
+            try {
+                await addDoc(collection(db, SHARED_EXPENSE_CATEGORIES_COLLECTION), { name: newCategory });
+                if(newExpenseNameInput) newExpenseNameInput.value = '';
+                showModal("Categoría de gasto añadida con éxito.");
+            } catch (error) {
+                console.error("Error al añadir categoría de gasto:", error);
+                showModal("Error al añadir categoría de gasto.");
+            }
+        } else {
+            showModal("Esa categoría de gasto ya existe o no es válida.");
         }
     });
 }
@@ -2469,6 +2485,20 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 showModal("Esa categoría de gasto ya existe o no es válida.");
             }
+        });
+    }
+    
+    // NUEVO: Listeners para los botones de promociones
+    if (showSimplePromoFormBtn && addSimplePromotionForm) {
+        showSimplePromoFormBtn.addEventListener('click', () => {
+            addSimplePromotionForm.classList.remove('hidden');
+            addComboForm.classList.add('hidden'); // Ocultar el otro formulario
+        });
+    }
+    if (showComboFormBtn && addComboForm) {
+        showComboFormBtn.addEventListener('click', () => {
+            addComboForm.classList.remove('hidden');
+            addSimplePromotionForm.classList.add('hidden'); // Ocultar el otro formulario
         });
     }
 
