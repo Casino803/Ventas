@@ -2567,3 +2567,88 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// NUEVA FUNCIÓN PARA AÑADIR UN CAMPO DE PRODUCTO AL FORMULARIO DEL COMBO
+function addComboProductInput() {
+    if (!comboProductsContainer) return;
+
+    const div = document.createElement('div');
+    div.className = "flex space-x-2 items-center mb-2";
+    div.innerHTML = `
+        <select class="combo-product-select w-full px-2 py-1 border rounded-lg"></select>
+        <input type="number" class="combo-product-quantity w-24 px-2 py-1 border rounded-lg text-center" value="1" min="1">
+        <button type="button" class="remove-combo-product-btn text-red-500 hover:text-red-700">
+            <i class="fas fa-times-circle"></i>
+        </button>
+    `;
+
+    const select = div.querySelector('.combo-product-select');
+    const removeBtn = div.querySelector('.remove-combo-product-btn');
+
+    // Poblar el select con la lista de productos
+    allProducts.forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.id;
+        option.textContent = product.name;
+        select.appendChild(option);
+    });
+
+    // Añadir el listener para el botón de remover
+    removeBtn.addEventListener('click', () => {
+        div.remove();
+    });
+
+    comboProductsContainer.appendChild(div);
+}
+
+// NUEVA FUNCIÓN PARA GUARDAR EL COMBO
+if (addComboForm) {
+    addComboForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const comboName = comboNameInput?.value;
+        const comboPrice = parseFloat(comboPriceInput?.value);
+
+        if (!comboName || isNaN(comboPrice) || comboPrice <= 0) {
+            showModal("Por favor, ingresa un nombre y un precio válido para el combo.");
+            return;
+        }
+
+        const comboProducts = [];
+        const productInputs = comboProductsContainer?.querySelectorAll('.combo-product-select');
+        const quantityInputs = comboProductsContainer?.querySelectorAll('.combo-product-quantity');
+
+        if (productInputs?.length === 0) {
+            showModal("Un combo debe tener al menos un producto.");
+            return;
+        }
+
+        for (let i = 0; i < productInputs.length; i++) {
+            const productId = productInputs[i].value;
+            const quantity = parseInt(quantityInputs[i].value, 10);
+            comboProducts.push({ productId, quantity });
+        }
+
+        try {
+            await addDoc(collection(db, SHARED_COMBOS_COLLECTION), {
+                name: comboName,
+                price: comboPrice,
+                items: comboProducts,
+                timestamp: serverTimestamp()
+            });
+            showModal("Combo guardado con éxito.");
+            addComboForm.reset();
+            comboProductsContainer.innerHTML = ''; // Limpiar los inputs del combo
+            addComboForm.classList.add('hidden'); // Ocultar el formulario
+        } catch (error) {
+            console.error("Error al guardar el combo:", error);
+            showModal("Hubo un error al guardar el combo. Intenta de nuevo.");
+        }
+    });
+}
+
+
+// AÑADE ESTE EVENT LISTENER EN TU ARCHIVO main.js
+if (addComboProductBtn) {
+    addComboProductBtn.addEventListener('click', () => {
+        addComboProductInput();
+    });
+}
