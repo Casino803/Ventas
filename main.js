@@ -553,17 +553,19 @@ function renderProductCategoriesList() {
 
         const deleteButton = itemDiv.querySelector('.delete-product-category-btn');
         deleteButton.addEventListener('click', async () => {
-    if (confirm(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`)) {
-        try {
-            const categoryDocRef = doc(db, SHARED_PRODUCT_CATEGORIES_COLLECTION, category.id);
-            await deleteDoc(categoryDocRef);
-            showModal("Categoría de producto eliminada con éxito.");
-        } catch (error) {
-            console.error("Error al eliminar la categoría de producto:", error);
-            showModal("Error al eliminar la categoría de producto.");
-        }
-    }
-});
+            if (confirm(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`)) {
+                try {
+                    const categoryDocRef = doc(db, SHARED_PRODUCT_CATEGORIES_COLLECTION, category.id);
+                    await deleteDoc(categoryDocRef);
+                    showModal("Categoría de producto eliminada con éxito.");
+                } catch (error) {
+                    console.error("Error al eliminar la categoría de producto:", error);
+                    showModal("Error al eliminar la categoría de producto.");
+                }
+            }
+        });
+    });
+}
 
 function renderProductCategoriesInput() {
     if (!productCategoryInput) return;
