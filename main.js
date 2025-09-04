@@ -2283,12 +2283,13 @@ function renderManagePromotion(promo) {
     promoDiv.querySelector('.edit-promo-btn').addEventListener('click', () => {
         const selectedPromo = allPromotions.find(p => p.id === promo.id);
         if (selectedPromo) {
+            // Muestra el formulario y rellena los campos
+            addSimplePromotionForm.classList.remove('hidden');
+            addComboForm.classList.add('hidden');
             simplePromoNameInput.value = selectedPromo.name;
             simplePromoTypeSelect.value = selectedPromo.type;
             simplePromoValueInput.value = selectedPromo.value;
             addSimplePromotionForm.dataset.promoId = selectedPromo.id; // Guarda el ID para la edición
-            addSimplePromotionForm.classList.remove('hidden');
-            addComboForm.classList.add('hidden');
         }
     });
     
@@ -2352,6 +2353,9 @@ function renderPromotionsAndCombos() {
         comboDiv.querySelector('.edit-combo-btn').addEventListener('click', () => {
             const selectedCombo = allCombos.find(c => c.id === combo.id);
             if (selectedCombo) {
+                // Muestra el formulario y rellena los campos
+                addComboForm.classList.remove('hidden');
+                addSimplePromotionForm.classList.add('hidden');
                 comboIdInput.value = selectedCombo.id;
                 comboNameInput.value = selectedCombo.name;
                 comboPriceInput.value = selectedCombo.price;
@@ -2362,8 +2366,6 @@ function renderPromotionsAndCombos() {
                         addComboProductInput(product, item.quantity);
                     }
                 });
-                addComboForm.classList.remove('hidden');
-                addSimplePromotionForm.classList.add('hidden');
             }
         });
 
