@@ -1953,7 +1953,7 @@ function renderTopProductsChart(sales) {
 function renderPaymentMethodsChart(sales) {
     if (!paymentMethodsChartCtx) return;
 
-    const paymentTotals = sales.reduce((acc, sale) => {
+    const paymentTotals = sales.reduce((acc, sale => {
         sale.payments.forEach(payment => {
             acc[payment.method] = (acc[payment.method] || 0) + payment.amount;
         });
@@ -2253,8 +2253,69 @@ if (addComboForm) {
 
 // NUEVA FUNCIÓN PARA RENDERIZAR LA LISTA DE COMBOS PARA GESTIÓN
 function renderManageCombos() {
+    // Si la función ya está incluida en renderPromotionsAndCombos, no la necesitamos aquí.
+    // Su lógica se moverá allí para evitar duplicación.
+}
+
+// NUEVA FUNCIÓN PARA RENDERIZAR LAS PROMOCIONES SIMPLES PARA GESTIÓN
+function renderManagePromotion(promo) {
     if (!promotionsList) return;
-    promotionsList.innerHTML = ''; // Limpiar la lista existente
+    const promoDiv = document.createElement('div');
+    promoDiv.className = "bg-green-100 p-3 rounded-lg flex items-center justify-between";
+    promoDiv.innerHTML = `
+        <div class="flex-grow">
+            <span class="font-semibold">${promo.name}</span>
+            <span class="text-gray-500"> - Tipo: ${promo.type}</span>
+            <span class="text-gray-500"> - Valor: ${promo.value}</span>
+        </div>
+        <div class="flex space-x-2">
+            <button data-promo-id="${promo.id}" class="edit-promo-btn px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button data-promo-id="${promo.id}" class="delete-promo-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    `;
+    promotionsList.appendChild(promoDiv);
+
+    // Añadir listeners para editar y eliminar promociones
+    promoDiv.querySelector('.edit-promo-btn').addEventListener('click', () => {
+        const selectedPromo = allPromotions.find(p => p.id === promo.id);
+        if (selectedPromo) {
+            simplePromoNameInput.value = selectedPromo.name;
+            simplePromoTypeSelect.value = selectedPromo.type;
+            simplePromoValueInput.value = selectedPromo.value;
+            addSimplePromotionForm.dataset.promoId = selectedPromo.id; // Guarda el ID para la edición
+            addSimplePromotionForm.classList.remove('hidden');
+            addComboForm.classList.add('hidden');
+        }
+    });
+    
+    promoDiv.querySelector('.delete-promo-btn').addEventListener('click', () => {
+        showConfirmationModal(`¿Estás seguro de que quieres eliminar la promoción '${promo.name}'?`, async () => {
+            try {
+                const promoRef = doc(db, SHARED_PROMOTIONS_COLLECTION, promo.id);
+                await deleteDoc(promoRef);
+                showModal("Promoción eliminada con éxito.");
+            } catch (error) {
+                console.error("Error al eliminar la promoción:", error);
+                showModal("Error al eliminar la promoción. Por favor, intenta de nuevo.");
+            }
+        }, () => {});
+    });
+}
+
+function renderPromotionsAndCombos() {
+    if (!promotionsList) return;
+    promotionsList.innerHTML = '';
+
+    // Renderizar promociones simples
+    allPromotions.forEach(promo => {
+        renderManagePromotion(promo);
+    });
+
+    // Renderizar combos
     allCombos.forEach(combo => {
         const comboDiv = document.createElement('div');
         comboDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
@@ -2319,63 +2380,6 @@ function renderManageCombos() {
             }, () => {});
         });
     });
-}
-
-// NUEVA FUNCIÓN PARA RENDERIZAR LAS PROMOCIONES SIMPLES PARA GESTIÓN
-function renderPromotionsAndCombos() {
-    if (!promotionsList) return;
-    promotionsList.innerHTML = '';
-
-    // Renderizar promociones simples
-    allPromotions.forEach(promo => {
-        const promoDiv = document.createElement('div');
-        promoDiv.className = "bg-green-100 p-3 rounded-lg flex items-center justify-between";
-        promoDiv.innerHTML = `
-            <div class="flex-grow">
-                <span class="font-semibold">${promo.name}</span>
-                <span class="text-gray-500"> - Tipo: ${promo.type}</span>
-                <span class="text-gray-500"> - Valor: ${promo.value}</span>
-            </div>
-            <div class="flex space-x-2">
-                <button data-promo-id="${promo.id}" class="edit-promo-btn px-3 py-1 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition-colors">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button data-promo-id="${promo.id}" class="delete-promo-btn px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
-        `;
-        promotionsList.appendChild(promoDiv);
-
-        // Añadir listeners para editar y eliminar promociones
-        promoDiv.querySelector('.edit-promo-btn').addEventListener('click', () => {
-            const selectedPromo = allPromotions.find(p => p.id === promo.id);
-            if (selectedPromo) {
-                simplePromoNameInput.value = selectedPromo.name;
-                simplePromoTypeSelect.value = selectedPromo.type;
-                simplePromoValueInput.value = selectedPromo.value;
-                addSimplePromotionForm.dataset.promoId = selectedPromo.id; // Guarda el ID para la edición
-                addSimplePromotionForm.classList.remove('hidden');
-                addComboForm.classList.add('hidden');
-            }
-        });
-        
-        promoDiv.querySelector('.delete-promo-btn').addEventListener('click', () => {
-            showConfirmationModal(`¿Estás seguro de que quieres eliminar la promoción '${promo.name}'?`, async () => {
-                try {
-                    const promoRef = doc(db, SHARED_PROMOTIONS_COLLECTION, promo.id);
-                    await deleteDoc(promoRef);
-                    showModal("Promoción eliminada con éxito.");
-                } catch (error) {
-                    console.error("Error al eliminar la promoción:", error);
-                    showModal("Error al eliminar la promoción. Por favor, intenta de nuevo.");
-                }
-            }, () => {});
-        });
-    });
-
-    // Renderizar combos
-    renderManageCombos();
 }
 
 // NUEVO: Listener para el formulario de promoción simple
