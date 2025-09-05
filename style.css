@@ -42,6 +42,31 @@ transform: none;
 color: #1f2937;
 }
 
+/* Nuevos estilos para centrar el contenido de la tarjeta */
+.product-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+/* Nuevo estilo para los encabezados de categoría */
+.category-header {
+    font-size: 1.5rem; /* text-2xl */
+    font-weight: 700; /* font-bold */
+    color: #1f2937; /* text-gray-800 */
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid #3b82f6; /* border-blue-500 */
+}
+
+/* Estilos para los contenedores de los productos por categoría */
+.products-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+}
 #product-list, #manage-products-container, #sales-history-container, #daily-expenses-container, #customers-list-container, #cash-history-container, #payment-methods-list, #expense-categories-list, #product-categories-list, #promotions-list {
   max-height: calc(100vh - 20rem); /* Aumentado para adaptarse a la pantalla completa */
 }
