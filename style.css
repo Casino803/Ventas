@@ -76,6 +76,6 @@ color: #1f2937;
   width: 100%;
 }
 
-#product-list, #manage-products-container, #sales-history-container, #daily-expenses-container, #customers-list-container, #cash-history-container, #payment-methods-list, #expense-categories-list, #product-categories-list, #promotions-list {
-  max-height: calc(100vh - 20rem); /* Aumentado para adaptarse a la pantalla completa */
+#manage-products-container, #sales-history-container, #daily-expenses-container, #customers-list-container, #cash-history-container, #payment-methods-list, #expense-categories-list, #product-categories-list, #promotions-list {
+  max-height: calc(100vh - 20rem); /* Mantiene la altura fija para otras listas */
 }
