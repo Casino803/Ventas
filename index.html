@@ -16,41 +16,41 @@
   <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Ventas</h1>
   <div id="main-tabs" class="flex flex-col space-y-2">
     <button data-page="pos-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors active">
-      <i class="fas fa-cash-register mr-3"></i> <span>Punto de Venta</span>
+      <i class="fas fa-cash-register mr-3"></i> Punto de Venta
     </button>
     <button data-page="products-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-      <i class="fas fa-boxes-stacked mr-3"></i> <span>Gestión de Productos</span>
+      <i class="fas fa-boxes-stacked mr-3"></i> Gestión de Productos
     </button>
     <button data-page="history-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-      <i class="fas fa-clipboard-list mr-3"></i> <span>Historial de Ventas</span>
+      <i class="fas fa-clipboard-list mr-3"></i> Historial de Ventas
     </button>
     <button data-page="stats-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-      <i class="fas fa-chart-line mr-3"></i> <span>Estadísticas</span>
+      <i class="fas fa-chart-line mr-3"></i> Estadísticas
     </button>
     <button data-page="cash-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-      <i class="fas fa-wallet mr-3"></i> <span>Caja</span>
+      <i class="fas fa-wallet mr-3"></i> Caja
     </button>
     <button data-page="expenses-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-      <i class="fas fa-minus-circle mr-3"></i> <span>Gastos</span>
+      <i class="fas fa-minus-circle mr-3"></i> Gastos
     </button>
     <button data-page="customers-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-      <i class="fas fa-users mr-3"></i> <span>Clientes</span>
+      <i class="fas fa-users mr-3"></i> Clientes
     </button>
     <button data-page="settings-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-        <i class="fas fa-cog mr-3"></i> <span>Configuración</span>
+        <i class="fas fa-cog mr-3"></i> Configuración
     </button>
   </div>
-  <button id="sidebar-toggle-btn" class="absolute top-4 left-4 p-2 bg-blue-600 text-white rounded-full shadow-lg">
+  <button id="sidebar-toggle-btn" class="absolute bottom-4 left-4 p-2 bg-blue-600 text-white rounded-full shadow-lg">
       <i class="fas fa-chevron-left"></i>
   </button>
 </div>
 
-<div class="flex-1 p-8 flex flex-col overflow-hidden">
+<div class="flex-1 p-8 overflow-y-auto">
 
-  <div id="pos-page" class="page-content active h-full flex flex-col">
+  <div id="pos-page" class="page-content active">
     <div class="flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6 h-full">
       <div class="lg:w-2/3 flex flex-col h-full">
-        <div class="flex flex-col flex-grow">
+        <div class="flex-grow flex flex-col">
           <h2 class="text-2xl font-bold text-gray-800 mb-6">Punto de Venta</h2>
           <div class="mb-4 flex space-x-2">
             <input type="text" id="pos-search-input" placeholder="Buscar productos..."
@@ -61,7 +61,7 @@
           </div>
           <div id="product-list" class="flex-grow flex flex-col">
             <h3 class="text-xl font-semibold text-gray-700 mb-4">Productos Disponibles</h3>
-            <div id="products-container" class="space-y-6 overflow-y-scroll flex-grow h-full">
+            <div id="products-container" class="space-y-6 overflow-y-scroll h-full">
             </div>
           </div>
         </div>
