@@ -148,6 +148,8 @@ const promotionAmountSpan = document.getElementById('promotion-amount');
 
 // NUEVA REFERENCIA PARA EL ID DEL COMBO EN EL FORMULARIO
 const comboIdInput = document.getElementById('combo-id');
+const sidebar = document.getElementById('sidebar');
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 
 
 let salesChart;
@@ -245,27 +247,16 @@ function showPage(pageId) {
     }
 }
 
-function showHomeMenu() {
-    pages.forEach(page => page.classList.remove('active'));
-    if (homeMenu) homeMenu.classList.add('active');
-}
-
 function setupNavigation() {
     menuButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetPageId = btn.dataset.page;
-            // Manejar la lógica de pestañas si el botón no es del menú principal
-            if (!btn.classList.contains('tab-btn')) {
-                // Desactivar la pestaña activa
-                document.querySelector('.tab-btn.active')?.classList.remove('active');
-                showPage(targetPageId);
-            }
-        });
-    });
-
-    backToMenuBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            showHomeMenu();
+            // Desactivar el botón activo
+            document.querySelector('.tab-btn-sidebar.active')?.classList.remove('active');
+            // Activar el botón clicado
+            btn.classList.add('active');
+            // Mostrar la página correspondiente
+            showPage(targetPageId);
         });
     });
 }
@@ -300,6 +291,17 @@ function setupCashTabNavigation() {
             cashTabPages.forEach(p => p.classList.remove('active'));
             document.getElementById(targetPageId)?.classList.add('active');
         });
+    });
+}
+
+if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener('click', () => {
+        sidebar?.classList.toggle('collapsed');
+        const icon = sidebarToggleBtn.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-chevron-left');
+            icon.classList.toggle('fa-chevron-right');
+        }
     });
 }
 
@@ -2480,19 +2482,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Configurar la navegación de pestañas de Caja y Gastos
     setupCashTabNavigation();
-
-    // Reasignar el evento de clic a los botones de navegación superior
-    const topNavButtons = document.querySelectorAll('.fixed button[data-page]');
-    topNavButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetPageId = btn.dataset.page;
-            showPage(targetPageId);
-            // Si el menú principal está oculto, deseleccionar cualquier pestaña
-            if(targetPageId !== 'home-menu') {
-                document.querySelector('.tab-btn.active')?.classList.remove('active');
-            }
-        });
-    });
 
     // Manejar el estado de autenticación al cargar la página
     onAuthStateChanged(auth, user => {
