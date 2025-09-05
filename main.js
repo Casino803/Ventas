@@ -271,13 +271,14 @@ function setupNavigation() {
 }
 
 function setupTabNavigation() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
+    // Usar la clase `tab-btn-sidebar` para la nueva navegación
+    const tabButtons = document.querySelectorAll('.tab-btn-sidebar');
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetPageId = btn.dataset.page;
-            // Desactivar la pestaña activa
-            document.querySelector('.tab-btn.active')?.classList.remove('active');
-            // Activar la pestaña clicada
+            // Desactivar el botón activo
+            document.querySelector('.tab-btn-sidebar.active')?.classList.remove('active');
+            // Activar el botón clicado
             btn.classList.add('active');
             // Mostrar la página correspondiente
             showPage(targetPageId);
@@ -2459,7 +2460,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (authModal) authModal.classList.add('hidden');
             // Al iniciar sesión, mostrar el POS y activar su pestaña
             showPage('pos-page');
-            const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
+            const posTab = document.querySelector('.tab-btn-sidebar[data-page="pos-page"]');
             if(posTab) {
                 posTab.classList.add('active');
             }
