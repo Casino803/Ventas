@@ -318,22 +318,64 @@ function renderProducts(products) {
     if (!productsContainer) return;
     productsContainer.innerHTML = '';
     
-    // Renderizar productos
-    products.forEach(product => {
-        renderProductCard(product);
-    });
+    // Agrupar productos por categoría
+    const productsByCategory = products.reduce((acc, product) => {
+        const categoryId = product.categoryId || 'uncategorized';
+        if (!acc[categoryId]) {
+            acc[categoryId] = [];
+        }
+        acc[categoryId].push(product);
+        return acc;
+    }, {});
     
-    // Renderizar combos
-    allCombos.forEach(combo => {
-        renderComboCard(combo);
+    // Obtener y ordenar las categorías para el renderizado
+    const sortedCategoryIds = Object.keys(productsByCategory).sort();
+
+    sortedCategoryIds.forEach(categoryId => {
+        const categoryName = categoryId === 'uncategorized' ? 'Sin Categoría' : (productCategories.find(c => c.id === categoryId)?.name || 'Sin Nombre');
+        
+        const categorySection = document.createElement('div');
+        categorySection.className = 'category-section mb-6';
+
+        const categoryHeader = document.createElement('h4');
+        categoryHeader.className = 'category-header';
+        categoryHeader.textContent = categoryName;
+        categorySection.appendChild(categoryHeader);
+        
+        const productsGrid = document.createElement('div');
+        productsGrid.className = 'products-grid-container';
+        
+        productsByCategory[categoryId].forEach(product => {
+            renderProductCard(product, productsGrid);
+        });
+
+        // Renderizar combos en su propia sección si no hay filtro de búsqueda
+        if (posSearchInput?.value === '' && categoryId === sortedCategoryIds[0]) {
+            const comboSection = document.createElement('div');
+            comboSection.className = 'combo-section mb-6';
+            const comboHeader = document.createElement('h4');
+            comboHeader.className = 'category-header';
+            comboHeader.textContent = 'Combos';
+            comboSection.appendChild(comboHeader);
+            const comboGrid = document.createElement('div');
+            comboGrid.className = 'products-grid-container';
+            allCombos.forEach(combo => {
+                renderComboCard(combo, comboGrid);
+            });
+            comboSection.appendChild(comboGrid);
+            productsContainer.appendChild(comboSection);
+        }
+
+        categorySection.appendChild(productsGrid);
+        productsContainer.appendChild(categorySection);
     });
-    
+
     renderPromotionSelect();
 }
 
 // NUEVAS FUNCIONES PARA PROMOCIONES Y COMBOS
-function renderComboCard(combo) {
-    if (!productsContainer) return;
+function renderComboCard(combo, container) {
+    if (!container) return;
     const card = document.createElement('div');
     card.className = "bg-orange-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300 border-2 border-orange-400";
     card.innerHTML = `
@@ -344,7 +386,7 @@ function renderComboCard(combo) {
             <i class="fas fa-plus-circle"></i> Añadir Combo
         </button>
     `;
-    productsContainer.appendChild(card);
+    container.appendChild(card);
     card.querySelector('button').addEventListener('click', () => {
         addComboToCart(combo);
     });
@@ -714,10 +756,10 @@ function renderExpenseCategories() {
     });
 }
 
-function renderProductCard(product) {
-    if (!productsContainer) return;
+function renderProductCard(product, container) {
+    if (!container) return;
     const card = document.createElement('div');
-    card.className = "bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300";
+    card.className = "bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col justify-between items-center text-center transition-transform hover:scale-105 duration-300 product-card";
 
     let stockHtml = '';
     if (product.stock !== undefined) {
@@ -736,16 +778,16 @@ function renderProductCard(product) {
     }
 
     card.innerHTML = `
-    <h3 class="font-bold text-gray-800 text-lg mb-2">${product.name}</h3>
+    <h3 class="font-bold text-gray-800 text-lg mb-2 text-center">${product.name}</h3>
     <p class="text-xl font-bold text-green-600">$${product.price.toFixed(2)}</p>
     ${stockHtml}
     ${categoryHtml}
     <button data-product-id="${product.id}"
-        class="mt-4 w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+        class="mt-4 w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-center">
         <i class="fas fa-plus-circle"></i> Añadir al Carrito
     </button>
     `;
-    productsContainer.appendChild(card);
+    container.appendChild(card);
 
     card.querySelector('button').addEventListener('click', () => {
         addProductToCart(product);
