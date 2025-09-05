@@ -23,8 +23,6 @@ const db = getFirestore(app);
 // Referencias de la UI (variables globales)
 const menuButtons = document.querySelectorAll('button[data-page]');
 const pages = document.querySelectorAll('.page-content');
-const homeMenu = document.getElementById('home-menu');
-const backToMenuBtns = document.querySelectorAll('.back-to-menu-btn');
 const posSearchInput = document.getElementById('pos-search-input');
 const productsContainer = document.getElementById('products-container');
 const cartContainer = document.getElementById('cart-container');
@@ -64,20 +62,15 @@ const customerFormContainer = document.getElementById('customer-form-container')
 const cashStatusText = document.getElementById('cash-status-text');
 const currentCashDisplay = document.getElementById('current-cash-display');
 const openCashForm = document.getElementById('open-cash-form');
-const expenseSection = document.getElementById('expense-section');
-const expenseSeparator = document.getElementById('expense-separator');
 const expenseForm = document.getElementById('expense-form');
 const dailyExpensesContainer = document.getElementById('daily-expenses-container');
 const closeCashBtn = document.getElementById('close-cash-btn');
-const closeSeparator = document.getElementById('close-separator');
 const expenseCategorySelect = document.getElementById('expense-category-select');
 const cashHistoryContainer = document.getElementById('cash-history-container');
 const cashStatsSection = document.getElementById('cash-stats');
 const statsTotalSales = document.getElementById('stats-total-sales');
 const statsSalesCount = document.getElementById('stats-sales-count');
 const statsTotalExpenses = document.getElementById('stats-total-expenses');
-const statsCashSales = document.getElementById('stats-cash-sales');
-const statsOtherSales = document.getElementById('stats-other-sales');
 const paymentStatsContainer = document.getElementById('payment-stats-container');
 
 // Referencias del modal de pago múltiple
@@ -116,7 +109,6 @@ const paymentMethodsList = document.getElementById('payment-methods-list');
 const addExpenseCategoryForm = document.getElementById('add-expense-category-form');
 const newExpenseCategoryName = document.getElementById('new-expense-category-name');
 const expenseCategoriesList = document.getElementById('expense-categories-list');
-const tabButtons = document.querySelectorAll('.tab-btn');
 
 // Nuevas referencias para categorías de productos
 const addProductCategoryForm = document.getElementById('add-product-category-form');
@@ -146,7 +138,6 @@ const clearPromotionBtn = document.getElementById('clear-promotion-btn');
 const promotionDisplay = document.getElementById('promotion-display');
 const promotionAmountSpan = document.getElementById('promotion-amount');
 
-// NUEVA REFERENCIA PARA EL ID DEL COMBO EN EL FORMULARIO
 const comboIdInput = document.getElementById('combo-id');
 const sidebar = document.getElementById('sidebar');
 const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
@@ -166,22 +157,18 @@ let allCustomers = [];
 let isProcessingPayment = false;
 let currentDiscountSurcharge = {
     value: 0,
-    type: null // 'percentage_discount', 'fixed_discount', 'percentage_surcharge', 'fixed_surcharge'
+    type: null
 };
 
-// NUEVAS VARIABLES PARA PROMOCIONES
 let allPromotions = [];
 let allCombos = [];
 let currentPromotion = null;
 
-
-// Ahora estas colecciones son globales
 const SHARED_PRODUCTS_COLLECTION = 'products';
 const SHARED_SALES_COLLECTION = 'sales';
 const SHARED_CUSTOMERS_COLLECTION = 'customers';
 const SHARED_PAYMENT_METHODS_COLLECTION = 'paymentMethods';
 const SHARED_EXPENSE_CATEGORIES_COLLECTION = 'expenseCategories';
-// NUEVAS COLECCIONES COMPARTIDAS
 const SHARED_EXPENSES_COLLECTION = 'expenses';
 const SHARED_CASH_COLLECTION = 'cajas';
 const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
@@ -196,7 +183,6 @@ let userPaymentMethods = [];
 const defaultExpenseCategories = ["General", "Suministros", "Servicios"];
 let userExpenseCategories = [];
 
-// Nuevo estado global para las categorías de productos
 let productCategories = [];
 
 function showModal(message) {
@@ -236,7 +222,6 @@ function showConfirmationModal(message, onConfirm, onCancel) {
     }
 }
 
-// Hacemos que la función showPage sea global para que pueda ser llamada desde cualquier lugar
 function showPage(pageId) {
     pages.forEach(page => {
         page.classList.remove('active');
@@ -262,34 +247,13 @@ function setupNavigation() {
 }
 
 function setupTabNavigation() {
-    // Usar la clase `tab-btn-sidebar` para la nueva navegación
     const tabButtons = document.querySelectorAll('.tab-btn-sidebar');
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetPageId = btn.dataset.page;
-            // Desactivar el botón activo
             document.querySelector('.tab-btn-sidebar.active')?.classList.remove('active');
-            // Activar el botón clicado
             btn.classList.add('active');
-            // Mostrar la página correspondiente
             showPage(targetPageId);
-        });
-    });
-}
-
-function setupCashTabNavigation() {
-    const cashTabButtons = document.querySelectorAll('.cash-tab-btn');
-    const cashTabPages = document.querySelectorAll('.cash-tab-page');
-
-    cashTabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetPageId = btn.dataset.page;
-
-            cashTabButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            cashTabPages.forEach(p => p.classList.remove('active'));
-            document.getElementById(targetPageId)?.classList.add('active');
         });
     });
 }
@@ -320,7 +284,6 @@ function renderProducts(products) {
     if (!productsContainer) return;
     productsContainer.innerHTML = '';
     
-    // Agrupar productos por categoría
     const productsByCategory = products.reduce((acc, product) => {
         const categoryId = product.categoryId || 'uncategorized';
         if (!acc[categoryId]) {
@@ -330,7 +293,6 @@ function renderProducts(products) {
         return acc;
     }, {});
     
-    // Obtener y ordenar las categorías para el renderizado
     const sortedCategoryIds = Object.keys(productsByCategory).sort();
 
     sortedCategoryIds.forEach(categoryId => {
@@ -351,7 +313,6 @@ function renderProducts(products) {
             renderProductCard(product, productsGrid);
         });
 
-        // Renderizar combos en su propia sección si no hay filtro de búsqueda
         if (posSearchInput?.value === '' && categoryId === sortedCategoryIds[0]) {
             const comboSection = document.createElement('div');
             comboSection.className = 'combo-section mb-6';
@@ -375,7 +336,6 @@ function renderProducts(products) {
     renderPromotionSelect();
 }
 
-// NUEVAS FUNCIONES PARA PROMOCIONES Y COMBOS
 function renderComboCard(combo, container) {
     if (!container) return;
     const card = document.createElement('div');
@@ -410,7 +370,11 @@ onAuthStateChanged(auth, async (user) => {
         userId = user.uid;
         setupRealtimeListeners();
         if (authModal) authModal.classList.add('hidden');
-        showPage('pos-page'); // Inicia en la página del POS
+        showPage('pos-page'); 
+        const posTab = document.querySelector('.tab-btn-sidebar[data-page="pos-page"]');
+        if(posTab) {
+            posTab.classList.add('active');
+        }
     } else {
         if (authModal) authModal.classList.remove('hidden');
         pages.forEach(page => page.classList.remove('active'));
@@ -423,7 +387,6 @@ function setupRealtimeListeners() {
         return;
     }
 
-    // Colecciones compartidas
     const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
     onSnapshot(productsCollection, (snapshot) => {
         allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -432,7 +395,6 @@ function setupRealtimeListeners() {
         allProducts.forEach(product => {
             renderManageProduct(product);
         });
-        // Llama a esta función para asegurar que el select de categorías de producto se actualiza
         renderProductCategoriesInput();
     }, (error) => {
         console.error("Error al escuchar productos:", error);
@@ -482,7 +444,6 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de gastos.");
     });
 
-    // Nuevo listener para las categorías de productos
     const productCategoriesCollection = collection(db, SHARED_PRODUCT_CATEGORIES_COLLECTION);
     onSnapshot(productCategoriesCollection, (snapshot) => {
         productCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -493,7 +454,6 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de productos.");
     });
     
-    // NUEVO: Listener para las promociones simples
     const promotionsCollection = collection(db, SHARED_PROMOTIONS_COLLECTION);
     onSnapshot(promotionsCollection, (snapshot) => {
         allPromotions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -504,19 +464,16 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las promociones.");
     });
     
-    // NUEVO: Listener para los combos
     const combosCollection = collection(db, SHARED_COMBOS_COLLECTION);
     onSnapshot(combosCollection, (snapshot) => {
       allCombos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderProducts(allProducts); // Para refrescar la vista de productos y combos
+      renderProducts(allProducts); 
       if(promotionsList) renderPromotionsAndCombos();
     }, (error) => {
       console.error("Error al escuchar combos:", error);
       showModal("Error al cargar los combos.");
     });
 
-
-    // Colecciones ahora compartidas
     const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
     onSnapshot(expensesCollection, (snapshot) => {
         const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -550,9 +507,8 @@ function setupRealtimeListeners() {
     });
 }
 
-// Funciones de renderizado de configuración
 function renderPaymentMethodsList() {
-    if (!paymentMethodsList) return; // Validación agregada
+    if (!paymentMethodsList) return; 
     paymentMethodsList.innerHTML = '';
     const allMethods = [...defaultPaymentMethods.map(name => ({name: name, id: null})), ...userPaymentMethods];
     allMethods.forEach(method => {
@@ -590,7 +546,7 @@ function renderPaymentMethodsList() {
 }
 
 function renderExpenseCategoriesList() {
-    if (!expenseCategoriesList) return; // Validación agregada
+    if (!expenseCategoriesList) return; 
     expenseCategoriesList.innerHTML = '';
     const allCategories = [...defaultExpenseCategories.map(name => ({name: name, id: null})), ...userExpenseCategories];
     allCategories.forEach(category => {
@@ -736,7 +692,6 @@ function renderPaymentMethodFilters() {
     const selectFilter = document.getElementById('filter-payment-method');
     selectFilter.innerHTML = '<option value="">Todas</option>';
     
-    // Generar opciones para todos los métodos de pago disponibles (predeterminados + agregados por el usuario)
     const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
     allMethods.forEach(method => {
         const option = document.createElement('option');
@@ -878,7 +833,6 @@ function renderSalesHistory(sales) {
     
     const filteredSales = applyFilters(sales);
     
-    // Nuevo cálculo para el total de la vista filtrada
     let filteredTotal = 0;
     const paymentMethodFilter = filterPaymentMethod?.value;
 
@@ -909,7 +863,6 @@ function renderSalesHistory(sales) {
 
     const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
     
-    // Mostrar el total general de la vista filtrada
     if (sortedDates.length > 0) {
         const totalHeader = document.createElement('div');
         totalHeader.className = "bg-blue-600 text-white p-4 rounded-lg mb-4 text-center";
@@ -957,7 +910,6 @@ function renderSalesHistory(sales) {
 
             let customerHtml = sale.customerId ? `<p class="mt-2 text-sm text-gray-600">Cliente: <span class="font-semibold">${sale.customerName}</span></p>` : '';
 
-            // Lógica para mostrar solo el monto del pago filtrado
             let displayAmount = sale.total;
             if (paymentMethodFilter && paymentMethodFilter !== 'Todas') {
                 const filteredPayment = sale.payments.find(p => p.method === paymentMethodFilter);
@@ -984,7 +936,6 @@ function renderSalesHistory(sales) {
         });
         salesHistoryContainer.appendChild(dayDiv);
     });
-    // Attach print events
     document.querySelectorAll('.print-receipt-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const saleId = e.target.dataset.saleId;
@@ -1012,7 +963,6 @@ function applyFilters(sales) {
             return false;
         }
         
-        // Lógica de filtro para las formas de pago configuradas
         if (paymentMethod && paymentMethod !== 'Todas') {
             return sale.payments.some(p => p.method === paymentMethod);
         }
@@ -1041,7 +991,6 @@ function renderDailyExpenses(expenses) {
     if (!dailyExpensesContainer) return;
     dailyExpensesContainer.innerHTML = '';
 
-    // Agrupar gastos por día
     const expensesByDay = expenses.reduce((acc, expense) => {
         const timestamp = expense.timestamp;
         if (timestamp && timestamp.seconds) {
@@ -1058,8 +1007,6 @@ function renderDailyExpenses(expenses) {
     const sortedDates = Object.keys(expensesByDay).sort((a, b) => new Date(b) - new Date(a));
 
     sortedDates.forEach(dateString => {
-        const dailyExpenses = expensesByDay[dateString];
-
         const dayDiv = document.createElement('div');
         dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
         dayDiv.innerHTML = `
@@ -1106,12 +1053,7 @@ function renderCashHistory(history) {
         const dayDiv = document.createElement('div');
         dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
 
-        let totalSalesDay = 0;
-        let totalExpensesDay = 0;
-
         const entriesHtml = historyByDay[dateString].map(entry => {
-            totalSalesDay += entry.ventasTotales;
-            totalExpensesDay += entry.gastosTotales;
             const entryDate = new Date(entry.fecha.seconds * 1000).toLocaleTimeString('es-ES');
             return `
             <div class="bg-white p-3 rounded-lg shadow-sm my-2">
@@ -1148,13 +1090,11 @@ async function updateDailyTotals() {
 
     const today = new Date().toLocaleDateString('en-CA');
 
-    // Obtener ventas asociadas a la caja de hoy
     const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
     const salesSnapshot = await getDocs(salesQuery);
     let salesCount = 0;
     let paymentMethodTotals = {};
 
-    // Obtener todos los métodos de pago disponibles
     const allPaymentMethods = [...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)];
     allPaymentMethods.forEach(method => {
         paymentMethodTotals[method] = 0;
@@ -1176,7 +1116,6 @@ async function updateDailyTotals() {
         return sum;
     }, 0);
 
-    // Obtener gastos asociados a la caja de hoy
     const expensesQuery = query(collection(db, SHARED_EXPENSES_COLLECTION), where("cashId", "==", today));
     const expensesSnapshot = await getDocs(expensesQuery);
     dailyExpensesTotal = expensesSnapshot.docs.reduce((sum, doc) => {
@@ -1190,25 +1129,20 @@ async function updateDailyTotals() {
     const currentCash = dailyCashData.abertura + paymentMethodTotals['Efectivo'] - dailyExpensesTotal;
     if (currentCashDisplay) currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
 
-    // Actualizar las estadísticas
     if (statsTotalSales) statsTotalSales.textContent = `$${dailySalesTotal.toFixed(2)}`;
     if (statsSalesCount) statsSalesCount.textContent = salesCount;
     if (statsTotalExpenses) statsTotalExpenses.textContent = `$${dailyExpensesTotal.toFixed(2)}`;
 
-    // Renderizar dinámicamente los totales de pago
     renderPaymentStats(paymentMethodTotals);
 }
 
 function renderPaymentStats(paymentMethodTotals) {
     if (!paymentStatsContainer) return;
 
-    // Limpiar el contenedor antes de renderizar
     paymentStatsContainer.innerHTML = '';
     
-    // Convertir el objeto a un array de pares [clave, valor]
     const paymentMethodsArray = Object.entries(paymentMethodTotals);
 
-    // Renderizar cada forma de pago
     paymentMethodsArray.forEach(([method, total]) => {
         const div = document.createElement('div');
         let totalSalesText = '';
@@ -1231,19 +1165,13 @@ function renderCashStatus() {
     if (dailyCashData && !dailyCashData.cerrada) {
         if (cashStatusText) cashStatusText.textContent = `Caja abierta: $${dailyCashData.abertura.toFixed(2)}`;
         if (openCashForm) openCashForm.classList.add('hidden');
-        if (expenseSection) expenseSection.classList.remove('hidden');
-        if (expenseSeparator) expenseSeparator.classList.remove('hidden');
         if (closeCashBtn) closeCashBtn.classList.remove('hidden');
-        if (closeSeparator) closeSeparator.classList.remove('hidden');
         if (cashStatsSection) cashStatsSection.classList.remove('hidden');
     } else {
         if (cashStatusText) cashStatusText.textContent = "Caja cerrada";
         if (currentCashDisplay) currentCashDisplay.textContent = "$0.00";
         if (openCashForm) openCashForm.classList.remove('hidden');
-        if (expenseSection) expenseSection.classList.add('hidden');
-        if (expenseSeparator) expenseSeparator.classList.add('hidden');
         if (closeCashBtn) closeCashBtn.classList.add('hidden');
-        if (closeSeparator) closeSeparator.classList.add('hidden');
         if (cashStatsSection) cashStatsSection.classList.add('hidden');
     }
 }
@@ -1301,7 +1229,6 @@ if (expenseForm) {
             expenseForm.reset();
             showModal("Gasto registrado con éxito.");
             
-            // Ocultar el formulario después de guardar
             if (expenseFormContainer) expenseFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -1351,7 +1278,6 @@ if (closeCashBtn) {
     });
 }
 
-// Lógica de cálculo de precios corregida
 function calculateTotal() {
     let subtotal = 0;
     let total = 0;
@@ -1368,7 +1294,6 @@ function calculateTotal() {
         }
     });
 
-    // APLICAR PROMOCIÓN SIMPLE (SI HAY UNA ACTIVA)
     if (currentPromotion) {
         if (currentPromotion.type === 'fixed_discount') {
             promotionAmount += currentPromotion.value;
@@ -1394,7 +1319,6 @@ function calculateTotal() {
         total -= promotionAmount;
     }
 
-    // LUEGO APLICAR DESCUENTO/RECARGO MANUAL
     let adjustmentAmount = 0;
     if (currentDiscountSurcharge.value > 0) {
         if (currentDiscountSurcharge.type === 'percentage_discount') {
@@ -1462,9 +1386,7 @@ function renderCart() {
     cartSubtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
     cartTotalSpan.textContent = `$${total.toFixed(2)}`;
 
-    // Mostrar el descuento/recargo aplicado
     if (adjustmentAmount !== 0) {
-        let text = currentDiscountSurcharge.type.includes('discount') ? 'Descuento' : 'Recargo';
         let sign = currentDiscountSurcharge.type.includes('discount') ? '-' : '+';
         discountSurchargeAmountSpan.textContent = `${sign}$${adjustmentAmount.toFixed(2)}`;
         discountSurchargeDisplay.classList.remove('hidden');
@@ -1472,7 +1394,6 @@ function renderCart() {
         discountSurchargeDisplay.classList.add('hidden');
     }
 
-    // NUEVO: Mostrar la promoción aplicada
     if (promotionAmount > 0) {
         promotionAmountSpan.textContent = `-$${promotionAmount.toFixed(2)}`;
         promotionDisplay.classList.remove('hidden');
@@ -1564,7 +1485,6 @@ if (productForm) {
             const productIdInput = document.getElementById('product-id');
             if (productIdInput) productIdInput.value = '';
             
-            // Ocultar el formulario después de guardar
             if (productFormContainer) productFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -1609,7 +1529,6 @@ if (applyDiscountSurchargeBtn) {
         currentDiscountSurcharge.value = value;
         currentDiscountSurcharge.type = type;
         
-        // Limpiar la promoción si hay un descuento/recargo manual
         currentPromotion = null;
         if(promotionSelect) promotionSelect.value = "";
 
@@ -1817,7 +1736,6 @@ async function processImportedSales(csvData) {
     showModal(message);
 }
 
-// Lógica de clientes
 if (addCustomerForm) {
     addCustomerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1832,7 +1750,6 @@ if (addCustomerForm) {
             if(addCustomerForm) addCustomerForm.reset();
             showModal(`Cliente '${name}' añadido con éxito.`);
             
-            // Ocultar el formulario después de guardar
             if (customerFormContainer) customerFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -2047,7 +1964,6 @@ function renderPaymentMethodsChart(sales) {
     });
 }
 
-// Impresión de recibos
 function printReceipt(sale) {
     const paymentsHtml = sale.payments.map(p => `
         <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
@@ -2117,20 +2033,16 @@ function printReceipt(sale) {
     </div>
     `;
 
-    // 1. Crea un contenedor temporal
     const printArea = document.createElement('div');
     printArea.innerHTML = content;
     document.body.appendChild(printArea);
 
-    // 2. Espera a que el DOM se actualice y luego imprime
     setTimeout(() => {
         window.print();
-        // 3. Elimina el contenedor temporal después de la impresión
         document.body.removeChild(printArea);
     }, 500);
 }
 
-// Lógica de autenticación
 if (loginBtn) {
     loginBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -2190,7 +2102,6 @@ if (toggleFiltersBtn) {
     toggleFiltersBtn.addEventListener('click', toggleFilters);
 }
 
-// Se hace global para poder llamarla desde el HTML con onclick
 window.toggleSection = function(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) {
@@ -2203,7 +2114,6 @@ window.toggleSection = function(sectionId) {
     }
 }
 
-// NUEVA FUNCIÓN PARA AÑADIR UN CAMPO DE PRODUCTO AL FORMULARIO DEL COMBO
 function addComboProductInput(product = null, quantity = 1) {
     if (!comboProductsContainer) return;
 
@@ -2220,7 +2130,6 @@ function addComboProductInput(product = null, quantity = 1) {
     const select = div.querySelector('.combo-product-select');
     const removeBtn = div.querySelector('.remove-combo-product-btn');
 
-    // Poblar el select con la lista de productos
     allProducts.forEach(prod => {
         const option = document.createElement('option');
         option.value = prod.id;
@@ -2232,7 +2141,6 @@ function addComboProductInput(product = null, quantity = 1) {
         select.value = product.id;
     }
 
-    // Añadir el listener para el botón de remover
     removeBtn.addEventListener('click', () => {
         div.remove();
     });
@@ -2240,7 +2148,6 @@ function addComboProductInput(product = null, quantity = 1) {
     comboProductsContainer.appendChild(div);
 }
 
-// NUEVA FUNCIÓN PARA GUARDAR EL COMBO (AHORA TAMBIÉN EDITA)
 if (addComboForm) {
     addComboForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -2277,18 +2184,16 @@ if (addComboForm) {
 
         try {
             if (comboId) {
-                // Editar combo existente
                 const comboRef = doc(db, SHARED_COMBOS_COLLECTION, comboId);
                 await setDoc(comboRef, comboData, { merge: true });
                 showModal("Combo editado con éxito.");
             } else {
-                // Añadir nuevo combo
                 await addDoc(collection(db, SHARED_COMBOS_COLLECTION), comboData);
                 showModal("Combo guardado con éxito.");
             }
             addComboForm.reset();
-            comboProductsContainer.innerHTML = ''; // Limpiar los inputs del combo
-            addComboForm.classList.add('hidden'); // Ocultar el formulario
+            comboProductsContainer.innerHTML = '';
+            addComboForm.classList.add('hidden');
         } catch (error) {
             console.error("Error al guardar el combo:", error);
             showModal("Hubo un error al guardar el combo. Intenta de nuevo.");
@@ -2296,13 +2201,6 @@ if (addComboForm) {
     });
 }
 
-// NUEVA FUNCIÓN PARA RENDERIZAR LA LISTA DE COMBOS PARA GESTIÓN
-function renderManageCombos() {
-    // Si la función ya está incluida en renderPromotionsAndCombos, no la necesitamos aquí.
-    // Su lógica se moverá allí para evitar duplicación.
-}
-
-// NUEVA FUNCIÓN PARA RENDERIZAR LAS PROMOCIONES SIMPLES PARA GESTIÓN
 function renderManagePromotion(promo) {
     if (!promotionsList) return;
     const promoDiv = document.createElement('div');
@@ -2324,17 +2222,15 @@ function renderManagePromotion(promo) {
     `;
     promotionsList.appendChild(promoDiv);
 
-    // Añadir listeners para editar y eliminar promociones
     promoDiv.querySelector('.edit-promo-btn').addEventListener('click', () => {
         const selectedPromo = allPromotions.find(p => p.id === promo.id);
         if (selectedPromo) {
-            // Muestra el formulario y rellena los campos
             if (addSimplePromotionForm) addSimplePromotionForm.classList.remove('hidden');
             if (addComboForm) addComboForm.classList.add('hidden');
             if (simplePromoNameInput) simplePromoNameInput.value = selectedPromo.name;
             if (simplePromoTypeSelect) simplePromoTypeSelect.value = selectedPromo.type;
             if (simplePromoValueInput) simplePromoValueInput.value = selectedPromo.value;
-            if (addSimplePromotionForm) addSimplePromotionForm.dataset.promoId = selectedPromo.id; // Guarda el ID para la edición
+            if (addSimplePromotionForm) addSimplePromotionForm.dataset.promoId = selectedPromo.id;
         }
     });
     
@@ -2356,12 +2252,10 @@ function renderPromotionsAndCombos() {
     if (!promotionsList) return;
     promotionsList.innerHTML = '';
 
-    // Renderizar promociones simples
     allPromotions.forEach(promo => {
         renderManagePromotion(promo);
     });
 
-    // Renderizar combos
     allCombos.forEach(combo => {
         const comboDiv = document.createElement('div');
         comboDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
@@ -2394,11 +2288,9 @@ function renderPromotionsAndCombos() {
         `;
         promotionsList.appendChild(comboDiv);
 
-        // Añadir listeners a los botones de editar y eliminar
         comboDiv.querySelector('.edit-combo-btn').addEventListener('click', () => {
             const selectedCombo = allCombos.find(c => c.id === combo.id);
             if (selectedCombo) {
-                // Muestra el formulario y rellena los campos
                 if (addComboForm) addComboForm.classList.remove('hidden');
                 if (addSimplePromotionForm) addSimplePromotionForm.classList.add('hidden');
                 if (comboIdInput) comboIdInput.value = selectedCombo.id;
@@ -2429,7 +2321,6 @@ function renderPromotionsAndCombos() {
     });
 }
 
-// NUEVO: Listener para el formulario de promoción simple
 if(addSimplePromotionForm) {
     addSimplePromotionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -2452,12 +2343,10 @@ if(addSimplePromotionForm) {
 
         try {
             if (promoId) {
-                // Editar promoción existente
                 const promoRef = doc(db, SHARED_PROMOTIONS_COLLECTION, promoId);
                 await setDoc(promoRef, promoData, { merge: true });
                 showModal("Promoción editada con éxito.");
             } else {
-                // Añadir nueva promoción
                 await addDoc(collection(db, SHARED_PROMOTIONS_COLLECTION), promoData);
                 showModal("Promoción añadida con éxito.");
             }
@@ -2471,25 +2360,16 @@ if(addSimplePromotionForm) {
     });
 }
 
-// Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Configurar la navegación principal del menú
     setupNavigation();
-
-    // Configurar la navegación de pestañas
     setupTabNavigation();
 
-    // Configurar la navegación de pestañas de Caja y Gastos
-    setupCashTabNavigation();
-
-    // Manejar el estado de autenticación al cargar la página
     onAuthStateChanged(auth, user => {
         if (user) {
             userId = user.uid;
             setupRealtimeListeners();
             if (authModal) authModal.classList.add('hidden');
-            // Al iniciar sesión, mostrar el POS y activar su pestaña
             showPage('pos-page');
             const posTab = document.querySelector('.tab-btn-sidebar[data-page="pos-page"]');
             if(posTab) {
@@ -2543,12 +2423,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     showModal("Producto editado con éxito.");
                 } else {
                     const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-                    await addDoc(productsCollection, productData);
+                    await addDoc(productsCollection, {name, price, stock});
                     showModal("Producto añadido con éxito.");
                 }
                 if (productForm) productForm.reset();
                 const productIdInput = document.getElementById('product-id');
                 if (productIdInput) productIdInput.value = '';
+                
+                if (productFormContainer) productFormContainer.classList.add('hidden');
+                
             } catch (error) {
                 console.error("Error al guardar el producto:", error);
                 showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
@@ -2617,7 +2500,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Mover este bloque fuera de setupRealtimeListeners
     if (processPaymentBtn) {
         processPaymentBtn.addEventListener('click', async () => {
             if (isProcessingPayment) {
@@ -2668,7 +2550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             stock: item.stock - item.quantity
                         });
                     }
-                }).filter(Boolean); // Filter out undefined promises
+                }).filter(Boolean);
 
                 await Promise.all(productUpdates);
 
@@ -2807,25 +2689,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // NUEVO: Listeners para los botones de promociones
     if (showSimplePromoFormBtn && addSimplePromotionForm) {
         showSimplePromoFormBtn.addEventListener('click', () => {
             addSimplePromotionForm.classList.remove('hidden');
-            addComboForm.classList.add('hidden'); // Ocultar el otro formulario
+            addComboForm.classList.add('hidden');
         });
     }
     if (showComboFormBtn && addComboForm) {
         showComboFormBtn.addEventListener('click', () => {
             addComboForm.classList.remove('hidden');
-            addSimplePromotionForm.classList.add('hidden'); // Ocultar el otro formulario
-            // Limpiar el formulario y el campo ID al cambiar a "Crear Combo"
+            addSimplePromotionForm.classList.add('hidden');
             addComboForm.reset();
             if (comboIdInput) comboIdInput.value = '';
             if (comboProductsContainer) comboProductsContainer.innerHTML = '';
         });
     }
 
-    // AÑADE ESTE EVENT LISTENER
     if (addComboProductBtn) {
         addComboProductBtn.addEventListener('click', () => {
             addComboProductInput();
@@ -2854,7 +2733,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Toggle forms visibility
     if (toggleProductFormBtn) {
         toggleProductFormBtn.addEventListener('click', () => {
             if (productFormContainer) {
