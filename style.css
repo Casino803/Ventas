@@ -1,19 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 body {
-font-family: 'Inter', sans-serif;
-background-color: #f3f4f6;
-transition: all 0.5s ease;
+  font-family: 'Inter', sans-serif;
+  background-color: #f3f4f6;
+  transition: all 0.5s ease;
 }
 .page-content {
-display: none;
-animation: fadeIn 0.5s ease-in-out;
+  display: none;
+  animation: fadeIn 0.5s ease-in-out;
 }
 .page-content.active {
-display: block;
+  display: block;
 }
 @keyframes fadeIn {
-from { opacity: 0; transform: translateY(10px); }
-to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .sidebar {
@@ -24,6 +24,15 @@ to { opacity: 1; transform: translateY(0); }
   width: 70px;
   min-width: 70px;
 }
+.sidebar.collapsed .tab-btn-sidebar span {
+  display: none;
+}
+.sidebar-toggle-icon {
+  transition: transform 0.3s ease-in-out;
+}
+.sidebar.collapsed .sidebar-toggle-icon {
+  transform: rotate(180deg);
+}
 
 .tab-btn-sidebar {
   display: flex;
@@ -33,9 +42,6 @@ to { opacity: 1; transform: translateY(0); }
   transition: all 0.2s ease-in-out;
   overflow: hidden;
   white-space: nowrap;
-}
-.sidebar.collapsed .tab-btn-sidebar span {
-  display: none;
 }
 .tab-btn-sidebar.active {
   background-color: #e5e7eb;
@@ -53,24 +59,21 @@ to { opacity: 1; transform: translateY(0); }
   color: #1f2937;
 }
 
-/* Nuevos estilos para los contenedores de los productos por categoría */
 .products-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 1rem;
 }
 
-/* Nuevo estilo para los encabezados de categoría */
 .category-header {
-    font-size: 1.5rem; /* text-2xl */
-    font-weight: 700; /* font-bold */
-    color: #1f2937; /* text-gray-800 */
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
     margin-bottom: 1rem;
     padding-left: 0.5rem;
-    border-left: 4px solid #3b82f6; /* border-blue-500 */
+    border-left: 4px solid #3b82f6;
 }
 
-/* Estilos de las tarjetas de producto y combo, centrados y con tamaño de fuente ajustado */
 .product-card, .combo-card {
   text-align: center;
   overflow: hidden;
