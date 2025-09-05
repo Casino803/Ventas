@@ -17,29 +17,40 @@ to { opacity: 1; transform: translateY(0); }
 }
 
 .sidebar {
-width: 280px;
+  width: 280px;
+  min-width: 280px;
 }
+.sidebar.collapsed {
+  width: 70px;
+  min-width: 70px;
+}
+
 .tab-btn-sidebar {
-display: flex;
-align-items: center;
-width: 100%;
-text-align: left;
-transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease-in-out;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sidebar.collapsed .tab-btn-sidebar span {
+  display: none;
 }
 .tab-btn-sidebar.active {
-background-color: #e5e7eb;
-font-weight: 600;
-color: #1f2937;
-box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: #e5e7eb;
+  font-weight: 600;
+  color: #1f2937;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 .tab-btn-sidebar:hover {
-transform: translateX(5px);
+  transform: translateX(5px);
 }
 .tab-btn-sidebar.active:hover {
-transform: none;
+  transform: none;
 }
 .page-content h2, .page-content h3 {
-color: #1f2937;
+  color: #1f2937;
 }
 
 /* Nuevos estilos para los contenedores de los productos por categoría */
@@ -74,8 +85,4 @@ color: #1f2937;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
-}
-
-#manage-products-container, #sales-history-container, #daily-expenses-container, #customers-list-container, #cash-history-container, #payment-methods-list, #expense-categories-list, #product-categories-list, #promotions-list {
-  max-height: calc(100vh - 20rem); /* Mantiene la altura fija para otras listas */
 }
