@@ -10,122 +10,118 @@
 <link rel="stylesheet" href="style.css">
 <link rel="manifest" href="manifest.json">
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 flex h-screen overflow-hidden">
 
-<div class="fixed top-0 left-0 right-0 p-4 flex justify-between z-50">
-<button data-page="settings-page" class="menu-btn bg-blue-600 text-white font-bold p-3 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
-<i class="fas fa-cog"></i>
-</button>
-<button id="logout-btn" class="menu-btn bg-red-600 text-white font-bold p-3 rounded-lg shadow-md hover:bg-red-700 transition-colors">
-<i class="fas fa-sign-out-alt"></i>
-</button>
-</div>
-
-<div class="flex h-screen">
-<div class="sidebar bg-white shadow-xl p-4">
-<h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Ventas</h1>
-<div id="main-tabs" class="flex flex-col space-y-2">
-<button data-page="pos-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors active">
-<i class="fas fa-cash-register mr-3"></i> Punto de Venta
-</button>
-<button data-page="products-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-<i class="fas fa-boxes-stacked mr-3"></i> Gestión de Productos
-</button>
-<button data-page="history-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-<i class="fas fa-clipboard-list mr-3"></i> Historial de Ventas
-</button>
-<button data-page="stats-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-<i class="fas fa-chart-line mr-3"></i> Estadísticas
-</button>
-<button data-page="cash-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-<i class="fas fa-wallet mr-3"></i> Caja
-</button>
-<button data-page="expenses-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-<i class="fas fa-minus-circle mr-3"></i> Gastos
-</button>
-<button data-page="customers-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-<i class="fas fa-users mr-3"></i> Clientes
-</button>
-</div>
+<div id="sidebar" class="sidebar bg-white shadow-xl p-4 transition-all duration-300">
+  <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Ventas</h1>
+  <div id="main-tabs" class="flex flex-col space-y-2">
+    <button data-page="pos-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors active">
+      <i class="fas fa-cash-register mr-3"></i> Punto de Venta
+    </button>
+    <button data-page="products-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+      <i class="fas fa-boxes-stacked mr-3"></i> Gestión de Productos
+    </button>
+    <button data-page="history-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+      <i class="fas fa-clipboard-list mr-3"></i> Historial de Ventas
+    </button>
+    <button data-page="stats-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+      <i class="fas fa-chart-line mr-3"></i> Estadísticas
+    </button>
+    <button data-page="cash-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+      <i class="fas fa-wallet mr-3"></i> Caja
+    </button>
+    <button data-page="expenses-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+      <i class="fas fa-minus-circle mr-3"></i> Gastos
+    </button>
+    <button data-page="customers-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+      <i class="fas fa-users mr-3"></i> Clientes
+    </button>
+    <button data-page="settings-page" class="tab-btn-sidebar px-4 py-3 font-medium text-left text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+        <i class="fas fa-cog mr-3"></i> Configuración
+    </button>
+  </div>
+  <button id="sidebar-toggle-btn" class="absolute bottom-4 left-4 p-2 bg-blue-600 text-white rounded-full shadow-lg">
+      <i class="fas fa-chevron-left"></i>
+  </button>
 </div>
 
 <div class="flex-1 p-8 overflow-y-auto">
 
-<div id="pos-page" class="page-content active">
-<div class="flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6 h-full">
-<div class="lg:w-2/3 flex flex-col">
-<div class="flex-grow">
-<h2 class="text-2xl font-bold text-gray-800 mb-6">Punto de Venta</h2>
-<div class="mb-4 flex space-x-2">
-<input type="text" id="pos-search-input" placeholder="Buscar productos..."
-class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-<select id="customer-select" class="w-1/3 px-4 py-2 border rounded-lg">
-<option value="">Seleccionar Cliente</option>
-</select>
-</div>
-<div id="product-list" class="mb-6 flex-grow">
-<h3 class="text-xl font-semibold text-gray-700 mb-4">Productos Disponibles</h3>
-<div id="products-container" class="space-y-6 overflow-y-scroll h-full">
-</div>
-</div>
-</div>
-</div>
-
-<div class="lg:w-1/3 flex flex-col p-4 bg-gray-50 rounded-xl shadow-lg border border-gray-200">
-<h3 class="text-xl font-semibold text-gray-700 mb-4"><i class="fas fa-shopping-cart"></i> Carrito de Compras</h3>
-<div id="cart-container" class="space-y-3 mb-4 flex-grow overflow-y-auto">
-</div>
-<div class="mt-auto">
-<div class="flex justify-between items-center text-sm text-gray-600 border-t-2 border-gray-300 pt-4 mt-4">
-<span>Subtotal:</span>
-<span id="cart-subtotal" class="font-bold">$0.00</span>
-</div>
-<div id="promotion-display" class="hidden flex justify-between items-center text-sm text-gray-600">
-<span>Promoción:</span>
-<span id="promotion-amount" class="font-bold">$0.00</span>
-</div>
-<div id="discount-surcharge-display" class="hidden flex justify-between items-center text-sm text-gray-600">
-<span>Descuento/Recargo:</span>
-<span id="discount-surcharge-amount" class="font-bold">$0.00</span>
-</div>
-<div class="flex justify-between items-center text-2xl font-bold text-gray-800 mt-2">
-<span>Total:</span>
-<span id="cart-total" class="text-green-600">$0.00</span>
-</div>
-
-<div class="mt-6 p-4 bg-white rounded-lg shadow-inner border border-gray-200">
-<h4 class="font-semibold text-gray-700 mb-2">Ajuste de Venta</h4>
-<div class="flex space-x-2 mb-2">
-<input type="number" id="discount-surcharge-value" placeholder="Valor" step="0.01" class="w-2/5 px-2 py-1 border rounded-lg text-sm">
-<select id="discount-surcharge-type" class="w-3/5 px-2 py-1 border rounded-lg text-sm">
-<option value="percentage_discount">% Descuento</option>
-<option value="fixed_discount">Monto Descuento</option>
-<option value="percentage_surcharge">% Recargo</option>
-<option value="fixed_surcharge">Monto Recargo</option>
-</select>
-</div>
-<div class="flex space-x-2">
-<button id="apply-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">Aplicar</button>
-<button id="clear-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm hover:bg-gray-500">Limpiar</button>
-</div>
-</div>
-
-<div class="mt-4 p-4 bg-white rounded-lg shadow-inner border border-gray-200">
-<h4 class="font-semibold text-gray-700 mb-2">Aplicar Promoción</h4>
-<select id="promotion-select" class="w-full px-2 py-1 border rounded-lg text-sm">
-<option value="">Seleccionar Promoción</option>
-</select>
-<button id="clear-promotion-btn" class="w-full mt-2 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm hover:bg-gray-500">Limpiar Promoción</button>
-</div>
-
-<button id="checkout-btn"
-class="w-full mt-6 px-4 py-4 bg-green-600 text-white font-bold text-lg rounded-xl shadow-xl hover:bg-green-700 transition duration-300 transform hover:scale-105">
-<i class="fas fa-hand-holding-usd mr-2"></i> Finalizar Venta
-</button>
-</div>
-</div>
-</div>
-</div>
+  <div id="pos-page" class="page-content active">
+    <div class="flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6 h-full">
+      <div class="lg:w-2/3 flex flex-col h-full">
+        <div class="flex-grow flex flex-col">
+          <h2 class="text-2xl font-bold text-gray-800 mb-6">Punto de Venta</h2>
+          <div class="mb-4 flex space-x-2">
+            <input type="text" id="pos-search-input" placeholder="Buscar productos..."
+                   class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select id="customer-select" class="w-1/3 px-4 py-2 border rounded-lg">
+              <option value="">Seleccionar Cliente</option>
+            </select>
+          </div>
+          <div id="product-list" class="flex-grow flex flex-col">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Productos Disponibles</h3>
+            <div id="products-container" class="space-y-6 overflow-y-scroll h-full">
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <div class="lg:w-1/3 flex flex-col p-4 bg-gray-50 rounded-xl shadow-lg border border-gray-200 h-full">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4"><i class="fas fa-shopping-cart"></i> Carrito de Compras</h3>
+        <div id="cart-container" class="space-y-3 mb-4 flex-grow overflow-y-auto">
+        </div>
+        <div class="mt-auto">
+          <div class="flex justify-between items-center text-sm text-gray-600 border-t-2 border-gray-300 pt-4 mt-4">
+            <span>Subtotal:</span>
+            <span id="cart-subtotal" class="font-bold">$0.00</span>
+          </div>
+          <div id="promotion-display" class="hidden flex justify-between items-center text-sm text-gray-600">
+            <span>Promoción:</span>
+            <span id="promotion-amount" class="font-bold">$0.00</span>
+          </div>
+          <div id="discount-surcharge-display" class="hidden flex justify-between items-center text-sm text-gray-600">
+            <span>Descuento/Recargo:</span>
+            <span id="discount-surcharge-amount" class="font-bold">$0.00</span>
+          </div>
+          <div class="flex justify-between items-center text-2xl font-bold text-gray-800 mt-2">
+            <span>Total:</span>
+            <span id="cart-total" class="text-green-600">$0.00</span>
+          </div>
+  
+          <div class="mt-6 p-4 bg-white rounded-lg shadow-inner border border-gray-200">
+            <h4 class="font-semibold text-gray-700 mb-2">Ajuste de Venta</h4>
+            <div class="flex space-x-2 mb-2">
+              <input type="number" id="discount-surcharge-value" placeholder="Valor" step="0.01" class="w-2/5 px-2 py-1 border rounded-lg text-sm">
+              <select id="discount-surcharge-type" class="w-3/5 px-2 py-1 border rounded-lg text-sm">
+                <option value="percentage_discount">% Descuento</option>
+                <option value="fixed_discount">Monto Descuento</option>
+                <option value="percentage_surcharge">% Recargo</option>
+                <option value="fixed_surcharge">Monto Recargo</option>
+              </select>
+            </div>
+            <div class="flex space-x-2">
+              <button id="apply-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">Aplicar</button>
+              <button id="clear-discount-surcharge-btn" class="flex-1 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm hover:bg-gray-500">Limpiar</button>
+            </div>
+          </div>
+  
+          <div class="mt-4 p-4 bg-white rounded-lg shadow-inner border border-gray-200">
+            <h4 class="font-semibold text-gray-700 mb-2">Aplicar Promoción</h4>
+            <select id="promotion-select" class="w-full px-2 py-1 border rounded-lg text-sm">
+              <option value="">Seleccionar Promoción</option>
+            </select>
+            <button id="clear-promotion-btn" class="w-full mt-2 px-3 py-2 bg-gray-400 text-white rounded-lg text-sm hover:bg-gray-500">Limpiar Promoción</button>
+          </div>
+  
+          <button id="checkout-btn"
+                  class="w-full mt-6 px-4 py-4 bg-green-600 text-white font-bold text-lg rounded-xl shadow-xl hover:bg-green-700 transition duration-300 transform hover:scale-105">
+            <i class="fas fa-hand-holding-usd mr-2"></i> Finalizar Venta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <div id="products-page" class="page-content hidden">
 <h2 class="text-2xl font-bold text-gray-800 mb-6">Gestión de Productos</h2>
