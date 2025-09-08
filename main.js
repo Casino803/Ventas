@@ -59,8 +59,9 @@ const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
 const expenseFormContainer = document.getElementById('expense-form-container');
 const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
 const customerFormContainer = document.getElementById('customer-form-container');
-const reserveBtn = document.getElementById('reserve-btn'); // NUEVO: Botón de reservar
-const reservationsListContainer = document.getElementById('reservations-list-container'); // NUEVO: Contenedor para reservaciones
+const reserveBtn = document.getElementById('reserve-btn');
+const reservationsListContainer = document.getElementById('reservations-list-container');
+
 
 // Referencias de la página de caja
 const cashStatusText = document.getElementById('cash-status-text');
@@ -158,6 +159,7 @@ let currentDiscountSurcharge = {
     value: 0,
     type: null // 'percentage_discount', 'fixed_discount', 'percentage_surcharge', 'fixed_surcharge'
 };
+let currentReservationToProcess = null; // NUEVO: Para guardar la reservación a facturar
 
 let allCombos = [];
 
@@ -388,7 +390,7 @@ function renderReservations() {
             const reservationId = e.target.dataset.id;
             const reservationToProcess = allReservations.find(r => r.id === reservationId);
             if (reservationToProcess) {
-                processReservedOrder(reservationToProcess);
+                showPaymentModalForReservation(reservationToProcess);
             }
         });
     });
@@ -401,8 +403,28 @@ function renderReservations() {
     });
 }
 
+function showPaymentModalForReservation(reservation) {
+    if (!paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal || !customerSelect) {
+        showModal("Error: Faltan elementos de la interfaz de usuario para el modal de pago.");
+        return;
+    }
+
+    currentReservationToProcess = reservation;
+    cart = reservation.items;
+    
+    // Limpiar y configurar la UI del modal de pago para la reservación
+    paymentTotalDisplay.textContent = `$${reservation.total.toFixed(2)}`;
+    paymentRemainingDisplay.textContent = `$${reservation.total.toFixed(2)}`;
+    paymentInputsContainer.innerHTML = '';
+    addPaymentInput(reservation.total);
+    customerSelect.value = reservation.customerId;
+    
+    splitPaymentModal.classList.remove('hidden');
+}
+
+
 // NUEVO: Función para procesar una reservación
-async function processReservedOrder(reservation) {
+async function processReservedOrder(reservation, payments) {
     if (!dailyCashData || dailyCashData.cerrada) {
         showModal("La caja no está abierta. Por favor, abre la caja para facturar ventas.");
         return;
@@ -410,31 +432,42 @@ async function processReservedOrder(reservation) {
 
     const cashId = new Date().toLocaleDateString('en-CA');
     
-    showConfirmationModal(`¿Estás seguro de que quieres facturar este pedido de ${reservation.customerName}?`, async () => {
-        try {
-            // Mover la reservación a la colección de ventas
-            await addDoc(collection(db, SHARED_SALES_COLLECTION), {
+    try {
+        // Mover la reservación a la colección de ventas
+        const newSaleRef = await addDoc(collection(db, SHARED_SALES_COLLECTION), {
+            items: reservation.items,
+            subtotal: reservation.subtotal,
+            adjustment: reservation.adjustment,
+            total: reservation.total,
+            payments: payments, 
+            customerId: reservation.customerId,
+            customerName: reservation.customerName,
+            timestamp: serverTimestamp(),
+            cashId: cashId
+        });
+        
+        // Eliminar la reservación de la colección de reservaciones
+        const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservation.id);
+        await deleteDoc(reservationDocRef);
+        
+        showModal("Pedido facturado con éxito y eliminado de las reservaciones.");
+        
+        if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+            printReceipt({
+                id: newSaleRef.id,
                 items: reservation.items,
                 subtotal: reservation.subtotal,
                 adjustment: reservation.adjustment,
                 total: reservation.total,
-                payments: [], // Los pagos se agregarán más tarde
-                customerId: reservation.customerId,
+                payments: payments,
                 customerName: reservation.customerName,
-                timestamp: serverTimestamp(),
-                cashId: cashId
+                timestamp: new Date()
             });
-            
-            // Eliminar la reservación de la colección de reservaciones
-            const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservation.id);
-            await deleteDoc(reservationDocRef);
-            
-            showModal("Pedido facturado con éxito y eliminado de las reservaciones.");
-        } catch (error) {
-            console.error("Error al facturar el pedido reservado:", error);
-            showModal("Hubo un error al facturar el pedido. Intenta de nuevo.");
         }
-    }, () => {});
+    } catch (error) {
+        console.error("Error al facturar el pedido reservado:", error);
+        showModal("Hubo un error al facturar el pedido. Intenta de nuevo.");
+    }
 }
 
 // NUEVO: Función para eliminar una reservación
@@ -528,7 +561,6 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de gastos.");
     });
 
-    // Nuevo listener para las categorías de productos
     const productCategoriesCollection = collection(db, SHARED_PRODUCT_CATEGORIES_COLLECTION);
     onSnapshot(productCategoriesCollection, (snapshot) => {
         productCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -539,19 +571,16 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de productos.");
     });
     
-    // NUEVO: Listener para los combos
     const combosCollection = collection(db, SHARED_COMBOS_COLLECTION);
     onSnapshot(combosCollection, (snapshot) => {
       allCombos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderProducts(allProducts); // Para refrescar la vista de productos y combos
+      renderProducts(allProducts);
       if(promotionsList) renderManageCombos();
     }, (error) => {
       console.error("Error al escuchar combos:", error);
       showModal("Error al cargar los combos.");
     });
 
-
-    // Colecciones ahora compartidas
     const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
     onSnapshot(expensesCollection, (snapshot) => {
         const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -584,7 +613,6 @@ function setupRealtimeListeners() {
         console.error("Error al escuchar el historial de cajas:", error);
     });
 
-    // NUEVO: Listener para las reservaciones
     const reservationsCollection = collection(db, SHARED_RESERVATIONS_COLLECTION);
     onSnapshot(reservationsCollection, (snapshot) => {
         allReservations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -593,12 +621,10 @@ function setupRealtimeListeners() {
         console.error("Error al escuchar reservaciones:", error);
         showModal("Error al cargar las reservaciones.");
     });
-
 }
 
-// Funciones de renderizado de configuración
 function renderPaymentMethodsList() {
-    if (!paymentMethodsList) return; // Validación agregada
+    if (!paymentMethodsList) return;
     paymentMethodsList.innerHTML = '';
     const allMethods = [...defaultPaymentMethods.map(name => ({name: name, id: null})), ...userPaymentMethods];
     allMethods.forEach(method => {
@@ -636,7 +662,7 @@ function renderPaymentMethodsList() {
 }
 
 function renderExpenseCategoriesList() {
-    if (!expenseCategoriesList) return; // Validación agregada
+    if (!expenseCategoriesList) return;
     expenseCategoriesList.innerHTML = '';
     const allCategories = [...defaultExpenseCategories.map(name => ({name: name, id: null})), ...userExpenseCategories];
     allCategories.forEach(category => {
@@ -718,7 +744,7 @@ function renderProductCategoriesInput() {
 
 if(addProductCategoryForm) {
     addProductCategoryForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
         const newCategoryNameInput = document.getElementById('new-product-category-name');
         const newCategory = newCategoryNameInput?.value.trim();
         if (newCategory && !productCategories.map(c => c.name).includes(newCategory)) {
@@ -1730,6 +1756,9 @@ if (addPaymentInputBtn) {
 if (cancelSplitBtn) {
     cancelSplitBtn.addEventListener('click', () => {
         if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+        cart = [];
+        renderCart();
+        currentReservationToProcess = null;
     });
 }
 
@@ -2509,6 +2538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            currentReservationToProcess = null;
             const { total } = calculateTotal();
             if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
             if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
@@ -2575,12 +2605,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            const { subtotal, total, adjustmentAmount } = calculateTotal();
+            const payments = [];
             const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
             const paymentSelects = paymentInputsContainer.querySelectorAll('select');
-
             let sum = 0;
-            const payments = [];
 
             for (let i = 0; i < paymentInputs.length; i++) {
                 const amount = parseFloat(paymentInputs[i].value);
@@ -2595,49 +2623,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 payments.push({ method: method, amount: amount });
             }
 
-            if (Math.abs(sum - total) > 0.01) {
+            const totalAmountToPay = parseFloat(paymentTotalDisplay.textContent.replace('$', ''));
+            if (Math.abs(sum - totalAmountToPay) > 0.01) {
                 showModal("La suma de los pagos no coincide con el total.");
                 processPaymentBtn.disabled = false;
                 isProcessingPayment = false;
                 return;
             }
-            const cashId = new Date().toLocaleDateString('en-CA');
-            try {
-                const productUpdates = cart.map(item => {
-                    if(item.stock !== undefined) {
-                        const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
-                        return updateDoc(productDocRef, {
-                            stock: item.stock - item.quantity
-                        });
-                    }
-                }).filter(Boolean); // Filter out undefined promises
 
-                await Promise.all(productUpdates);
-
-                const customerId = customerSelect.value;
-                const customerName = customerSelect.options[customerSelect.selectedIndex].text;
-
-                const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                await addDoc(salesCollection, {
-                    items: cart,
-                    subtotal: subtotal,
-                    adjustment: {
-                        amount: adjustmentAmount,
-                        type: currentDiscountSurcharge.type
-                    },
-                    total: total,
-                    payments: payments,
-                    customerId: customerId || null,
-                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                    timestamp: serverTimestamp(),
-                    cashId: cashId
-                });
-
-                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-
-                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-                    printReceipt({
-                        id: newSaleRef.id,
+            if (currentReservationToProcess) {
+                await processReservedOrder(currentReservationToProcess, payments);
+                currentReservationToProcess = null;
+                cart = [];
+                renderCart();
+            } else {
+                const { subtotal, total, adjustmentAmount } = calculateTotal();
+                const cashId = new Date().toLocaleDateString('en-CA');
+                
+                try {
+                    const productUpdates = cart.map(item => {
+                        if(item.stock !== undefined) {
+                            const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                            return updateDoc(productDocRef, {
+                                stock: item.stock - item.quantity
+                            });
+                        }
+                    }).filter(Boolean);
+    
+                    await Promise.all(productUpdates);
+    
+                    const customerId = customerSelect.value;
+                    const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+    
+                    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+                    const newSaleRef = await addDoc(salesCollection, {
                         items: cart,
                         subtotal: subtotal,
                         adjustment: {
@@ -2646,26 +2665,53 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         total: total,
                         payments: payments,
+                        customerId: customerId || null,
                         customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                        timestamp: new Date()
+                        timestamp: serverTimestamp(),
+                        cashId: cashId
                     });
+    
+                    showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+    
+                    if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                        printReceipt({
+                            id: newSaleRef.id,
+                            items: cart,
+                            subtotal: subtotal,
+                            adjustment: {
+                                amount: adjustmentAmount,
+                                type: currentDiscountSurcharge.type
+                            },
+                            total: total,
+                            payments: payments,
+                            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                            timestamp: new Date()
+                        });
+                    }
+    
+                    cart = [];
+                    currentDiscountSurcharge = { value: 0, type: null };
+                    renderCart();
+                    if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+                    if(customerSelect) customerSelect.value = "";
+
+                } catch (error) {
+                    console.error("Error al finalizar la venta:", error);
+                    showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
                 }
-
-                cart = [];
-                currentDiscountSurcharge = { value: 0, type: null };
-                renderCart();
-                if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-                if(customerSelect) customerSelect.value = "";
-
-            } catch (error) {
-                console.error("Error al finalizar la venta:", error);
-                showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
-            } finally {
-                isProcessingPayment = false;
-                processPaymentBtn.disabled = false;
             }
-        });
-    }
+
+            if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+            if(customerSelect) customerSelect.value = "";
+            currentReservationToProcess = null;
+
+
+        } finally {
+            isProcessingPayment = false;
+            processPaymentBtn.disabled = false;
+        }
+    });
+}
 
     if (importSalesBtn) {
         importSalesBtn.addEventListener('click', () => {
@@ -2827,6 +2873,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (expenseFormContainer && !expenseFormContainer.classList.contains('hidden')) {
                     expenseFormContainer.classList.add('hidden');
                 }
+            }
+        });
+    }
+
+    if(reserveBtn) {
+        reserveBtn.addEventListener('click', async () => {
+            if (cart.length === 0) {
+                showModal("El carrito está vacío. Añade productos para reservar un pedido.");
+                return;
+            }
+
+            const { subtotal, total, adjustmentAmount } = calculateTotal();
+            const customerId = customerSelect.value;
+            const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+
+            if (!customerId) {
+                showModal("Debes seleccionar un cliente para reservar un pedido.");
+                return;
+            }
+
+            try {
+                const reservationsCollection = collection(db, SHARED_RESERVATIONS_COLLECTION);
+                await addDoc(reservationsCollection, {
+                    items: cart,
+                    subtotal: subtotal,
+                    adjustment: {
+                        amount: adjustmentAmount,
+                        type: currentDiscountSurcharge.type
+                    },
+                    total: total,
+                    customerId: customerId,
+                    customerName: customerName,
+                    timestamp: serverTimestamp()
+                });
+                
+                showModal("Pedido reservado con éxito.");
+                cart = [];
+                renderCart();
+            } catch (error) {
+                console.error("Error al reservar el pedido:", error);
+                showModal("Hubo un error al reservar el pedido. Intenta de nuevo.");
             }
         });
     }
