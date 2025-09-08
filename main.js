@@ -859,6 +859,16 @@ function renderSalesHistory(sales) {
             </li>
             `).join('');
 
+            // NUEVO: Generar HTML para el ajuste (descuento/recargo)
+            let adjustmentHtml = '';
+            if (sale.adjustment && sale.adjustment.amount > 0) {
+                const adjustmentText = sale.adjustment.type.includes('discount') ? 'Descuento' : 'Recargo';
+                const sign = sale.adjustment.type.includes('discount') ? '-' : '+';
+                adjustmentHtml = `<p class="text-sm text-gray-600">
+                    ${adjustmentText}: <span class="font-semibold">${sign}$${sale.adjustment.amount.toFixed(2)}</span>
+                </p>`;
+            }
+
             let paymentsHtml = '';
             if (sale.payments && sale.payments.length > 0) {
                 paymentsHtml = '<p class="mt-2 text-sm text-gray-600">Pagos:</p><ul class="space-y-1">';
@@ -888,6 +898,7 @@ function renderSalesHistory(sales) {
             <ul class="space-y-1">
                 ${itemsHtml}
             </ul>
+            ${adjustmentHtml}
             ${paymentsHtml}
             ${customerHtml}
             <div class="flex justify-end">
