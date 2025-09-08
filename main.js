@@ -1431,6 +1431,22 @@ if (productForm) {
                 const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
                 await setDoc(productRef, productData, { merge: true });
                 showModal("Producto editado con éxito.");
+                
+                // NUEVO: Lógica para actualizar combos si el precio del producto cambia
+                const oldProduct = allProducts.find(p => p.id === id);
+                if (oldProduct && oldProduct.price !== price) {
+                    const priceDifference = price - oldProduct.price;
+                    const combosWithProduct = allCombos.filter(combo => combo.items.some(item => item.productId === id));
+                    
+                    for (const combo of combosWithProduct) {
+                        const productItem = combo.items.find(item => item.productId === id);
+                        const priceChange = priceDifference * productItem.quantity;
+                        const newComboPrice = combo.price + priceChange;
+
+                        const comboRef = doc(db, SHARED_COMBOS_COLLECTION, combo.id);
+                        await setDoc(comboRef, { price: newComboPrice }, { merge: true });
+                    }
+                }
             } else {
                 const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
                 await addDoc(productsCollection, productData);
@@ -2162,6 +2178,7 @@ if (addComboForm) {
             addComboForm.reset();
             comboProductsContainer.innerHTML = ''; // Limpiar los inputs del combo
             addComboForm.classList.add('hidden'); // Ocultar el formulario
+            comboIdInput.value = ''; // Limpiar el ID del combo
         } catch (error) {
             console.error("Error al guardar el combo:", error);
             showModal("Hubo un error al guardar el combo. Intenta de nuevo.");
