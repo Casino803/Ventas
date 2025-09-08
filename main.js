@@ -2706,7 +2706,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 reader.readAsText(file);
             }
-        });
+        };
     }
 
     if (exportSalesBtn) {
