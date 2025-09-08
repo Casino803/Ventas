@@ -1002,14 +1002,17 @@ function renderDailyExpenses(expenses) {
     sortedDates.forEach(dateString => {
         const dayDiv = document.createElement('div');
         dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
+        
+        const dayData = expensesByDay[dateString];
+
         dayDiv.innerHTML = `
         <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
             <h3 class="font-bold text-lg">${dateString}</h3>
-            <span class="font-bold text-red-600 text-xl">Total: -$${dailyExpenses.total.toFixed(2)}</span>
+            <span class="font-bold text-red-600 text-xl">Total: -$${dayData.total.toFixed(2)}</span>
         </div>
         `;
 
-        dailyExpenses.expenses.forEach(expense => {
+        dayData.expenses.forEach(expense => {
             const expenseDiv = document.createElement('div');
             expenseDiv.className = "bg-white p-3 rounded-lg shadow-sm flex justify-between items-center my-2";
             const formattedTime = new Date(expense.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
@@ -2373,7 +2376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (productForm) productForm.reset();
                 const productIdInput = document.getElementById('product-id');
-                if (productIdInput) productIdInput.value = '';
+                if (productIdInput) productId.value = '';
             } catch (error) {
                 console.error("Error al guardar el producto:", error);
                 showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
