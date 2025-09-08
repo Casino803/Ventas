@@ -137,6 +137,8 @@ const comboProductsContainer = document.getElementById('combo-products-container
 const addComboProductBtn = document.getElementById('add-combo-product-btn');
 const promotionsList = document.getElementById('promotions-list');
 const comboIdInput = document.getElementById('combo-id');
+const reserveBtn = document.getElementById('reserve-btn'); // NUEVO: Botón de reservar
+const reservationsListContainer = document.getElementById('reservations-list-container'); // NUEVO: Contenedor para reservaciones
 
 
 let salesChart;
@@ -146,6 +148,7 @@ let userId = '';
 let cart = [];
 let allProducts = [];
 let allSales = [];
+let allReservations = []; // NUEVO: Estado global para las reservaciones
 let dailyCashData = null;
 let dailySalesTotal = 0;
 let dailyExpensesTotal = 0;
@@ -171,6 +174,7 @@ const SHARED_CASH_COLLECTION = 'cajas';
 const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
 const SHARED_PRODUCT_CATEGORIES_COLLECTION = 'productCategories';
 const SHARED_COMBOS_COLLECTION = 'combos';
+const SHARED_RESERVATIONS_COLLECTION = 'reservations'; // NUEVO: Colección para pedidos reservados
 
 
 const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
@@ -464,6 +468,17 @@ function setupRealtimeListeners() {
     }, (error) => {
         console.error("Error al escuchar el historial de cajas:", error);
     });
+
+    // NUEVO: Listener para las reservaciones
+    const reservationsCollection = collection(db, SHARED_RESERVATIONS_COLLECTION);
+    onSnapshot(reservationsCollection, (snapshot) => {
+        allReservations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if(reservationsListContainer) renderReservations();
+    }, (error) => {
+        console.error("Error al escuchar reservaciones:", error);
+        showModal("Error al cargar las reservaciones.");
+    });
+
 }
 
 // Funciones de renderizado de configuración
@@ -2486,7 +2501,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const customerName = customerSelect.options[customerSelect.selectedIndex].text;
 
                 const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                await addDoc(salesCollection, {
+                const newSaleRef = await addDoc(salesCollection, {
                     items: cart,
                     subtotal: subtotal,
                     adjustment: {
@@ -2697,5 +2712,162 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    // NUEVO: Lógica para reservar un pedido
+    if(reserveBtn) {
+        reserveBtn.addEventListener('click', async () => {
+            if (cart.length === 0) {
+                showModal("El carrito está vacío. Añade productos para reservar un pedido.");
+                return;
+            }
+
+            const { subtotal, total, adjustmentAmount } = calculateTotal();
+            const customerId = customerSelect.value;
+            const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+
+            if (!customerId) {
+                showModal("Debes seleccionar un cliente para reservar un pedido.");
+                return;
+            }
+
+            try {
+                const reservationsCollection = collection(db, SHARED_RESERVATIONS_COLLECTION);
+                await addDoc(reservationsCollection, {
+                    items: cart,
+                    subtotal: subtotal,
+                    adjustment: {
+                        amount: adjustmentAmount,
+                        type: currentDiscountSurcharge.type
+                    },
+                    total: total,
+                    customerId: customerId,
+                    customerName: customerName,
+                    timestamp: serverTimestamp()
+                });
+                
+                showModal("Pedido reservado con éxito.");
+                cart = [];
+                renderCart();
+            } catch (error) {
+                console.error("Error al reservar el pedido:", error);
+                showModal("Hubo un error al reservar el pedido. Intenta de nuevo.");
+            }
+        });
+    }
+
+    // NUEVO: Renderizado de reservaciones
+    function renderReservations() {
+        if (!reservationsListContainer) return;
+        reservationsListContainer.innerHTML = '';
+        if (allReservations.length === 0) {
+            reservationsListContainer.innerHTML = '<p class="text-center text-gray-500">No hay reservaciones pendientes.</p>';
+            return;
+        }
+
+        allReservations.forEach(reservation => {
+            const reservationDiv = document.createElement('div');
+            reservationDiv.className = "bg-white p-4 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-start md:items-center";
+
+            const formattedDate = reservation.timestamp ? new Date(reservation.timestamp.seconds * 1000).toLocaleString('es-ES') : 'Fecha no disponible';
+            
+            let itemsHtml = reservation.items.map(item => `
+                <li class="flex justify-between text-sm">
+                    <span class="text-gray-700">${item.name} x${item.quantity}</span>
+                </li>
+            `).join('');
+
+            reservationDiv.innerHTML = `
+                <div class="flex-grow">
+                    <p class="font-semibold text-gray-800">Cliente: ${reservation.customerName}</p>
+                    <p class="text-sm text-gray-500">Fecha de reserva: ${formattedDate}</p>
+                    <p class="text-lg font-bold text-blue-600 mt-2">Total: $${reservation.total.toFixed(2)}</p>
+                    <div class="mt-2 text-sm">
+                        <p class="font-semibold text-gray-700">Productos:</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            ${itemsHtml}
+                        </ul>
+                    </div>
+                </div>
+                <div class="flex space-x-2 mt-4 md:mt-0">
+                    <button data-id="${reservation.id}" class="process-reservation-btn px-4 py-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+                        <i class="fas fa-check-circle"></i> Facturar
+                    </button>
+                    <button data-id="${reservation.id}" class="delete-reservation-btn px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition duration-300">
+                        <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>
+                </div>
+            `;
+
+            reservationsListContainer.appendChild(reservationDiv);
+        });
+
+        // Eventos para facturar y eliminar
+        document.querySelectorAll('.process-reservation-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reservationId = e.target.dataset.id;
+                const reservationToProcess = allReservations.find(r => r.id === reservationId);
+                if (reservationToProcess) {
+                    processReservedOrder(reservationToProcess);
+                }
+            });
+        });
+
+        document.querySelectorAll('.delete-reservation-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reservationId = e.target.dataset.id;
+                deleteReservedOrder(reservationId);
+            });
+        });
+    }
+
+    // NUEVO: Función para procesar una reservación
+    async function processReservedOrder(reservation) {
+        if (!dailyCashData || dailyCashData.cerrada) {
+            showModal("La caja no está abierta. Por favor, abre la caja para facturar ventas.");
+            return;
+        }
+
+        const cashId = new Date().toLocaleDateString('en-CA');
+        
+        showConfirmationModal(`¿Estás seguro de que quieres facturar este pedido de ${reservation.customerName}?`, async () => {
+            try {
+                // Mover la reservación a la colección de ventas
+                await addDoc(collection(db, SHARED_SALES_COLLECTION), {
+                    items: reservation.items,
+                    subtotal: reservation.subtotal,
+                    adjustment: reservation.adjustment,
+                    total: reservation.total,
+                    payments: [], // Los pagos se agregarán más tarde
+                    customerId: reservation.customerId,
+                    customerName: reservation.customerName,
+                    timestamp: serverTimestamp(),
+                    cashId: cashId
+                });
+                
+                // Eliminar la reservación de la colección de reservaciones
+                const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservation.id);
+                await deleteDoc(reservationDocRef);
+                
+                showModal("Pedido facturado con éxito y eliminado de las reservaciones.");
+            } catch (error) {
+                console.error("Error al facturar el pedido reservado:", error);
+                showModal("Hubo un error al facturar el pedido. Intenta de nuevo.");
+            }
+        }, () => {});
+    }
+
+    // NUEVO: Función para eliminar una reservación
+    async function deleteReservedOrder(reservationId) {
+        showConfirmationModal(`¿Estás seguro de que quieres eliminar esta reservación? Esta acción no se puede deshacer.`, async () => {
+            try {
+                const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservationId);
+                await deleteDoc(reservationDocRef);
+                showModal("Reservación eliminada con éxito.");
+            } catch (error) {
+                console.error("Error al eliminar la reservación:", error);
+                showModal("Hubo un error al eliminar la reservación. Intenta de nuevo.");
+            }
+        }, () => {});
     }
 });
