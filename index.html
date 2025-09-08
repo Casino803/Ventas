@@ -377,16 +377,15 @@ class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-
     </div>
     
     <form id="add-combo-form" class="space-y-4 mb-4 hidden">
-      <input type="text" id="combo-name-input" placeholder="Nombre del Combo (ej. 'Menú del Día')" required class="w-full px-4 py-2 border rounded-lg">
-      <input type="number" id="combo-price-input" placeholder="Precio del Combo" step="0.01" required class="w-full px-4 py-2 border rounded-lg">
-      
-      <div id="combo-products-container" class="space-y-2 p-3 bg-white border rounded-lg">
-        <h4 class="font-semibold text-gray-700">Productos del Combo</h4>
-        </div>
-      <button type="button" id="add-combo-product-btn" class="px-4 py-2 bg-gray-500 text-white rounded-lg"><i class="fas fa-plus"></i> Añadir Producto al Combo</button>
-      
-      <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Guardar Combo</button>
-    </form>
+    <input type="hidden" id="combo-id">
+    <input type="text" id="combo-name-input" placeholder="Nombre del Combo (ej. 'Menú del Día')" required class="w-full px-4 py-2 border rounded-lg">
+    <input type="number" id="combo-price-input" placeholder="Precio del Combo" step="0.01" required class="w-full px-4 py-2 border rounded-lg">
+    <div id="combo-products-container" class="space-y-2 p-3 bg-white border rounded-lg">
+      <h4 class="font-semibold text-gray-700">Productos del Combo</h4>
+    </div>
+    <button type="button" id="add-combo-product-btn" class="px-4 py-2 bg-gray-500 text-white rounded-lg"><i class="fas fa-plus"></i> Añadir Producto al Combo</button>
+    <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Guardar Combo</button>
+</form>
     
     <div id="promotions-list" class="space-y-2 overflow-y-scroll max-h-48">
       </div>
