@@ -2636,30 +2636,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 await Promise.all(productUpdates);
 
-                const customerId = customerSelect.value;
-                const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+                if (currentReservationToProcess) {
+                    // Procesando un pedido reservado
+                    const newSaleRef = await addDoc(collection(db, SHARED_SALES_COLLECTION), {
+                        ...currentReservationToProcess,
+                        payments: payments,
+                        total: total,
+                        timestamp: serverTimestamp(),
+                        cashId: cashId
+                    });
 
-                const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                const newSaleRef = await addDoc(salesCollection, {
-                    items: cart,
-                    subtotal: subtotal,
-                    adjustment: {
-                        amount: adjustmentAmount,
-                        type: currentDiscountSurcharge.type
-                    },
-                    total: total,
-                    payments: payments,
-                    customerId: customerId || null,
-                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                    timestamp: serverTimestamp(),
-                    cashId: cashId
-                });
+                    const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, currentReservationToProcess.id);
+                    await deleteDoc(reservationDocRef);
 
-                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+                    showModal("Pedido reservado facturado con éxito y eliminado de las reservaciones.");
+                    if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                        printReceipt({
+                            ...currentReservationToProcess,
+                            id: newSaleRef.id,
+                            payments: payments,
+                            total: total,
+                            timestamp: new Date()
+                        });
+                    }
+                } else {
+                    // Procesando una venta nueva
+                    const customerId = customerSelect.value;
+                    const customerName = customerSelect.options[customerSelect.selectedIndex].text;
 
-                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-                    printReceipt({
-                        id: newSaleRef.id,
+                    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+                    const newSaleRef = await addDoc(salesCollection, {
                         items: cart,
                         subtotal: subtotal,
                         adjustment: {
@@ -2668,13 +2674,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         total: total,
                         payments: payments,
+                        customerId: customerId || null,
                         customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                        timestamp: new Date()
+                        timestamp: serverTimestamp(),
+                        cashId: cashId
                     });
+
+                    showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+
+                    if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                        printReceipt({
+                            id: newSaleRef.id,
+                            items: cart,
+                            subtotal: subtotal,
+                            adjustment: {
+                                amount: adjustmentAmount,
+                                type: currentDiscountSurcharge.type
+                            },
+                            total: total,
+                            payments: payments,
+                            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                            timestamp: new Date()
+                        });
+                    }
                 }
 
                 cart = [];
                 currentDiscountSurcharge = { value: 0, type: null };
+                currentReservationToProcess = null;
                 renderCart();
                 if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
                 if (customerSelect) customerSelect.value = "";
