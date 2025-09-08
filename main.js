@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp, updateDoc, query, where, getDocs, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // CONFIGURACIÓN DE FIREBASE
@@ -59,8 +59,8 @@ const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
 const expenseFormContainer = document.getElementById('expense-form-container');
 const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
 const customerFormContainer = document.getElementById('customer-form-container');
-const reserveBtn = document.getElementById('reserve-btn');
-const reservationsListContainer = document.getElementById('reservations-list-container');
+const reserveBtn = document.getElementById('reserve-btn'); // NUEVO: Botón de reservar
+const reservationsListContainer = document.getElementById('reservations-list-container'); // NUEVO: Contenedor para reservaciones
 
 
 // Referencias de la página de caja
@@ -160,6 +160,7 @@ let currentDiscountSurcharge = {
     type: null // 'percentage_discount', 'fixed_discount', 'percentage_surcharge', 'fixed_surcharge'
 };
 let currentReservationToProcess = null; // NUEVO: Para guardar la reservación a facturar
+
 
 let allCombos = [];
 
@@ -359,6 +360,15 @@ function renderReservations() {
             </li>
         `).join('');
 
+        let adjustmentHtml = '';
+        if (reservation.adjustment && reservation.adjustment.amount > 0) {
+            const adjustmentText = reservation.adjustment.type.includes('discount') ? 'Descuento' : 'Recargo';
+            const sign = reservation.adjustment.type.includes('discount') ? '-' : '+';
+            adjustmentHtml = `<p class="text-sm text-gray-600">
+                ${adjustmentText}: <span class="font-semibold">${sign}$${reservation.adjustment.amount.toFixed(2)}</span>
+            </p>`;
+        }
+        
         reservationDiv.innerHTML = `
             <div class="flex-grow">
                 <p class="font-semibold text-gray-800">Cliente: ${reservation.customerName}</p>
@@ -370,6 +380,7 @@ function renderReservations() {
                         ${itemsHtml}
                     </ul>
                 </div>
+                ${adjustmentHtml}
             </div>
             <div class="flex space-x-2 mt-4 md:mt-0">
                 <button data-id="${reservation.id}" class="process-reservation-btn px-4 py-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition duration-300">
@@ -432,42 +443,33 @@ async function processReservedOrder(reservation, payments) {
 
     const cashId = new Date().toLocaleDateString('en-CA');
     
-    try {
-        // Mover la reservación a la colección de ventas
-        const newSaleRef = await addDoc(collection(db, SHARED_SALES_COLLECTION), {
-            items: reservation.items,
-            subtotal: reservation.subtotal,
-            adjustment: reservation.adjustment,
-            total: reservation.total,
-            payments: payments, 
-            customerId: reservation.customerId,
-            customerName: reservation.customerName,
-            timestamp: serverTimestamp(),
-            cashId: cashId
-        });
-        
-        // Eliminar la reservación de la colección de reservaciones
-        const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservation.id);
-        await deleteDoc(reservationDocRef);
-        
-        showModal("Pedido facturado con éxito y eliminado de las reservaciones.");
-        
-        if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-            printReceipt({
-                id: newSaleRef.id,
+    showConfirmationModal(`¿Estás seguro de que quieres facturar este pedido de ${reservation.customerName}?`, async () => {
+        try {
+            // Mover la reservación a la colección de ventas
+            await addDoc(collection(db, SHARED_SALES_COLLECTION), {
                 items: reservation.items,
                 subtotal: reservation.subtotal,
-                adjustment: reservation.adjustment,
+                // Corregido: Condicionalmente agregar el campo adjustment si existe
+                ...(reservation.adjustment && reservation.adjustment.amount > 0 && { adjustment: reservation.adjustment }),
                 total: reservation.total,
-                payments: payments,
+                payments: payments, 
+                customerId: reservation.customerId,
                 customerName: reservation.customerName,
-                timestamp: new Date()
+                timestamp: serverTimestamp(),
+                cashId: cashId
             });
+            
+            // Eliminar la reservación de la colección de reservaciones
+            const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservation.id);
+            await deleteDoc(reservationDocRef);
+            
+            showModal("Pedido facturado con éxito y eliminado de las reservaciones.");
+            
+        } catch (error) {
+            console.error("Error al facturar el pedido reservado:", error);
+            showModal("Hubo un error al facturar el pedido. Intenta de nuevo.");
         }
-    } catch (error) {
-        console.error("Error al facturar el pedido reservado:", error);
-        showModal("Hubo un error al facturar el pedido. Intenta de nuevo.");
-    }
+    }, () => {});
 }
 
 // NUEVO: Función para eliminar una reservación
@@ -808,7 +810,6 @@ function renderPaymentMethodFilters() {
     const selectFilter = document.getElementById('filter-payment-method');
     selectFilter.innerHTML = '<option value="">Todas</option>';
     
-    // Generar opciones para todos los métodos de pago disponibles (predeterminados + agregados por el usuario)
     const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
     allMethods.forEach(method => {
         const option = document.createElement('option');
@@ -950,7 +951,6 @@ function renderSalesHistory(sales) {
     
     const filteredSales = applyFilters(sales);
     
-    // Nuevo cálculo para el total de la vista filtrada
     let filteredTotal = 0;
     const paymentMethodFilter = filterPaymentMethod?.value;
 
@@ -981,7 +981,6 @@ function renderSalesHistory(sales) {
 
     const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
     
-    // Mostrar el total general de la vista filtrada
     if (sortedDates.length > 0) {
         const totalHeader = document.createElement('div');
         totalHeader.className = "bg-blue-600 text-white p-4 rounded-lg mb-4 text-center";
@@ -1038,7 +1037,6 @@ function renderSalesHistory(sales) {
 
             let customerHtml = sale.customerId ? `<p class="mt-2 text-sm text-gray-600">Cliente: <span class="font-semibold">${sale.customerName}</span></p>` : '';
 
-            // Lógica para mostrar solo el monto del pago filtrado
             let displayAmount = sale.total;
             if (paymentMethodFilter && paymentMethodFilter !== 'Todas') {
                 const filteredPayment = sale.payments.find(p => p.method === paymentMethodFilter);
@@ -1066,7 +1064,6 @@ function renderSalesHistory(sales) {
         });
         salesHistoryContainer.appendChild(dayDiv);
     });
-    // Attach print events
     document.querySelectorAll('.print-receipt-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const saleId = e.target.dataset.saleId;
@@ -1094,7 +1091,6 @@ function applyFilters(sales) {
             return false;
         }
         
-        // Lógica de filtro para las formas de pago configuradas
         if (paymentMethod && paymentMethod !== 'Todas') {
             return sale.payments.some(p => p.method === paymentMethod);
         }
@@ -1123,7 +1119,6 @@ function renderDailyExpenses(expenses) {
     if (!dailyExpensesContainer) return;
     dailyExpensesContainer.innerHTML = '';
 
-    // Agrupar gastos por día
     const expensesByDay = expenses.reduce((acc, expense) => {
         const timestamp = expense.timestamp;
         if (timestamp && timestamp.seconds) {
@@ -1231,13 +1226,11 @@ async function updateDailyTotals() {
 
     const today = new Date().toLocaleDateString('en-CA');
 
-    // Obtener ventas asociadas a la caja de hoy
     const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
     const salesSnapshot = await getDocs(salesQuery);
     let salesCount = 0;
     let paymentMethodTotals = {};
 
-    // Obtener todos los métodos de pago disponibles
     const allPaymentMethods = [...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)];
     allPaymentMethods.forEach(method => {
         paymentMethodTotals[method] = 0;
@@ -1259,7 +1252,6 @@ async function updateDailyTotals() {
         return sum;
     }, 0);
 
-    // Obtener gastos asociados a la caja de hoy
     const expensesQuery = query(collection(db, SHARED_EXPENSES_COLLECTION), where("cashId", "==", today));
     const expensesSnapshot = await getDocs(expensesQuery);
     dailyExpensesTotal = expensesSnapshot.docs.reduce((sum, doc) => {
@@ -1273,25 +1265,20 @@ async function updateDailyTotals() {
     const currentCash = dailyCashData.abertura + paymentMethodTotals['Efectivo'] - dailyExpensesTotal;
     if (currentCashDisplay) currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
 
-    // Actualizar las estadísticas
     if (statsTotalSales) statsTotalSales.textContent = `$${dailySalesTotal.toFixed(2)}`;
     if (statsSalesCount) statsSalesCount.textContent = salesCount;
     if (statsTotalExpenses) statsTotalExpenses.textContent = `$${dailyExpensesTotal.toFixed(2)}`;
 
-    // Renderizar dinámicamente los totales de pago
     renderPaymentStats(paymentMethodTotals);
 }
 
 function renderPaymentStats(paymentMethodTotals) {
     if (!paymentStatsContainer) return;
 
-    // Limpiar el contenedor antes de renderizar
     paymentStatsContainer.innerHTML = '';
     
-    // Convertir el objeto a un array de pares [clave, valor]
     const paymentMethodsArray = Object.entries(paymentMethodTotals);
 
-    // Renderizar cada forma de pago
     paymentMethodsArray.forEach(([method, total]) => {
         const div = document.createElement('div');
         let totalSalesText = '';
@@ -1384,7 +1371,6 @@ if (expenseForm) {
             expenseForm.reset();
             showModal("Gasto registrado con éxito.");
             
-            // Ocultar el formulario después de guardar
             if (expenseFormContainer) expenseFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -1515,7 +1501,6 @@ function renderCart() {
     cartSubtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
     cartTotalSpan.textContent = `$${total.toFixed(2)}`;
 
-    // Mostrar el descuento/recargo aplicado
     if (adjustmentAmount !== 0) {
         let text = currentDiscountSurcharge.type.includes('discount') ? 'Descuento' : 'Recargo';
         let sign = currentDiscountSurcharge.type.includes('discount') ? '-' : '+';
@@ -1601,7 +1586,6 @@ if (productForm) {
                 await setDoc(productRef, productData, { merge: true });
                 showModal("Producto editado con éxito.");
                 
-                // NUEVO: Lógica para actualizar combos si el precio del producto cambia
                 const oldProduct = allProducts.find(p => p.id === id);
                 if (oldProduct && oldProduct.price !== price) {
                     const priceDifference = price - oldProduct.price;
@@ -1625,7 +1609,6 @@ if (productForm) {
             const productIdInput = document.getElementById('product-id');
             if (productIdInput) productIdInput.value = '';
             
-            // Ocultar el formulario después de guardar
             if (productFormContainer) productFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -1646,6 +1629,7 @@ if (checkoutBtn) {
             return;
         }
 
+        currentReservationToProcess = null;
         const { total } = calculateTotal();
         if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
         if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
@@ -1728,8 +1712,8 @@ function addPaymentInput(amount = 0) {
     removeBtn.className = "px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600";
     removeBtn.addEventListener('click', () => {
         row.remove();
-        if (cartTotalSpan && paymentInputsContainer.children.length === 0) {
-            addPaymentInput(parseFloat(cartTotalSpan.textContent.replace('$', '')));
+        if (paymentInputsContainer.children.length === 0) {
+            addPaymentInput(parseFloat(paymentTotalDisplay.textContent.replace('$', '')));
         }
         updateRemainingAmount();
     });
@@ -1763,8 +1747,8 @@ if (cancelSplitBtn) {
 }
 
 function updateRemainingAmount() {
-    if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
-    const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+    if (!paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer) return;
+    const total = parseFloat(paymentTotalDisplay.textContent.replace('$', ''));
     const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
     let sum = 0;
     paymentInputs.forEach(input => {
@@ -1877,7 +1861,6 @@ async function processImportedSales(csvData) {
     showModal(message);
 }
 
-// Lógica de clientes
 if (addCustomerForm) {
     addCustomerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1892,7 +1875,6 @@ if (addCustomerForm) {
             if(addCustomerForm) addCustomerForm.reset();
             showModal(`Cliente '${name}' añadido con éxito.`);
             
-            // Ocultar el formulario después de guardar
             if (customerFormContainer) customerFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -2108,7 +2090,6 @@ function renderPaymentMethodsChart(sales) {
     });
 }
 
-// Impresión de recibos
 function printReceipt(sale) {
     const paymentsHtml = sale.payments.map(p => `
         <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
@@ -2178,20 +2159,16 @@ function printReceipt(sale) {
     </div>
     `;
 
-    // 1. Crea un contenedor temporal
     const printArea = document.createElement('div');
     printArea.innerHTML = content;
     document.body.appendChild(printArea);
 
-    // 2. Espera a que el DOM se actualice y luego imprime
     setTimeout(() => {
         window.print();
-        // 3. Elimina el contenedor temporal después de la impresión
         document.body.removeChild(printArea);
     }, 500);
 }
 
-// Lógica de autenticación
 if (loginBtn) {
     loginBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -2251,7 +2228,6 @@ if (toggleFiltersBtn) {
     toggleFiltersBtn.addEventListener('click', toggleFilters);
 }
 
-// Se hace global para poder llamarla desde el HTML con onclick
 window.toggleSection = function(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) {
@@ -2264,7 +2240,6 @@ window.toggleSection = function(sectionId) {
     }
 }
 
-// FUNCIÓN PARA AÑADIR UN CAMPO DE PRODUCTO AL FORMULARIO DEL COMBO
 function addComboProductInput(product = null, quantity = 1) {
     if (!comboProductsContainer) return;
 
@@ -2281,7 +2256,6 @@ function addComboProductInput(product = null, quantity = 1) {
     const select = div.querySelector('.combo-product-select');
     const removeBtn = div.querySelector('.remove-combo-product-btn');
 
-    // Poblar el select con la lista de productos
     allProducts.forEach(prod => {
         const option = document.createElement('option');
         option.value = prod.id;
@@ -2293,7 +2267,6 @@ function addComboProductInput(product = null, quantity = 1) {
         select.value = product.id;
     }
 
-    // Añadir el listener para el botón de remover
     removeBtn.addEventListener('click', () => {
         div.remove();
     });
@@ -2301,7 +2274,6 @@ function addComboProductInput(product = null, quantity = 1) {
     comboProductsContainer.appendChild(div);
 }
 
-// FUNCIÓN PARA GUARDAR EL COMBO
 if (addComboForm) {
     addComboForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -2338,19 +2310,16 @@ if (addComboForm) {
 
         try {
             if (comboId) {
-                // Editar combo existente
                 const comboRef = doc(db, SHARED_COMBOS_COLLECTION, comboId);
                 await setDoc(comboRef, comboData, { merge: true });
                 showModal("Combo editado con éxito.");
             } else {
-                // Añadir nuevo combo
                 await addDoc(collection(db, SHARED_COMBOS_COLLECTION), comboData);
                 showModal("Combo guardado con éxito.");
             }
             addComboForm.reset();
-            comboProductsContainer.innerHTML = ''; // Limpiar los inputs del combo
-            addComboForm.classList.add('hidden'); // Ocultar el formulario
-            comboIdInput.value = ''; // Limpiar el ID del combo
+            comboProductsContainer.innerHTML = '';
+            addComboForm.classList.add('hidden');
         } catch (error) {
             console.error("Error al guardar el combo:", error);
             showModal("Hubo un error al guardar el combo. Intenta de nuevo.");
@@ -2362,7 +2331,6 @@ function renderManageCombos() {
     if (!promotionsList) return;
     promotionsList.innerHTML = '';
 
-    // Renderizar combos
     allCombos.forEach(combo => {
         const comboDiv = document.createElement('div');
         comboDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
@@ -2395,11 +2363,9 @@ function renderManageCombos() {
         `;
         promotionsList.appendChild(comboDiv);
 
-        // Añadir listeners a los botones de editar y eliminar
         comboDiv.querySelector('.edit-combo-btn').addEventListener('click', () => {
             const selectedCombo = allCombos.find(c => c.id === combo.id);
             if (selectedCombo) {
-                // Muestra el formulario y rellena los campos
                 if (addComboForm) addComboForm.classList.remove('hidden');
                 if (comboIdInput) comboIdInput.value = selectedCombo.id;
                 if (comboNameInput) comboNameInput.value = selectedCombo.name;
@@ -2429,234 +2395,91 @@ function renderManageCombos() {
     });
 }
 
-// Inicializar la aplicación
-document.addEventListener('DOMContentLoaded', () => {
 
-    // Configurar la navegación principal del menú
-    setupNavigation();
-
-    // Configurar la navegación de pestañas
-    setupTabNavigation();
-
-    // Configurar la navegación de pestañas de Caja y Gastos
-    setupCashTabNavigation();
-
-    // Reasignar el evento de clic a los botones de navegación superior
-    const topNavButtons = document.querySelectorAll('.fixed button[data-page]');
-    topNavButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetPageId = btn.dataset.page;
-            showPage(targetPageId);
-            // Si el menú principal está oculto, deseleccionar cualquier pestaña
-            if(targetPageId !== 'home-menu') {
-                document.querySelector('.tab-btn.active')?.classList.remove('active');
-            }
-        });
-    });
-
-    // Manejar el estado de autenticación al cargar la página
-    onAuthStateChanged(auth, user => {
-        if (user) {
-            userId = user.uid;
-            setupRealtimeListeners();
-            if (authModal) authModal.classList.add('hidden');
-            // Al iniciar sesión, mostrar el POS y activar su pestaña
-            showPage('pos-page');
-            const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
-            if(posTab) {
-                posTab.classList.add('active');
-            }
-        } else {
-            if (authModal) authModal.classList.remove('hidden');
-            pages.forEach(page => page.classList.remove('active'));
+if (processPaymentBtn) {
+    processPaymentBtn.addEventListener('click', async () => {
+        if (isProcessingPayment) {
+            return;
         }
-    });
+        isProcessingPayment = true;
+        processPaymentBtn.disabled = true;
 
-    if (addCustomerForm) {
-        addCustomerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('customer-name-input')?.value.trim();
-            if (!name) {
-                showModal("El nombre del cliente no puede estar vacío.");
+        if (!paymentInputsContainer || !customerSelect || !splitPaymentModal) {
+            console.error("Faltan elementos del DOM para procesar el pago.");
+            processPaymentBtn.disabled = false;
+            isProcessingPayment = false;
+            return;
+        }
+        
+        const payments = [];
+        const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
+        const paymentSelects = paymentInputsContainer.querySelectorAll('select');
+        let sum = 0;
+
+        for (let i = 0; i < paymentInputs.length; i++) {
+            const amount = parseFloat(paymentInputs[i].value);
+            const method = paymentSelects[i].value;
+            if (isNaN(amount) || amount <= 0) {
+                showModal("Todos los montos deben ser números positivos.");
+                processPaymentBtn.disabled = false;
+                isProcessingPayment = false;
                 return;
             }
-            try {
-                const customersCollection = collection(db, SHARED_CUSTOMERS_COLLECTION);
-                await addDoc(customersCollection, { name });
-                if(addCustomerForm) addCustomerForm.reset();
-                showModal(`Cliente '${name}' añadido con éxito.`);
-            } catch (error) {
-                console.error("Error al añadir cliente:", error);
-                showModal("Error al añadir cliente. Intenta de nuevo.");
-            }
-        });
-    }
+            sum += amount;
+            payments.push({ method: method, amount: amount });
+        }
 
-    if (productForm) {
-        productForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('product-id')?.value;
-            const name = document.getElementById('product-name-input')?.value;
-            const price = parseFloat(document.getElementById('product-price-input')?.value);
-            const stockInput = document.getElementById('product-stock-input')?.value;
-            const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
-            const categoryId = productCategoryInput?.value || null;
+        const totalAmountToPay = parseFloat(paymentTotalDisplay.textContent.replace('$', ''));
+        if (Math.abs(sum - totalAmountToPay) > 0.01) {
+            showModal("La suma de los pagos no coincide con el total.");
+            processPaymentBtn.disabled = false;
+            isProcessingPayment = false;
+            return;
+        }
 
-            if (isNaN(price) || price <= 0 || (stock !== undefined && (isNaN(stock) || stock < 0))) {
-                showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
-                return;
-            }
-
-            try {
-                if (id) {
-                    const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
-                    await setDoc(productRef, { name, price, stock }, { merge: true });
-                    showModal("Producto editado con éxito.");
-                } else {
-                    const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
-                    await addDoc(productsCollection, productData);
-                    showModal("Producto añadido con éxito.");
-                }
-                if (productForm) productForm.reset();
-                const productIdInput = document.getElementById('product-id');
-                if (productIdInput) productIdInput.value = '';
-            } catch (error) {
-                console.error("Error al guardar el producto:", error);
-                showModal("Error al guardar el producto. Por favor, intenta de nuevo.");
-            }
-        });
-    }
-
-    if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', () => {
-            if (cart.length === 0) {
-                showModal("El carrito está vacío. Añade productos para finalizar la venta.");
-                return;
-            }
-            if (!dailyCashData || dailyCashData.cerrada) {
-                showModal("La caja no está abierta. Por favor, abre la caja para registrar ventas.");
-                return;
-            }
-
+        if (currentReservationToProcess) {
+            await processReservedOrder(currentReservationToProcess, payments);
             currentReservationToProcess = null;
-            const { total } = calculateTotal();
-            if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
-            if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
-
-            if (paymentInputsContainer) paymentInputsContainer.innerHTML = '';
-            addPaymentInput(total);
-
-            if (splitPaymentModal) splitPaymentModal.classList.remove('hidden');
-        });
-    }
-
-    if (applyDiscountSurchargeBtn) {
-        applyDiscountSurchargeBtn.addEventListener('click', () => {
-            const value = parseFloat(discountSurchargeValueInput?.value);
-            const type = discountSurchargeTypeSelect?.value;
-
-            if (isNaN(value) || value <= 0) {
-                showModal("El valor del descuento/recargo debe ser un número positivo.");
-                return;
-            }
-
-            currentDiscountSurcharge.value = value;
-            currentDiscountSurcharge.type = type;
-
+            cart = [];
             renderCart();
-        });
-    }
-
-    if (clearDiscountSurchargeBtn) {
-        clearDiscountSurchargeBtn.addEventListener('click', () => {
-            currentDiscountSurcharge.value = 0;
-            currentDiscountSurcharge.type = null;
-            discountSurchargeValueInput.value = '';
-            renderCart();
-        });
-    }
-
-
-    if (addPaymentInputBtn) {
-        addPaymentInputBtn.addEventListener('click', () => {
-            addPaymentInput(0);
-        });
-    }
-
-    if (cancelSplitBtn) {
-        cancelSplitBtn.addEventListener('click', () => {
-            if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-        });
-    }
-    
-    // Mover este bloque fuera de setupRealtimeListeners
-    if (processPaymentBtn) {
-        processPaymentBtn.addEventListener('click', async () => {
-            if (isProcessingPayment) {
-                return;
-            }
-            isProcessingPayment = true;
-            processPaymentBtn.disabled = true;
-
-            if (!paymentInputsContainer || !customerSelect || !splitPaymentModal) {
-                console.error("Faltan elementos del DOM para procesar el pago.");
-                processPaymentBtn.disabled = false;
-                isProcessingPayment = false;
-                return;
-            }
+        } else {
+            const { subtotal, total, adjustmentAmount } = calculateTotal();
+            const cashId = new Date().toLocaleDateString('en-CA');
             
-            const payments = [];
-            const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
-            const paymentSelects = paymentInputsContainer.querySelectorAll('select');
-            let sum = 0;
+            try {
+                const productUpdates = cart.map(item => {
+                    if(item.stock !== undefined) {
+                        const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                        return updateDoc(productDocRef, {
+                            stock: item.stock - item.quantity
+                        });
+                    }
+                }).filter(Boolean);
 
-            for (let i = 0; i < paymentInputs.length; i++) {
-                const amount = parseFloat(paymentInputs[i].value);
-                const method = paymentSelects[i].value;
-                if (isNaN(amount) || amount <= 0) {
-                    showModal("Todos los montos deben ser números positivos.");
-                    processPaymentBtn.disabled = false;
-                    isProcessingPayment = false;
-                    return;
-                }
-                sum += amount;
-                payments.push({ method: method, amount: amount });
-            }
+                await Promise.all(productUpdates);
 
-            const totalAmountToPay = parseFloat(paymentTotalDisplay.textContent.replace('$', ''));
-            if (Math.abs(sum - totalAmountToPay) > 0.01) {
-                showModal("La suma de los pagos no coincide con el total.");
-                processPaymentBtn.disabled = false;
-                isProcessingPayment = false;
-                return;
-            }
+                const customerId = customerSelect.value;
+                const customerName = customerSelect.options[customerSelect.selectedIndex].text;
 
-            if (currentReservationToProcess) {
-                await processReservedOrder(currentReservationToProcess, payments);
-                currentReservationToProcess = null;
-                cart = [];
-                renderCart();
-            } else {
-                const { subtotal, total, adjustmentAmount } = calculateTotal();
-                const cashId = new Date().toLocaleDateString('en-CA');
-                
-                try {
-                    const productUpdates = cart.map(item => {
-                        if(item.stock !== undefined) {
-                            const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
-                            return updateDoc(productDocRef, {
-                                stock: item.stock - item.quantity
-                            });
-                        }
-                    }).filter(Boolean);
-    
-                    await Promise.all(productUpdates);
-    
-                    const customerId = customerSelect.value;
-                    const customerName = customerSelect.options[customerSelect.selectedIndex].text;
-    
-                    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                    const newSaleRef = await addDoc(salesCollection, {
+                const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+                const newSaleRef = await addDoc(salesCollection, {
+                    items: cart,
+                    subtotal: subtotal,
+                    // Corregido: Condicionalmente agregar el campo adjustment si existe
+                    ...(adjustmentAmount > 0 && { adjustment: { amount: adjustmentAmount, type: currentDiscountSurcharge.type } }),
+                    total: total,
+                    payments: payments,
+                    customerId: customerId || null,
+                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                    timestamp: serverTimestamp(),
+                    cashId: cashId
+                });
+
+                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+
+                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                    printReceipt({
+                        id: newSaleRef.id,
                         items: cart,
                         subtotal: subtotal,
                         adjustment: {
@@ -2665,54 +2488,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         total: total,
                         payments: payments,
-                        customerId: customerId || null,
                         customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                        timestamp: serverTimestamp(),
-                        cashId: cashId
+                        timestamp: new Date()
                     });
-    
-                    showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
-    
-                    if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-                        printReceipt({
-                            id: newSaleRef.id,
-                            items: cart,
-                            subtotal: subtotal,
-                            adjustment: {
-                                amount: adjustmentAmount,
-                                type: currentDiscountSurcharge.type
-                            },
-                            total: total,
-                            payments: payments,
-                            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                            timestamp: new Date()
-                        });
-                    }
-    
-                    cart = [];
-                    currentDiscountSurcharge = { value: 0, type: null };
-                    renderCart();
-                    if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-                    if(customerSelect) customerSelect.value = "";
-
-                } catch (error) {
-                    console.error("Error al finalizar la venta:", error);
-                    showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
                 }
+
+                cart = [];
+                currentDiscountSurcharge = { value: 0, type: null };
+                renderCart();
+            } catch (error) {
+                console.error("Error al finalizar la venta:", error);
+                showModal("Hubo un error al registrar la venta. Por favor, intenta de nuevo.");
             }
-
-            if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-            if(customerSelect) customerSelect.value = "";
-            currentReservationToProcess = null;
-
-
-        } finally {
-            isProcessingPayment = false;
-            processPaymentBtn.disabled = false;
         }
-    });
-}
 
+        if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+        if(customerSelect) customerSelect.value = "";
+        currentReservationToProcess = null;
+    } finally {
+        isProcessingPayment = false;
+        processPaymentBtn.disabled = false;
+    }
+});
     if (importSalesBtn) {
         importSalesBtn.addEventListener('click', () => {
             if (importSalesInput) importSalesInput.click();
@@ -2795,11 +2592,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // NUEVO: Listeners para los botones de combos
     if (showComboFormBtn) {
         showComboFormBtn.addEventListener('click', () => {
             if (addComboForm) addComboForm.classList.remove('hidden');
-            // Limpiar el formulario y el campo ID al cambiar a "Crear Combo"
             addComboForm.reset();
             if (comboIdInput) comboIdInput.value = '';
             if (comboProductsContainer) comboProductsContainer.innerHTML = '';
@@ -2834,7 +2629,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Toggle forms visibility
     if (toggleProductFormBtn) {
         toggleProductFormBtn.addEventListener('click', () => {
             if (productFormContainer) {
@@ -2898,10 +2692,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await addDoc(reservationsCollection, {
                     items: cart,
                     subtotal: subtotal,
-                    adjustment: {
-                        amount: adjustmentAmount,
-                        type: currentDiscountSurcharge.type
-                    },
+                    ...(adjustmentAmount > 0 && { adjustment: { amount: adjustmentAmount, type: currentDiscountSurcharge.type } }),
                     total: total,
                     customerId: customerId,
                     customerName: customerName,
@@ -2910,6 +2701,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 showModal("Pedido reservado con éxito.");
                 cart = [];
+                currentDiscountSurcharge = { value: 0, type: null };
                 renderCart();
             } catch (error) {
                 console.error("Error al reservar el pedido:", error);
