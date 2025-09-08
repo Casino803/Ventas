@@ -2626,13 +2626,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const cashId = new Date().toLocaleDateString('en-CA');
             try {
                 const productUpdates = cart.map(item => {
-                    if(item.stock !== undefined) {
+                    if (item.stock !== undefined) {
                         const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
                         return updateDoc(productDocRef, {
-                            stock: item.stock - item.quantity
+                            stock: increment(-item.quantity)
                         });
                     }
-                }).filter(Boolean); // Filter out undefined promises
+                }).filter(Boolean);
 
                 await Promise.all(productUpdates);
 
@@ -2640,7 +2640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const customerName = customerSelect.options[customerSelect.selectedIndex].text;
 
                 const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                await addDoc(salesCollection, {
+                const newSaleRef = await addDoc(salesCollection, {
                     items: cart,
                     subtotal: subtotal,
                     adjustment: {
@@ -2677,7 +2677,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDiscountSurcharge = { value: 0, type: null };
                 renderCart();
                 if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-                if(customerSelect) customerSelect.value = "";
+                if (customerSelect) customerSelect.value = "";
 
             } catch (error) {
                 console.error("Error al finalizar la venta:", error);
