@@ -728,7 +728,7 @@ function renderProductCategoriesList() {
 
         const deleteButton = itemDiv.querySelector('.delete-product-category-btn');
 deleteButton.addEventListener('click', async () => {
-    if (confirm(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`)) {
+    showConfirmationModal(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`, async () => {
         try {
             const categoryDocRef = doc(db, SHARED_PRODUCT_CATEGORIES_COLLECTION, category.id);
             await deleteDoc(categoryDocRef);
@@ -737,7 +737,9 @@ deleteButton.addEventListener('click', async () => {
             console.error("Error al eliminar la categoría de producto:", error);
             showModal("Error al eliminar la categoría de producto.");
         }
-    } () => {});
+    }, () => {
+        // Callback para la cancelación, si es necesario.
+    });
 });
 
 function renderProductCategoriesInput() {
