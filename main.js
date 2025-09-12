@@ -13,8 +13,6 @@ const firebaseConfig = {
     measurementId: "G-XYG0ZNEQ61"
 };
 
-const appId = firebaseConfig.appId;
-
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -59,6 +57,9 @@ const toggleExpenseFormBtn = document.getElementById('toggle-expense-form-btn');
 const expenseFormContainer = document.getElementById('expense-form-container');
 const toggleCustomerFormBtn = document.getElementById('toggle-customer-form-btn');
 const customerFormContainer = document.getElementById('customer-form-container');
+const reserveBtn = document.getElementById('reserve-btn');
+const reservationsListContainer = document.getElementById('reservations-list-container');
+const topSettingsButton = document.querySelector('button[data-page="settings-page"]'); // Declaración en el ámbito global
 
 // Referencias de la página de caja
 const cashStatusText = document.getElementById('cash-status-text');
@@ -146,6 +147,7 @@ let userId = '';
 let cart = [];
 let allProducts = [];
 let allSales = [];
+let allReservations = []; // NUEVO: Estado global para las reservaciones
 let dailyCashData = null;
 let dailySalesTotal = 0;
 let dailyExpensesTotal = 0;
@@ -155,6 +157,8 @@ let currentDiscountSurcharge = {
     value: 0,
     type: null // 'percentage_discount', 'fixed_discount', 'percentage_surcharge', 'fixed_surcharge'
 };
+let currentReservationToProcess = null; // NUEVO: Para guardar la reservación a facturar
+
 
 let allCombos = [];
 
@@ -171,6 +175,7 @@ const SHARED_CASH_COLLECTION = 'cajas';
 const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
 const SHARED_PRODUCT_CATEGORIES_COLLECTION = 'productCategories';
 const SHARED_COMBOS_COLLECTION = 'combos';
+const SHARED_RESERVATIONS_COLLECTION = 'reservations'; // NUEVO: Colección para pedidos reservados
 
 
 const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
@@ -332,6 +337,164 @@ function renderComboCard(combo) {
     });
 }
 
+// NUEVAS FUNCIONES PARA RESERVACIONES
+function renderReservations() {
+    if (!reservationsListContainer) return;
+    reservationsListContainer.innerHTML = '';
+    if (allReservations.length === 0) {
+        reservationsListContainer.innerHTML = '<p class="text-center text-gray-500">No hay reservaciones pendientes.</p>';
+        return;
+    }
+
+    allReservations.forEach(reservation => {
+        const reservationDiv = document.createElement('div');
+        reservationDiv.className = "bg-white p-4 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-start md:items-center";
+
+        const formattedDate = reservation.timestamp ? new Date(reservation.timestamp.seconds * 1000).toLocaleString('es-ES') : 'Fecha no disponible';
+        
+        let itemsHtml = reservation.items.map(item => `
+            <li class="flex justify-between text-sm">
+                <span class="text-gray-700">${item.name} x${item.quantity}</span>
+            </li>
+        `).join('');
+
+        let adjustmentHtml = '';
+        if (reservation.adjustment && reservation.adjustment.amount > 0) {
+            const adjustmentText = reservation.adjustment.type.includes('discount') ? 'Descuento' : 'Recargo';
+            const sign = reservation.adjustment.type.includes('discount') ? '-' : '+';
+            adjustmentHtml = `<p class="text-sm text-gray-600">
+                ${adjustmentText}: <span class="font-semibold">${sign}$${reservation.adjustment.amount.toFixed(2)}</span>
+            </p>`;
+        }
+        
+        reservationDiv.innerHTML = `
+            <div class="flex-grow">
+                <p class="font-semibold text-gray-800">Cliente: ${reservation.customerName}</p>
+                <p class="text-sm text-gray-500">Fecha de reserva: ${formattedDate}</p>
+                <p class="text-lg font-bold text-blue-600 mt-2">Total: $${reservation.total.toFixed(2)}</p>
+                <div class="mt-2 text-sm">
+                    <p class="font-semibold text-gray-700">Productos:</p>
+                    <ul class="list-disc list-inside space-y-1 ml-4">
+                        ${itemsHtml}
+                    </ul>
+                </div>
+                ${adjustmentHtml}
+            </div>
+            <div class="flex space-x-2 mt-4 md:mt-0">
+                <button data-id="${reservation.id}" class="process-reservation-btn px-4 py-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+                    <i class="fas fa-check-circle"></i> Facturar
+                </button>
+                <button data-id="${reservation.id}" class="delete-reservation-btn px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition duration-300">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
+            </div>
+        `;
+
+        reservationsListContainer.appendChild(reservationDiv);
+    });
+
+    // Eventos para facturar y eliminar
+    document.querySelectorAll('.process-reservation-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const reservationId = e.target.dataset.id;
+            const reservationToProcess = allReservations.find(r => r.id === reservationId);
+            if (reservationToProcess) {
+                showPaymentModalForReservation(reservationToProcess);
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-reservation-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const reservationId = e.target.dataset.id;
+            deleteReservedOrder(reservationId);
+        });
+    });
+}
+
+function showPaymentModalForReservation(reservation) {
+    if (!paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer || !splitPaymentModal || !customerSelect) {
+        showModal("Error: Faltan elementos de la interfaz de usuario para el modal de pago.");
+        return;
+    }
+
+    currentReservationToProcess = reservation;
+    cart = reservation.items;
+    
+    // Cambiar a la página de punto de venta
+    showPage('pos-page');
+    // Activar la pestaña de punto de venta
+    const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
+    if (posTab) {
+        document.querySelector('.tab-btn.active')?.classList.remove('active');
+        posTab.classList.add('active');
+    }
+
+    // Actualizar el carrito en la UI
+    renderCart();
+    
+    // Limpiar y configurar la UI del modal de pago para la reservación
+    paymentTotalDisplay.textContent = `$${reservation.total.toFixed(2)}`;
+    paymentRemainingDisplay.textContent = `$${reservation.total.toFixed(2)}`;
+    paymentInputsContainer.innerHTML = '';
+    addPaymentInput(reservation.total);
+    customerSelect.value = reservation.customerId;
+    
+    splitPaymentModal.classList.remove('hidden');
+}
+
+
+// NUEVO: Función para procesar una reservación
+async function processReservedOrder(reservation, payments) {
+    if (!dailyCashData || dailyCashData.cerrada) {
+        showModal("La caja no está abierta. Por favor, abre la caja para facturar ventas.");
+        return;
+    }
+
+    const cashId = new Date().toLocaleDateString('en-CA');
+    
+    showConfirmationModal(`¿Estás seguro de que quieres facturar este pedido de ${reservation.customerName}?`, async () => {
+        try {
+            // Mover la reservación a la colección de ventas
+            await addDoc(collection(db, SHARED_SALES_COLLECTION), {
+                items: reservation.items,
+                subtotal: reservation.subtotal,
+                ...(reservation.adjustment && reservation.adjustment.amount > 0 && { adjustment: reservation.adjustment }),
+                total: reservation.total,
+                payments: payments, 
+                customerId: reservation.customerId,
+                customerName: reservation.customerName,
+                timestamp: serverTimestamp(),
+                cashId: cashId
+            });
+            
+            // Eliminar la reservación de la colección de reservaciones
+            const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservation.id);
+            await deleteDoc(reservationDocRef);
+            
+            showModal("Pedido facturado con éxito y eliminado de las reservaciones.");
+            
+        } catch (error) {
+            console.error("Error al facturar el pedido reservado:", error);
+            showModal("Hubo un error al facturar el pedido. Intenta de nuevo.");
+        }
+    }, () => {});
+}
+
+// NUEVO: Función para eliminar una reservación
+async function deleteReservedOrder(reservationId) {
+    showConfirmationModal(`¿Estás seguro de que quieres eliminar esta reservación? Esta acción no se puede deshacer.`, async () => {
+        try {
+            const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, reservationId);
+            await deleteDoc(reservationDocRef);
+            showModal("Reservación eliminada con éxito.");
+        } catch (error) {
+            console.error("Error al eliminar la reservación:", error);
+            showModal("Hubo un error al eliminar la reservación. Intenta de nuevo.");
+        }
+    }, () => {});
+}
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         userId = user.uid;
@@ -409,7 +572,6 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de gastos.");
     });
 
-    // Nuevo listener para las categorías de productos
     const productCategoriesCollection = collection(db, SHARED_PRODUCT_CATEGORIES_COLLECTION);
     onSnapshot(productCategoriesCollection, (snapshot) => {
         productCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -420,19 +582,16 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las categorías de productos.");
     });
     
-    // NUEVO: Listener para los combos
     const combosCollection = collection(db, SHARED_COMBOS_COLLECTION);
     onSnapshot(combosCollection, (snapshot) => {
       allCombos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderProducts(allProducts); // Para refrescar la vista de productos y combos
+      renderProducts(allProducts);
       if(promotionsList) renderManageCombos();
     }, (error) => {
       console.error("Error al escuchar combos:", error);
       showModal("Error al cargar los combos.");
     });
 
-
-    // Colecciones ahora compartidas
     const expensesCollection = collection(db, SHARED_EXPENSES_COLLECTION);
     onSnapshot(expensesCollection, (snapshot) => {
         const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -464,11 +623,19 @@ function setupRealtimeListeners() {
     }, (error) => {
         console.error("Error al escuchar el historial de cajas:", error);
     });
+
+    const reservationsCollection = collection(db, SHARED_RESERVATIONS_COLLECTION);
+    onSnapshot(reservationsCollection, (snapshot) => {
+        allReservations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if(reservationsListContainer) renderReservations();
+    }, (error) => {
+        console.error("Error al escuchar reservaciones:", error);
+        showModal("Error al cargar las reservaciones.");
+    });
 }
 
-// Funciones de renderizado de configuración
 function renderPaymentMethodsList() {
-    if (!paymentMethodsList) return; // Validación agregada
+    if (!paymentMethodsList) return;
     paymentMethodsList.innerHTML = '';
     const allMethods = [...defaultPaymentMethods.map(name => ({name: name, id: null})), ...userPaymentMethods];
     allMethods.forEach(method => {
@@ -506,7 +673,7 @@ function renderPaymentMethodsList() {
 }
 
 function renderExpenseCategoriesList() {
-    if (!expenseCategoriesList) return; // Validación agregada
+    if (!expenseCategoriesList) return;
     expenseCategoriesList.innerHTML = '';
     const allCategories = [...defaultExpenseCategories.map(name => ({name: name, id: null})), ...userExpenseCategories];
     allCategories.forEach(category => {
@@ -561,7 +728,7 @@ function renderProductCategoriesList() {
 
         const deleteButton = itemDiv.querySelector('.delete-product-category-btn');
         deleteButton.addEventListener('click', async () => {
-            if (confirm(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`)) {
+            showConfirmationModal(`¿Estás seguro de que quieres eliminar la categoría de producto '${category.name}'?`, async () => {
                 try {
                     const categoryDocRef = doc(db, SHARED_PRODUCT_CATEGORIES_COLLECTION, category.id);
                     await deleteDoc(categoryDocRef);
@@ -570,7 +737,9 @@ function renderProductCategoriesList() {
                     console.error("Error al eliminar la categoría de producto:", error);
                     showModal("Error al eliminar la categoría de producto.");
                 }
-            }
+            }, () => {
+                // Callback para la cancelación, si es necesario.
+            });
         });
     });
 }
@@ -652,7 +821,6 @@ function renderPaymentMethodFilters() {
     const selectFilter = document.getElementById('filter-payment-method');
     selectFilter.innerHTML = '<option value="">Todas</option>';
     
-    // Generar opciones para todos los métodos de pago disponibles (predeterminados + agregados por el usuario)
     const allMethods = [...new Set([...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)])];
     allMethods.forEach(method => {
         const option = document.createElement('option');
@@ -794,7 +962,6 @@ function renderSalesHistory(sales) {
     
     const filteredSales = applyFilters(sales);
     
-    // Nuevo cálculo para el total de la vista filtrada
     let filteredTotal = 0;
     const paymentMethodFilter = filterPaymentMethod?.value;
 
@@ -825,7 +992,6 @@ function renderSalesHistory(sales) {
 
     const sortedDates = Object.keys(salesByDay).sort((a, b) => new Date(b) - new Date(a));
     
-    // Mostrar el total general de la vista filtrada
     if (sortedDates.length > 0) {
         const totalHeader = document.createElement('div');
         totalHeader.className = "bg-blue-600 text-white p-4 rounded-lg mb-4 text-center";
@@ -859,6 +1025,15 @@ function renderSalesHistory(sales) {
             </li>
             `).join('');
 
+            let adjustmentHtml = '';
+            if (sale.adjustment && sale.adjustment.amount > 0) {
+                const adjustmentText = sale.adjustment.type.includes('discount') ? 'Descuento' : 'Recargo';
+                const sign = sale.adjustment.type.includes('discount') ? '-' : '+';
+                adjustmentHtml = `<p class="text-sm text-gray-600">
+                    ${adjustmentText}: <span class="font-semibold">${sign}$${sale.adjustment.amount.toFixed(2)}</span>
+                </p>`;
+            }
+
             let paymentsHtml = '';
             if (sale.payments && sale.payments.length > 0) {
                 paymentsHtml = '<p class="mt-2 text-sm text-gray-600">Pagos:</p><ul class="space-y-1">';
@@ -873,7 +1048,6 @@ function renderSalesHistory(sales) {
 
             let customerHtml = sale.customerId ? `<p class="mt-2 text-sm text-gray-600">Cliente: <span class="font-semibold">${sale.customerName}</span></p>` : '';
 
-            // Lógica para mostrar solo el monto del pago filtrado
             let displayAmount = sale.total;
             if (paymentMethodFilter && paymentMethodFilter !== 'Todas') {
                 const filteredPayment = sale.payments.find(p => p.method === paymentMethodFilter);
@@ -888,6 +1062,7 @@ function renderSalesHistory(sales) {
             <ul class="space-y-1">
                 ${itemsHtml}
             </ul>
+            ${adjustmentHtml}
             ${paymentsHtml}
             ${customerHtml}
             <div class="flex justify-end">
@@ -900,7 +1075,6 @@ function renderSalesHistory(sales) {
         });
         salesHistoryContainer.appendChild(dayDiv);
     });
-    // Attach print events
     document.querySelectorAll('.print-receipt-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const saleId = e.target.dataset.saleId;
@@ -928,7 +1102,6 @@ function applyFilters(sales) {
             return false;
         }
         
-        // Lógica de filtro para las formas de pago configuradas
         if (paymentMethod && paymentMethod !== 'Todas') {
             return sale.payments.some(p => p.method === paymentMethod);
         }
@@ -957,7 +1130,6 @@ function renderDailyExpenses(expenses) {
     if (!dailyExpensesContainer) return;
     dailyExpensesContainer.innerHTML = '';
 
-    // Agrupar gastos por día
     const expensesByDay = expenses.reduce((acc, expense) => {
         const timestamp = expense.timestamp;
         if (timestamp && timestamp.seconds) {
@@ -976,14 +1148,17 @@ function renderDailyExpenses(expenses) {
     sortedDates.forEach(dateString => {
         const dayDiv = document.createElement('div');
         dayDiv.className = "bg-gray-200 p-4 rounded-lg mb-4";
+        
+        const dayData = expensesByDay[dateString];
+
         dayDiv.innerHTML = `
         <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-300">
             <h3 class="font-bold text-lg">${dateString}</h3>
-            <span class="font-bold text-red-600 text-xl">Total: -$${dailyExpenses.total.toFixed(2)}</span>
+            <span class="font-bold text-red-600 text-xl">Total: -$${dayData.total.toFixed(2)}</span>
         </div>
         `;
 
-        dailyExpenses.expenses.forEach(expense => {
+        dayData.expenses.forEach(expense => {
             const expenseDiv = document.createElement('div');
             expenseDiv.className = "bg-white p-3 rounded-lg shadow-sm flex justify-between items-center my-2";
             const formattedTime = new Date(expense.timestamp.seconds * 1000).toLocaleTimeString('es-ES');
@@ -1062,13 +1237,11 @@ async function updateDailyTotals() {
 
     const today = new Date().toLocaleDateString('en-CA');
 
-    // Obtener ventas asociadas a la caja de hoy
     const salesQuery = query(collection(db, SHARED_SALES_COLLECTION), where("cashId", "==", today));
     const salesSnapshot = await getDocs(salesQuery);
     let salesCount = 0;
     let paymentMethodTotals = {};
 
-    // Obtener todos los métodos de pago disponibles
     const allPaymentMethods = [...defaultPaymentMethods, ...userPaymentMethods.map(m => m.name)];
     allPaymentMethods.forEach(method => {
         paymentMethodTotals[method] = 0;
@@ -1090,7 +1263,6 @@ async function updateDailyTotals() {
         return sum;
     }, 0);
 
-    // Obtener gastos asociados a la caja de hoy
     const expensesQuery = query(collection(db, SHARED_EXPENSES_COLLECTION), where("cashId", "==", today));
     const expensesSnapshot = await getDocs(expensesQuery);
     dailyExpensesTotal = expensesSnapshot.docs.reduce((sum, doc) => {
@@ -1104,25 +1276,20 @@ async function updateDailyTotals() {
     const currentCash = dailyCashData.abertura + paymentMethodTotals['Efectivo'] - dailyExpensesTotal;
     if (currentCashDisplay) currentCashDisplay.textContent = `$${currentCash.toFixed(2)}`;
 
-    // Actualizar las estadísticas
     if (statsTotalSales) statsTotalSales.textContent = `$${dailySalesTotal.toFixed(2)}`;
     if (statsSalesCount) statsSalesCount.textContent = salesCount;
     if (statsTotalExpenses) statsTotalExpenses.textContent = `$${dailyExpensesTotal.toFixed(2)}`;
 
-    // Renderizar dinámicamente los totales de pago
     renderPaymentStats(paymentMethodTotals);
 }
 
 function renderPaymentStats(paymentMethodTotals) {
     if (!paymentStatsContainer) return;
 
-    // Limpiar el contenedor antes de renderizar
     paymentStatsContainer.innerHTML = '';
     
-    // Convertir el objeto a un array de pares [clave, valor]
     const paymentMethodsArray = Object.entries(paymentMethodTotals);
 
-    // Renderizar cada forma de pago
     paymentMethodsArray.forEach(([method, total]) => {
         const div = document.createElement('div');
         let totalSalesText = '';
@@ -1215,7 +1382,6 @@ if (expenseForm) {
             expenseForm.reset();
             showModal("Gasto registrado con éxito.");
             
-            // Ocultar el formulario después de guardar
             if (expenseFormContainer) expenseFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -1304,7 +1470,6 @@ function calculateTotal() {
     };
 }
 
-
 function renderCart() {
     if (!cartContainer || !cartSubtotalSpan || !cartTotalSpan || !discountSurchargeDisplay) return;
 
@@ -1346,7 +1511,6 @@ function renderCart() {
     cartSubtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
     cartTotalSpan.textContent = `$${total.toFixed(2)}`;
 
-    // Mostrar el descuento/recargo aplicado
     if (adjustmentAmount !== 0) {
         let text = currentDiscountSurcharge.type.includes('discount') ? 'Descuento' : 'Recargo';
         let sign = currentDiscountSurcharge.type.includes('discount') ? '-' : '+';
@@ -1431,6 +1595,21 @@ if (productForm) {
                 const productRef = doc(db, SHARED_PRODUCTS_COLLECTION, id);
                 await setDoc(productRef, productData, { merge: true });
                 showModal("Producto editado con éxito.");
+                
+                const oldProduct = allProducts.find(p => p.id === id);
+                if (oldProduct && oldProduct.price !== price) {
+                    const priceDifference = price - oldProduct.price;
+                    const combosWithProduct = allCombos.filter(combo => combo.items.some(item => item.productId === id));
+                    
+                    for (const combo of combosWithProduct) {
+                        const productItem = combo.items.find(item => item.productId === id);
+                        const priceChange = priceDifference * productItem.quantity;
+                        const newComboPrice = combo.price + priceChange;
+
+                        const comboRef = doc(db, SHARED_COMBOS_COLLECTION, combo.id);
+                        await setDoc(comboRef, { price: newComboPrice }, { merge: true });
+                    }
+                }
             } else {
                 const productsCollection = collection(db, SHARED_PRODUCTS_COLLECTION);
                 await addDoc(productsCollection, productData);
@@ -1440,7 +1619,6 @@ if (productForm) {
             const productIdInput = document.getElementById('product-id');
             if (productIdInput) productIdInput.value = '';
             
-            // Ocultar el formulario después de guardar
             if (productFormContainer) productFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -1460,7 +1638,7 @@ if (checkoutBtn) {
             showModal("La caja no está abierta. Por favor, abre la caja para registrar ventas.");
             return;
         }
-
+        currentReservationToProcess = null;
         const { total } = calculateTotal();
         if (paymentTotalDisplay) paymentTotalDisplay.textContent = `$${total.toFixed(2)}`;
         if (paymentRemainingDisplay) paymentRemainingDisplay.textContent = `$${total.toFixed(2)}`;
@@ -1520,22 +1698,15 @@ function addPaymentInput(amount = 0) {
     input.step = "0.01";
     input.className = "w-full px-4 py-2 border border-gray-300 rounded-lg";
 
-    if (cartTotalSpan) {
-        if (paymentInputsContainer.children.length === 0) {
-            input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
-        } else {
-            input.value = amount.toFixed(2);
-        }
+    if (paymentInputsContainer.children.length === 0) {
+        input.value = parseFloat(paymentTotalDisplay.textContent.replace('$', '')).toFixed(2);
+    } else {
+        input.value = amount.toFixed(2);
     }
-
+    
     if (input && select) {
         input.addEventListener('input', updateRemainingAmount);
-        select.addEventListener('change', () => {
-            if (cartTotalSpan && paymentInputsContainer.children.length === 1) {
-                input.value = parseFloat(cartTotalSpan.textContent.replace('$', '')).toFixed(2);
-            }
-            updateRemainingAmount();
-        });
+        select.addEventListener('change', updateRemainingAmount);
     }
 
     const removeBtn = document.createElement('button');
@@ -1543,8 +1714,8 @@ function addPaymentInput(amount = 0) {
     removeBtn.className = "px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600";
     removeBtn.addEventListener('click', () => {
         row.remove();
-        if (cartTotalSpan && paymentInputsContainer.children.length === 0) {
-            addPaymentInput(parseFloat(cartTotalSpan.textContent.replace('$', '')));
+        if (paymentInputsContainer.children.length === 0) {
+            addPaymentInput(parseFloat(paymentTotalDisplay.textContent.replace('$', '')));
         }
         updateRemainingAmount();
     });
@@ -1571,12 +1742,15 @@ if (addPaymentInputBtn) {
 if (cancelSplitBtn) {
     cancelSplitBtn.addEventListener('click', () => {
         if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
+        cart = [];
+        renderCart();
+        currentReservationToProcess = null;
     });
 }
 
 function updateRemainingAmount() {
-    if (!cartTotalSpan || !paymentRemainingDisplay || !paymentInputsContainer) return;
-    const total = parseFloat(cartTotalSpan.textContent.replace('$', ''));
+    if (!paymentTotalDisplay || !paymentRemainingDisplay || !paymentInputsContainer) return;
+    const total = parseFloat(paymentTotalDisplay.textContent.replace('$', ''));
     const paymentInputs = paymentInputsContainer.querySelectorAll('input[type="number"]');
     let sum = 0;
     paymentInputs.forEach(input => {
@@ -1689,7 +1863,6 @@ async function processImportedSales(csvData) {
     showModal(message);
 }
 
-// Lógica de clientes
 if (addCustomerForm) {
     addCustomerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1704,7 +1877,6 @@ if (addCustomerForm) {
             if(addCustomerForm) addCustomerForm.reset();
             showModal(`Cliente '${name}' añadido con éxito.`);
             
-            // Ocultar el formulario después de guardar
             if (customerFormContainer) customerFormContainer.classList.add('hidden');
             
         } catch (error) {
@@ -1815,8 +1987,7 @@ function renderSalesChart(sales) {
                     }
                 }
             }
-        }
-    });
+        });
 }
 
 function renderTopProductsChart(sales) {
@@ -1920,7 +2091,6 @@ function renderPaymentMethodsChart(sales) {
     });
 }
 
-// Impresión de recibos
 function printReceipt(sale) {
     const paymentsHtml = sale.payments.map(p => `
         <p class="payment-row">Pagado con ${p.method}: $${p.amount.toFixed(2)}</p>
@@ -1990,20 +2160,16 @@ function printReceipt(sale) {
     </div>
     `;
 
-    // 1. Crea un contenedor temporal
     const printArea = document.createElement('div');
     printArea.innerHTML = content;
     document.body.appendChild(printArea);
 
-    // 2. Espera a que el DOM se actualice y luego imprime
     setTimeout(() => {
         window.print();
-        // 3. Elimina el contenedor temporal después de la impresión
         document.body.removeChild(printArea);
     }, 500);
 }
 
-// Lógica de autenticación
 if (loginBtn) {
     loginBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -2063,7 +2229,6 @@ if (toggleFiltersBtn) {
     toggleFiltersBtn.addEventListener('click', toggleFilters);
 }
 
-// Se hace global para poder llamarla desde el HTML con onclick
 window.toggleSection = function(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) {
@@ -2076,7 +2241,6 @@ window.toggleSection = function(sectionId) {
     }
 }
 
-// FUNCIÓN PARA AÑADIR UN CAMPO DE PRODUCTO AL FORMULARIO DEL COMBO
 function addComboProductInput(product = null, quantity = 1) {
     if (!comboProductsContainer) return;
 
@@ -2093,7 +2257,6 @@ function addComboProductInput(product = null, quantity = 1) {
     const select = div.querySelector('.combo-product-select');
     const removeBtn = div.querySelector('.remove-combo-product-btn');
 
-    // Poblar el select con la lista de productos
     allProducts.forEach(prod => {
         const option = document.createElement('option');
         option.value = prod.id;
@@ -2105,7 +2268,6 @@ function addComboProductInput(product = null, quantity = 1) {
         select.value = product.id;
     }
 
-    // Añadir el listener para el botón de remover
     removeBtn.addEventListener('click', () => {
         div.remove();
     });
@@ -2113,7 +2275,6 @@ function addComboProductInput(product = null, quantity = 1) {
     comboProductsContainer.appendChild(div);
 }
 
-// FUNCIÓN PARA GUARDAR EL COMBO
 if (addComboForm) {
     addComboForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -2150,18 +2311,16 @@ if (addComboForm) {
 
         try {
             if (comboId) {
-                // Editar combo existente
                 const comboRef = doc(db, SHARED_COMBOS_COLLECTION, comboId);
                 await setDoc(comboRef, comboData, { merge: true });
                 showModal("Combo editado con éxito.");
             } else {
-                // Añadir nuevo combo
                 await addDoc(collection(db, SHARED_COMBOS_COLLECTION), comboData);
                 showModal("Combo guardado con éxito.");
             }
             addComboForm.reset();
-            comboProductsContainer.innerHTML = ''; // Limpiar los inputs del combo
-            addComboForm.classList.add('hidden'); // Ocultar el formulario
+            comboProductsContainer.innerHTML = '';
+            addComboForm.classList.add('hidden');
         } catch (error) {
             console.error("Error al guardar el combo:", error);
             showModal("Hubo un error al guardar el combo. Intenta de nuevo.");
@@ -2173,7 +2332,6 @@ function renderManageCombos() {
     if (!promotionsList) return;
     promotionsList.innerHTML = '';
 
-    // Renderizar combos
     allCombos.forEach(combo => {
         const comboDiv = document.createElement('div');
         comboDiv.className = "bg-gray-100 p-3 rounded-lg flex items-center justify-between";
@@ -2206,11 +2364,9 @@ function renderManageCombos() {
         `;
         promotionsList.appendChild(comboDiv);
 
-        // Añadir listeners a los botones de editar y eliminar
         comboDiv.querySelector('.edit-combo-btn').addEventListener('click', () => {
             const selectedCombo = allCombos.find(c => c.id === combo.id);
             if (selectedCombo) {
-                // Muestra el formulario y rellena los campos
                 if (addComboForm) addComboForm.classList.remove('hidden');
                 if (comboIdInput) comboIdInput.value = selectedCombo.id;
                 if (comboNameInput) comboNameInput.value = selectedCombo.name;
@@ -2240,38 +2396,27 @@ function renderManageCombos() {
     });
 }
 
-// Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
-
-    // Configurar la navegación principal del menú
     setupNavigation();
-
-    // Configurar la navegación de pestañas
     setupTabNavigation();
-
-    // Configurar la navegación de pestañas de Caja y Gastos
     setupCashTabNavigation();
 
-    // Reasignar el evento de clic a los botones de navegación superior
     const topNavButtons = document.querySelectorAll('.fixed button[data-page]');
     topNavButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetPageId = btn.dataset.page;
             showPage(targetPageId);
-            // Si el menú principal está oculto, deseleccionar cualquier pestaña
             if(targetPageId !== 'home-menu') {
                 document.querySelector('.tab-btn.active')?.classList.remove('active');
             }
         });
     });
 
-    // Manejar el estado de autenticación al cargar la página
     onAuthStateChanged(auth, user => {
         if (user) {
             userId = user.uid;
             setupRealtimeListeners();
             if (authModal) authModal.classList.add('hidden');
-            // Al iniciar sesión, mostrar el POS y activar su pestaña
             showPage('pos-page');
             const posTab = document.querySelector('.tab-btn[data-page="pos-page"]');
             if(posTab) {
@@ -2399,7 +2544,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Mover este bloque fuera de setupRealtimeListeners
     if (processPaymentBtn) {
         processPaymentBtn.addEventListener('click', async () => {
             if (isProcessingPayment) {
@@ -2444,40 +2588,44 @@ document.addEventListener('DOMContentLoaded', () => {
             const cashId = new Date().toLocaleDateString('en-CA');
             try {
                 const productUpdates = cart.map(item => {
-                    if(item.stock !== undefined) {
+                    if (item.stock !== undefined) {
                         const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
                         return updateDoc(productDocRef, {
-                            stock: item.stock - item.quantity
+                            stock: increment(-item.quantity)
                         });
                     }
-                }).filter(Boolean); // Filter out undefined promises
+                }).filter(Boolean);
 
                 await Promise.all(productUpdates);
 
-                const customerId = customerSelect.value;
-                const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+                if (currentReservationToProcess) {
+                    const newSaleRef = await addDoc(collection(db, SHARED_SALES_COLLECTION), {
+                        ...currentReservationToProcess,
+                        payments: payments,
+                        total: total,
+                        timestamp: serverTimestamp(),
+                        cashId: cashId
+                    });
 
-                const salesCollection = collection(db, SHARED_SALES_COLLECTION);
-                await addDoc(salesCollection, {
-                    items: cart,
-                    subtotal: subtotal,
-                    adjustment: {
-                        amount: adjustmentAmount,
-                        type: currentDiscountSurcharge.type
-                    },
-                    total: total,
-                    payments: payments,
-                    customerId: customerId || null,
-                    customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                    timestamp: serverTimestamp(),
-                    cashId: cashId
-                });
+                    const reservationDocRef = doc(db, SHARED_RESERVATIONS_COLLECTION, currentReservationToProcess.id);
+                    await deleteDoc(reservationDocRef);
 
-                showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+                    showModal("Pedido reservado facturado con éxito y eliminado de las reservaciones.");
+                    if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                        printReceipt({
+                            ...currentReservationToProcess,
+                            id: newSaleRef.id,
+                            payments: payments,
+                            total: total,
+                            timestamp: new Date()
+                        });
+                    }
+                } else {
+                    const customerId = customerSelect.value;
+                    const customerName = customerSelect.options[customerSelect.selectedIndex].text;
 
-                if (confirm("¿Deseas imprimir el recibo de la venta?")) {
-                    printReceipt({
-                        id: newSaleRef.id,
+                    const salesCollection = collection(db, SHARED_SALES_COLLECTION);
+                    const newSaleRef = await addDoc(salesCollection, {
                         items: cart,
                         subtotal: subtotal,
                         adjustment: {
@@ -2486,16 +2634,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         total: total,
                         payments: payments,
+                        customerId: customerId || null,
                         customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
-                        timestamp: new Date()
+                        timestamp: serverTimestamp(),
+                        cashId: cashId
                     });
+
+                    showModal("Venta finalizada con éxito. El carrito se ha vaciado.");
+
+                    if (confirm("¿Deseas imprimir el recibo de la venta?")) {
+                        printReceipt({
+                            id: newSaleRef.id,
+                            items: cart,
+                            subtotal: subtotal,
+                            adjustment: {
+                                amount: adjustmentAmount,
+                                type: currentDiscountSurcharge.type
+                            },
+                            total: total,
+                            payments: payments,
+                            customerName: customerName === 'Seleccionar Cliente' ? null : customerName,
+                            timestamp: new Date()
+                        });
+                    }
                 }
 
                 cart = [];
                 currentDiscountSurcharge = { value: 0, type: null };
+                currentReservationToProcess = null;
                 renderCart();
                 if (splitPaymentModal) splitPaymentModal.classList.add('hidden');
-                if(customerSelect) customerSelect.value = "";
+                if (customerSelect) customerSelect.value = "";
 
             } catch (error) {
                 console.error("Error al finalizar la venta:", error);
@@ -2589,11 +2758,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // NUEVO: Listeners para los botones de combos
     if (showComboFormBtn) {
         showComboFormBtn.addEventListener('click', () => {
             if (addComboForm) addComboForm.classList.remove('hidden');
-            // Limpiar el formulario y el campo ID al cambiar a "Crear Combo"
             addComboForm.reset();
             if (comboIdInput) comboIdInput.value = '';
             if (comboProductsContainer) comboProductsContainer.innerHTML = '';
@@ -2606,14 +2773,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    const topSettingsButton = document.querySelector('button[data-page="settings-page"]');
-    if (topSettingsButton) {
-        topSettingsButton.addEventListener('click', () => {
-            showPage('settings-page');
-            document.querySelector('.tab-btn.active')?.classList.remove('active');
-        });
-    }
-
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             try {
@@ -2628,7 +2787,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Toggle forms visibility
     if (toggleProductFormBtn) {
         toggleProductFormBtn.addEventListener('click', () => {
             if (productFormContainer) {
@@ -2669,5 +2827,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+    
+    if (reserveBtn) {
+        reserveBtn.addEventListener('click', () => {
+            reserveOrder();
+        });
+    }
+
+    async function reserveOrder() {
+        if (cart.length === 0) {
+            showModal("El carrito está vacío. Añade productos para reservar el pedido.");
+            return;
+        }
+
+        const customerId = customerSelect.value;
+        const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+
+        if (!customerId) {
+            showModal("Por favor, selecciona un cliente para reservar el pedido.");
+            return;
+        }
+
+        const {
+            subtotal,
+            total,
+            adjustmentAmount
+        } = calculateTotal();
+
+        try {
+            await addDoc(collection(db, SHARED_RESERVATIONS_COLLECTION), {
+                items: cart,
+                subtotal: subtotal,
+                adjustment: {
+                    amount: adjustmentAmount,
+                    type: currentDiscountSurcharge.type
+                },
+                total: total,
+                customerId: customerId,
+                customerName: customerName,
+                timestamp: serverTimestamp()
+            });
+
+            cart = [];
+            currentDiscountSurcharge = {
+                value: 0,
+                type: null
+            };
+            renderCart();
+            customerSelect.value = "";
+            showModal("Pedido reservado con éxito.");
+        } catch (error) {
+            console.error("Error al reservar el pedido:", error);
+            showModal("Hubo un error al reservar el pedido. Intenta de nuevo.");
+        }
     }
 });
