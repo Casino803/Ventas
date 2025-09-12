@@ -1987,7 +1987,7 @@ function renderSalesChart(sales) {
                     }
                 }
             }
-        });
+        };
 }
 
 function renderTopProductsChart(sales) {
