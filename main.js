@@ -1,7 +1,7 @@
-import { auth, onAuthStateChanged } from './firebase.js';
-import { setupRealtimeListeners } from './firestore.js';
-import { setupNavigation, setupTabNavigation, setupCashTabNavigation, showPage } from './ui.js';
-import { processPayment, reserveOrder } from './logic.js';
+import { auth, onAuthStateChanged } from './js/firebase.js';
+import { setupRealtimeListeners } from './js/firestore.js';
+import { setupNavigation, setupTabNavigation, setupCashTabNavigation, showPage } from './js/ui.js';
+import { processPayment, reserveOrder } from './js/logic.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
