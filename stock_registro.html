@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Diario de Stock - Ventas Casino</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css"> 
+    <link rel="stylesheet" href="stock_registro.css"> 
+</head>
+<body class="bg-gray-100 p-4 min-h-screen">
+
+    <div class="fixed top-0 left-0 right-0 p-4 flex justify-start z-50">
+        <a href="index.html" class="menu-btn bg-gray-500 text-white font-bold p-3 rounded-lg shadow-md hover:bg-gray-600 transition-colors">
+            <i class="fas fa-arrow-left"></i> Volver al POS
+        </a>
+    </div>
+
+    <div class="max-w-4xl mx-auto mt-16">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">📝 Registro Diario de Stock</h1>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <button id="toggle-new-product-form-btn" 
+                    onclick="window.toggleSection('product-form-container')"
+                    class="w-full px-4 py-3 bg-blue-600 text-white font-bold text-lg rounded-lg shadow-md hover:bg-blue-700 transition duration-300 mb-4">
+                    <i class="fas fa-plus"></i> Añadir Nueva Materia Prima
+            </button>
+            
+            <div id="product-form-container" class="hidden pt-4 border-t border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">Detalles de la Nueva Materia Prima</h3>
+                <form id="new-product-form" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    
+                    <input type="text" id="new-product-name" placeholder="Nombre (Ej: Queso Rallado)" required
+                        class="md:col-span-3 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="new-product-unit" placeholder="Unidad (Ej: KG, LTS, U)" required
+                        class="md:col-span-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="new-product-category" required class="md:col-span-2 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Seleccione Categoría</option>
+                        <option value="Almacén">Almacén</option>
+                        <option value="Frutas y Verduras">Frutas y Verduras</option>
+                        <option value="Carnes">Carnes</option>
+                        <option value="Lacteos y Fiambres">Lácteos y Fiambres</option>
+                        <option value="Bebidas">Bebidas</option>
+                        <option value="Empaques">Empaques</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+
+                    <input type="number" id="new-product-cost" placeholder="Costo Unitario (por la unidad elegida)" step="0.01" required
+                        class="md:col-span-3 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="number" id="new-product-reorder" placeholder="Punto de Pedido (Alerta)" step="any" 
+                        class="md:col-span-3 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    
+                    <button type="submit" class="md:col-span-6 w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+                        <i class="fas fa-database"></i> Crear y Guardar Base de Materia Prima
+                    </button>
+                </form>
+                <div id="new-product-status" class="mt-4 text-center"></div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Carga de Conteo Físico</h2>
+            <p class="text-gray-600 mb-6 font-semibold">Instrucción: Ingresa la <span class="text-red-600">Cantidad Actual TOTAL</span> del producto.</p>
+
+            <form id="stockForm" class="space-y-6">
+                
+                <div id="stock-items-container">
+                    <p class="text-center text-gray-500 p-4">Cargando inventario...</p>
+                </div>
+                
+                <button type="submit"
+                    class="w-full px-4 py-3 bg-green-600 text-white font-bold text-lg rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+                    <i class="fas fa-save"></i> Guardar Stock Diario en Firebase
+                </button>
+
+                <div id="status" class="mt-6 text-center"></div>
+            </form>
+        </div>
+    </div>
+    
+    <script type="module" src="stock_registro.js"></script>
+</body>
+</html>

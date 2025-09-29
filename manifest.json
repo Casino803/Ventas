@@ -1,0 +1,20 @@
+{
+  "name": "Casino de Comunicaciones",
+  "short_name": "Casino de Comunicaciones",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+  "sizes": "any", // Esto le dice al navegador que puede escalar el ícono.
+  "type": "image/svg+xml"
+    },
+    {
+      "src": "./icons/icon.svg",
+  "sizes": "any", // Esto le dice al navegador que puede escalar el ícono.
+  "type": "image/svg+xml"
+    }
+  ]
+}
