@@ -979,17 +979,10 @@ function renderManageProduct(product) {
             categoryDisplay = `<span class="text-gray-400 text-sm"> (${category.name})</span>`;
         }
     }
-    
-    // Muestra el tipo de producto
-    let typeDisplay = '';
-    if (product.type) {
-        typeDisplay = `<span class="text-xs font-semibold text-purple-600"> [${product.type.toUpperCase()}]</span>`;
-    }
 
     itemDiv.innerHTML = `
     <div class="flex-grow">
         <span class="font-semibold">${product.name}</span>
-        ${typeDisplay}
         <span class="text-gray-500"> - $${product.price.toFixed(2)}</span>
         ${stockDisplay}
         ${categoryDisplay}
@@ -1685,15 +1678,10 @@ if (productForm) {
         const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
         const categoryId = productCategoryInput?.value || null;
 
-        // ✅ ASIGNACIÓN DE TIPO DE PRODUCTO:
-        let productType = 'final'; // Valor por defecto: Producto final
-
-        // Si se define un stock, asumimos que es un insumo
-        if (stock !== undefined && stockInput !== '') {
-            productType = 'insumo'; 
-        }
+        // Se inicializa el tipo de producto. Si se define un stock directo, asumimos 'insumo' por defecto si no tiene otro tipo.
+        let productType = (stock !== undefined && stockInput !== '') ? 'insumo' : 'final';
         
-        // Si el producto ya existe y tiene un tipo (procesado, final), respetarlo
+        // Mantener el tipo de producto existente si no es un nuevo registro
         if (id) {
             const existingProduct = allProducts.find(p => p.id === id);
             if (existingProduct && existingProduct.type) {
@@ -1709,9 +1697,6 @@ if (productForm) {
         const productData = { name, price, type: productType }; // Incluimos type
         if (stock !== undefined) {
             productData.stock = stock;
-        } else {
-             // Si el stock se borra, aseguramos que la propiedad no se suba
-            delete productData.stock;
         }
         if (categoryId) {
             productData.categoryId = categoryId;

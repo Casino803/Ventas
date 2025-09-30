@@ -29,7 +29,7 @@
             </button>
             
             <div id="product-form-container" class="hidden pt-4 border-t border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-700 mb-4">Detalles de la Nueva Materia Prima</h3>
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">Detalles de la Materia Prima (Añadir / Editar)</h3>
                 <form id="new-product-form" class="grid grid-cols-1 md:grid-cols-6 gap-4">
                     
                     <input type="text" id="new-product-name" placeholder="Nombre (Ej: Queso Rallado)" required
@@ -52,7 +52,7 @@
                     <input type="number" id="new-product-reorder" placeholder="Punto de Pedido (Alerta)" step="any" 
                         class="md:col-span-3 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     
-                    <button type="submit" class="md:col-span-6 w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300">
+                    <button type="submit" class="md:col-span-6 w-full px-4 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300">
                         <i class="fas fa-database"></i> Crear y Guardar Base de Materia Prima
                     </button>
                 </form>
@@ -66,6 +66,18 @@
 
             <form id="stockForm" class="space-y-6">
                 
+                <div class="mb-6">
+                    <input type="text" id="inventory-search" placeholder="🔍 Buscar Materia Prima por nombre..."
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+                </div>
+                
+                <div class="grid grid-cols-4 gap-4 items-center font-bold text-gray-600 border-b pb-2 mb-2">
+                    <span class="col-span-1">Producto / Gestión</span>
+                    <span class="col-span-1 text-center">Cantidad Actual</span>
+                    <span class="col-span-1">Unidad</span>
+                    <span class="col-span-1">Info (PP / Costo)</span>
+                </div>
+
                 <div id="stock-items-container">
                     <p class="text-center text-gray-500 p-4">Cargando inventario...</p>
                 </div>

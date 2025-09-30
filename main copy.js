@@ -161,7 +161,7 @@ let currentReservationToProcess = null; // NUEVO: Para guardar la reservación a
 
 
 let allCombos = [];
-let allRecipes = []; // NUEVO: Recetas cargadas de Firebase
+
 
 // Ahora estas colecciones son globales
 const SHARED_PRODUCTS_COLLECTION = 'products';
@@ -176,7 +176,7 @@ const SHARED_CASH_HISTORY_COLLECTION = 'cajas_historico';
 const SHARED_PRODUCT_CATEGORIES_COLLECTION = 'productCategories';
 const SHARED_COMBOS_COLLECTION = 'combos';
 const SHARED_RESERVATIONS_COLLECTION = 'reservations'; // NUEVO: Colección para pedidos reservados
-const SHARED_RECIPES_COLLECTION = 'recipes'; // NUEVA COLECCIÓN DE RECETAS
+
 
 const defaultPaymentMethods = ["Efectivo", "Transferencia MP"];
 let userPaymentMethods = [];
@@ -492,7 +492,7 @@ async function deleteReservedOrder(reservationId) {
 
     showConfirmationModal(`¿Estás seguro de que quieres eliminar esta reservación? Esta acción no se puede deshacer.`, async () => {
         try {
-            // 1. Devolver stock (Lógica de descuento de stock anterior, aún necesaria si no hay receta)
+            // 1. Devolver stock
             if (reservationToDelete && reservationToDelete.items) {
                 const stockRevertUpdates = reservationToDelete.items.map(item => {
                     if (item.isCombo && item.items) {
@@ -539,49 +539,6 @@ onAuthStateChanged(auth, async (user) => {
         pages.forEach(page => page.classList.remove('active'));
     }
 });
-
-// ------------------------------------------------------------
-// NUEVA FUNCIÓN: Lógica de Desglose Recursivo
-// ------------------------------------------------------------
-async function descontarStockRecursivo(itemId, cantidad) {
-    // 1. Obtener el producto (Insumo, Procesado o Final)
-    const product = allProducts.find(p => p.id === itemId);
-    const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, itemId);
-
-    if (!product) {
-        console.warn(`Producto no encontrado para el ID: ${itemId}`);
-        return;
-    }
-
-    // 2. Si es Insumo o un producto final sin receta pero con stock directo, descontar.
-    // Asumimos que los productos sin tipo o con type:insumo tienen stock directo
-    if (product.type === 'insumo' || (product.type === 'final' && product.stock !== undefined)) {
-        // Caso Base: Es un insumo o producto final con gestión de stock directo, descontar.
-        await updateDoc(productDocRef, {
-            stock: increment(-cantidad)
-        });
-        return;
-    }
-
-    // 3. Si es Procesado o Final CON receta, buscar la receta y desglosar
-    const recipe = allRecipes.find(r => r.productId === itemId);
-
-    if (recipe && recipe.components && recipe.components.length > 0) {
-        // Caso Recursivo: Desglosar en componentes
-        const recursiveUpdates = recipe.components.map(component => {
-            const requiredAmount = component.quantity * cantidad;
-            return descontarStockRecursivo(component.componentId, requiredAmount);
-        });
-        await Promise.all(recursiveUpdates);
-    } else {
-        // Manejo de error: Producto Procesado sin receta definida.
-        if (product.type === 'procesado') {
-             console.warn(`Producto Procesado sin receta definida: ${product.name}. Stock no descontado.`);
-        }
-    }
-}
-// ------------------------------------------------------------
-
 
 function setupRealtimeListeners() {
     if (!userId) {
@@ -710,12 +667,6 @@ function setupRealtimeListeners() {
         showModal("Error al cargar las reservaciones.");
     });
     
-    const recipesCollection = collection(db, SHARED_RECIPES_COLLECTION);
-    onSnapshot(recipesCollection, (snapshot) => {
-        allRecipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }, (error) => {
-        console.error("Error al escuchar recetas:", error);
-    });
 }
 
 function renderPaymentMethodsList() {
@@ -979,17 +930,10 @@ function renderManageProduct(product) {
             categoryDisplay = `<span class="text-gray-400 text-sm"> (${category.name})</span>`;
         }
     }
-    
-    // Muestra el tipo de producto
-    let typeDisplay = '';
-    if (product.type) {
-        typeDisplay = `<span class="text-xs font-semibold text-purple-600"> [${product.type.toUpperCase()}]</span>`;
-    }
 
     itemDiv.innerHTML = `
     <div class="flex-grow">
         <span class="font-semibold">${product.name}</span>
-        ${typeDisplay}
         <span class="text-gray-500"> - $${product.price.toFixed(2)}</span>
         ${stockDisplay}
         ${categoryDisplay}
@@ -1685,33 +1629,14 @@ if (productForm) {
         const stock = stockInput !== '' ? parseInt(stockInput, 10) : undefined;
         const categoryId = productCategoryInput?.value || null;
 
-        // ✅ ASIGNACIÓN DE TIPO DE PRODUCTO:
-        let productType = 'final'; // Valor por defecto: Producto final
-
-        // Si se define un stock, asumimos que es un insumo
-        if (stock !== undefined && stockInput !== '') {
-            productType = 'insumo'; 
-        }
-        
-        // Si el producto ya existe y tiene un tipo (procesado, final), respetarlo
-        if (id) {
-            const existingProduct = allProducts.find(p => p.id === id);
-            if (existingProduct && existingProduct.type) {
-                productType = existingProduct.type;
-            }
-        }
-        
         if (isNaN(price) || price <= 0 || (stock !== undefined && (isNaN(stock) || stock < 0))) {
             showModal("El precio debe ser un número positivo y el stock debe ser un número entero no negativo.");
             return;
         }
         
-        const productData = { name, price, type: productType }; // Incluimos type
+        const productData = { name, price };
         if (stock !== undefined) {
             productData.stock = stock;
-        } else {
-             // Si el stock se borra, aseguramos que la propiedad no se suba
-            delete productData.stock;
         }
         if (categoryId) {
             productData.categoryId = categoryId;
@@ -2726,14 +2651,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 // El descuento de stock para RESERVACIONES se hace en reserveBtn.
                 // El descuento de stock para VENTAS NORMALES debe hacerse aquí:
                 if (!currentReservationToProcess) {
-                    // **INICIO: MODIFICACIÓN DE STOCK PARA DESGLOSE DE RECETAS**
-                    const stockUpdates = cart.map(item => {
-                        // Usamos la nueva función recursiva para cada item del carrito
-                        return descontarStockRecursivo(item.id, item.quantity);
-                    }).flat().filter(Boolean); // flat().filter(Boolean) asegura que Promise.all reciba solo promesas válidas
-                    
-                    await Promise.all(stockUpdates);
-                    // **FIN: MODIFICACIÓN DE STOCK PARA DESGLOSE DE RECETAS**
+                    const productUpdates = cart.map(item => {
+                        if (item.isCombo && item.items) {
+                            return item.items.map(comboItem => {
+                                const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, comboItem.productId);
+                                return updateDoc(productDocRef, {
+                                    stock: increment(-comboItem.quantity * item.quantity)
+                                });
+                            });
+                        }
+                        if (item.stock !== undefined && !item.isCombo) {
+                            const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                            return updateDoc(productDocRef, {
+                                stock: increment(-item.quantity)
+                            });
+                        }
+                    }).flat().filter(Boolean);
+                    await Promise.all(productUpdates);
                 }
                 
                 // **INICIO DE LA CORRECCIÓN: Limpiar el carrito de propiedades no compatibles con Firestore**
@@ -2860,14 +2794,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // 1. Descontar stock de los productos.
-            // **INICIO: MODIFICACIÓN DE STOCK PARA DESGLOSE DE RECETAS**
             const productUpdates = cart.map(item => {
-                // Usamos la nueva función recursiva para cada item del carrito
-                return descontarStockRecursivo(item.id, item.quantity);
-            }).flat().filter(Boolean); // flat().filter(Boolean) asegura que Promise.all reciba solo promesas válidas
-
+                if (item.isCombo && item.items) {
+                    // Actualizar stock de los productos que componen el combo
+                    return item.items.map(comboItem => {
+                        const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, comboItem.productId);
+                        return updateDoc(productDocRef, {
+                            stock: increment(-comboItem.quantity * item.quantity)
+                        });
+                    });
+                }
+                if (item.stock !== undefined && !item.isCombo) {
+                    // Actualizar stock de productos individuales
+                    const productDocRef = doc(db, SHARED_PRODUCTS_COLLECTION, item.id);
+                    return updateDoc(productDocRef, {
+                        stock: increment(-item.quantity)
+                    });
+                }
+            }).flat().filter(Boolean);
+            
             await Promise.all(productUpdates); // Ejecuta la actualización de stock
-            // **FIN: MODIFICACIÓN DE STOCK PARA DESGLOSE DE RECETAS**
 
             // 2. Registrar la reservación
             await addDoc(collection(db, SHARED_RESERVATIONS_COLLECTION), {
