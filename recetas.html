@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Recetas y Desglose</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 p-4 min-h-screen">
+
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Gestión de Recetas (BOM)</h1>
+        
+        <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center">
+                <p id="modal-message" class="text-lg font-semibold mb-4"></p>
+                <button id="modal-close-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg">Cerrar</button>
+            </div>
+        </div>
+
+        <form id="recipe-form" class="space-y-4">
+            <input type="hidden" id="recipe-id">
+
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h2 class="text-xl font-semibold mb-3">Producto a Recetar</h2>
+                
+                <label for="product-select" class="block text-sm font-medium text-gray-700">Seleccionar Producto Final o Procesado:</label>
+                <select id="product-select" required 
+                    class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    title="Solo se muestran productos que no sean insumos.">
+                    <option value="">Cargando productos...</option>
+                </select>
+
+                <div class="mt-4 flex space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="product_type" value="procesado" id="type_procesado" required class="form-radio text-blue-600">
+                        <span class="ml-2">Procesado (Uso intermedio)</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="product_type" value="final" id="type_final" required class="form-radio text-green-600">
+                        <span class="ml-2">Producto Final (Venta POS)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-lg space-y-4">
+                <h2 class="text-xl font-semibold mb-3">Desglose de Componentes</h2>
+                
+                <div id="components-container" class="space-y-2">
+                    </div>
+
+                <button type="button" id="add-component-btn" 
+                    class="px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-600 transition-colors">
+                    <i class="fas fa-plus"></i> Añadir Componente
+                </button>
+            </div>
+
+            <button type="submit" 
+                class="w-full px-4 py-2 bg-green-600 text-white font-bold text-lg rounded-lg shadow-md hover:bg-green-700 transition-colors">
+                <i class="fas fa-save"></i> Guardar Receta
+            </button>
+        </form>
+
+        <h2 class="text-xl font-semibold text-gray-700 mt-8 mb-4">Recetas Definidas</h2>
+        <div id="recipes-list-container" class="space-y-2">
+            </div>
+
+    </div>
+
+    <script type="module" src="recetas.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
